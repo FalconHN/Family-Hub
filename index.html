@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Naše Aplikacije</title>
+<meta name="theme-color" content="#191919" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Naše Aplikacije" />
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAt0lEQVR4nO2XTRJEQAxG0ynXYDOOycock804CAuVqpaiR4Rkk28nTb3XP6gkOMhn+C1HdW2mvkm8tiu8BS6JoDWcs9AaziXw341vJ3nMPk9198Gxq3fX7Xe2EeBgXpeKiARyOAfR2NjVIonLZ+DqDKUrEW9B8QycHThpStvhvgUhEAJqgbv/gEcECK6RUAnk338XAS38EQFtQiAEEoBPXwCwdUjuK4BkYg0mJvKCJRyAdccUy/Z8BbY5SMGsvWLSAAAAAElFTkSuQmCC" />
+<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAEV0lEQVR4nO3dQXLTSBiGYTvFNciGOSZZMcckG+YgzGIwkwTJVkvdUuvr59lCWS3qze+O2yWulw58+fbj59FrYLvXl+fr0Ws4ZAECHsMRge92QRGPba+4m15ExExpGXeTFxYyS7QI+6n2C4qZpVq0Uu0nRMhsUWtaV5nQYmarWg1t+qkQMi1smdarJ7SYaWVLW6uCFjOtrW2sOGgxs5c1rRUFLWb2Vtrc4qDFzFFK2lsUtJg52tIGHwYtZnqxpMXqR99wpLtBm8705lGTs0GLmV7da9OWgyiTQZvO9G6u0T+CFjNnMdWqLQdR3gVtOnM2H5s1oYkiaKL8Dtp2g7N6264JTRRBE+XpcrHd4PxuDZvQRBE0UQRNlKv9M0lMaKIImiifjl5Amu9fPxf9/b/+/qfRSsYk6A1K4136GiJfT9CFakRccg1xlxH0AntEvOTa4n5M0HccGfKU23qEPU/QM9bGXBrbmut8//pZ1DMcrHxQElirqHpYw1kJ+o2lIe0VUW/rOQNB//IonqOj6X19vRD05X4svYVyprUeYfij77MFcm9NvX0qc4ShJ/RcAD2GPOXs629h2AmdEMPcWkee1EMGnRDzjajfGy7opJhvRP2/4YKecuaYbxLuoYahgh5xYo12z0MFPSVpsiXdy1rDBD3apHprpHsfJugpiRMt8Z5KDB00eYYIeqS33Dmj/BsMEfSU5Lfm5Ht7ZNigySRoogiaKEN/fZQ8JjRRBE0UQRNF0EQRNFG6fhTYKMe1Z9PzSaQJTRRBE0XQRBE0UQRNFEETRdBEETRRBE0UQRNF0EQRNFEETRRBE0XQRBE0UQRNFEETRdBEETRRBE0UQRNF0EQRNFEETRRBE0XQRBE0UQRNFEETRdBE6fr50AmmnqXsudftCLqRew8Fv/2ZsOuz5Whg6RPue34S/lkJurLSSEVdl6ArWhunqOsRNFEEXcnWKWtK1yFoogiaKIImiqCJIuhKtp76OTWsQ9BEEXRFa6es6VyPoCsrjVPMdQm6gaWRirk+Xx9t5Bar70PvS9CNiXdfthxEETRRBE0UQRNF0EQRNFEETRRBE0XQRBE0UQRNFEETRdBEETRRBE0UQRNF0EQRNFEETRRBE0XQRBE0UQRNFEETRdBEETRRBE0UQRNF0ER5en15vh69CKjh9eX52vXjdP3vqpSy5SCKoInydLn8t/c4eiGwxa1hE5oogibK76BtOzirt+2a0EQRNFHeBW3bwdl8bNaEJsofQZvSnMVUq5MTWtT0bq5RWw6izAZtStOre23endCipjePmrTlIMrDoE1perGkxUUTWtQcbWmDi7ccouYoJe0V7aFFzd5Kmyv+pVDU7GVNa6s+5RA1ra1tbPXHdqKmlS1tVYnyy7cfP2u8DmOrMSSrHKyY1mxVq6HqIZrWlKg9DKsffZvWLNWilabxmdZMaTn0dpum4h7bXu/ch2wPxD2GI7afXex3BZ6hh9+f/gUYFVt+VCqMfgAAAABJRU5ErkJggg==" />
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:#191919; min-height:100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color:#e8e8e6; }
+  #app { max-width: 420px; margin: 0 auto; padding: 60px 20px; }
+  h1 { font-size: 26px; margin-bottom: 6px; }
+  p.sub { color: #9a9a96; margin-top:0; margin-bottom: 28px; font-size: 14px; }
+  input {
+    width: 100%; padding: 10px 12px; margin-bottom: 12px; border-radius: 6px;
+    border: 1px solid #333; background: #232323; color: #e8e8e6; font-size: 14px;
+  }
+  button.primary {
+    width: 100%; padding: 10px 12px; border-radius: 6px; border: none;
+    background: #2383e2; color: #fff; font-size: 14px; cursor: pointer; font-weight: 500;
+  }
+  button.primary:hover { background: #1a6fc4; }
+  .error { color: #f08a8a; font-size: 13px; margin-bottom: 12px; min-height: 16px; }
+  .card {
+    border: 1px solid #333; border-radius: 10px; padding: 20px; margin-bottom: 14px;
+    background: #1c1c1c; cursor: pointer; display:flex; align-items:center; gap:14px;
+    text-decoration: none; color: #e8e8e6; transition: border-color 0.15s;
+  }
+  .card:hover { border-color: #2383e2; }
+  .card .emoji { font-size: 28px; }
+  .card .title { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+  .card .desc { font-size: 13px; color: #9a9a96; }
+  .topbar { display:flex; justify-content: space-between; align-items:center; margin-bottom: 24px; }
+  .logout { font-size: 13px; color: #9a9a96; cursor:pointer; border: 1px solid #333; padding: 6px 12px; border-radius: 6px; background:transparent; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="login-screen">
+    <h1>🔐 Prijava</h1>
+    <p class="sub">Uloguj se da pristupiš aplikacijama</p>
+    <div class="error" id="login-error"></div>
+    <input type="email" id="email" placeholder="Email" autocomplete="username" />
+    <input type="password" id="password" placeholder="Lozinka" autocomplete="current-password" />
+    <button class="primary" onclick="doLogin()">Prijavi se</button>
+  </div>
+
+  <div id="menu-screen" class="hidden">
+    <div class="topbar">
+      <div>
+        <h1 style="margin-bottom:2px;">Naše Aplikacije</h1>
+        <p class="sub" id="welcome-text" style="margin-bottom:0;"></p>
+      </div>
+      <button class="logout" onclick="doLogout()">Odjava</button>
+    </div>
+
+    <a class="card" href="shopping-list.html">
+      <span class="emoji">🛒</span>
+      <div>
+        <div class="title">Smart Shopping List</div>
+        <div class="desc">Deljena lista za kupovinu</div>
+      </div>
+    </a>
+
+    <!-- Nove aplikacije se dodaju ovdje kao novi .card linkovi -->
+
+  </div>
+
+</div>
+
+<script>
+// ==== PASTE YOUR FIREBASE CONFIG HERE ====
+const firebaseConfig = {
+  apiKey: "AIzaSyCK9Is1wVBv4EIB-wg9Eb1CZ2FscWZH5dM",
+  authDomain: "shopping-list-e5217.firebaseapp.com",
+  projectId: "shopping-list-e5217",
+  storageBucket: "shopping-list-e5217.firebasestorage.app",
+  messagingSenderId: "1037284168970",
+  appId: "1:1037284168970:web:37c560fdf96af6e5f9d6f3"
+};
+firebase.initializeApp(firebaseConfig);
+
+const loginScreen = document.getElementById('login-screen');
+const menuScreen = document.getElementById('menu-screen');
+const errorBox = document.getElementById('login-error');
+const welcomeText = document.getElementById('welcome-text');
+
+function doLogin() {
+  errorBox.textContent = "";
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if (!email || !password) {
+    errorBox.textContent = "Unesi email i lozinku.";
+    return;
+  }
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .catch((err) => {
+      errorBox.textContent = "Pogrešan email ili lozinka.";
+    });
+}
+
+function doLogout() {
+  firebase.auth().signOut();
+}
+
+document.getElementById('password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doLogin();
+});
+
+firebase.auth().onAuthStateChanged((user) => {
+  if (user) {
+    loginScreen.classList.add('hidden');
+    menuScreen.classList.remove('hidden');
+    welcomeText.textContent = "Ulogovan/a kao " + user.email;
+  } else {
+    loginScreen.classList.remove('hidden');
+    menuScreen.classList.add('hidden');
+  }
+});
+</script>
+</body>
+</html>
