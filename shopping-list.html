@@ -42,7 +42,7 @@
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" data-presets="react">
+<script type="text/plain" id="app-source-code">
 const { useState, useEffect, useRef } = React;
 
 // Firestore is used directly below for shared, real-time sync.
@@ -956,6 +956,15 @@ function SmartShoppingList() {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<SmartShoppingList />);
+</script>
+<script>
+  // Manually transform with the classic JSX runtime so Babel does NOT
+  // inject an ES "import" statement (which breaks in a plain, non-module script).
+  const __src = document.getElementById('app-source-code').textContent;
+  const __out = Babel.transform(__src, { presets: [["react", { runtime: "classic" }]] }).code;
+  const __script = document.createElement('script');
+  __script.textContent = __out;
+  document.body.appendChild(__script);
 </script>
 </body>
 </html>
