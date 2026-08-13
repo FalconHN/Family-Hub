@@ -136,8 +136,8 @@
         'z-index:9999;background:' + theme.bg + ';border-right:1px solid ' + theme.border + ';' +
         'padding:20px 14px;box-sizing:border-box;' +
         'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
-      '.fh-side-header{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:0 6px;}' +
-      '.fh-side-logo{width:38px;height:38px;display:block;border-radius:9px;}' +
+      '.fh-side-header{display:flex;align-items:center;gap:10px;margin-bottom:26px;padding:0 6px;}' +
+      '.fh-side-logo{width:48px;height:48px;display:block;border-radius:12px;}' +
       '.fh-side-title{font-size:16px;font-weight:700;color:' + theme.headerText + ';}' +
       '.fh-side-tabs{display:flex;flex-direction:column;gap:4px;}' +
       '.fh-tab-side{flex-direction:row;align-items:center;gap:10px;padding:10px 12px;}' +
