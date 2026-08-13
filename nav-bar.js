@@ -31,9 +31,9 @@
     ? { bg: "#1c1c1c", border: "#333333", text: "#9a9a96", active: "#2383e2",
         activeBg: "#232323", shadow: "rgba(0,0,0,0.35)", soonBg: "#3a3a3a", soonText: "#cfcfcf",
         headerText: "#e8e8e6" }
-    : { bg: "#FAF8F4", border: "#E6E1D8", text: "#8A8578", active: "#2F6690",
-        activeBg: "#EAE6DC", shadow: "rgba(27,58,74,0.10)", soonBg: "#D6D1C6", soonText: "#ffffff",
-        headerText: "#1B3A4B" };
+    : { bg: "#FAF8F4", border: "#E6E1D8", text: "#8A8578", active: "#007991",
+        activeBg: "#DEE9E3", shadow: "rgba(15,34,43,0.10)", soonBg: "#D6D1C6", soonText: "#ffffff",
+        headerText: "#0F222B" };
 
   function tabsHtml(mode) {
     // mode: "bottom" (icon over label, stacked) or "side" (icon beside label, row)
