@@ -412,11 +412,13 @@ function computeMonth(monthData, meters, rates) {
     results[m.key] = { consumption: c, variableCost, fixedShare, tax, total };
   });
   let diff = null;
+  let diffConsumption = null;
   if (main) {
     const others = meters.filter((m) => !m.isMain);
     diff = results[main.key].total - others.reduce((s, m) => s + results[m.key].total, 0);
+    diffConsumption = consumption[main.key] - others.reduce((s, m) => s + consumption[m.key], 0);
   }
-  return { results, diff, totalConsumption: mainConsumption };
+  return { results, diff, diffConsumption, totalConsumption: mainConsumption };
 }
 
 function scheduleSave() {
@@ -487,7 +489,7 @@ function renderUnos() {
           <span>Fiksni dio: ${fmt(r.fixedShare)} ${state.rates.currency}</span>
         </div>
         <div class="total-row"><span>Ukupno</span><span>${fmt(r.total)} ${state.rates.currency}</span></div>
-        ${m.isMain ? `<div class="diff-row">Razlika (glavno − podbrojila): <strong class="${computed.diff < 0 ? "neg" : "pos"}">${fmt(computed.diff)} ${state.rates.currency}</strong></div>` : ""}
+        ${m.isMain ? `<div class="diff-row">Razlika (glavno − podbrojila): <strong class="${computed.diff < 0 ? "neg" : "pos"}">${fmt(computed.diff)} ${state.rates.currency}</strong> <span style="color:#8A8578;">(${fmt(computed.diffConsumption, 1)} m³)</span></div>` : ""}
       </div>
     `;
   });
