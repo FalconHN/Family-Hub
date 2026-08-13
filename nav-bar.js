@@ -30,7 +30,7 @@
   var APPS = [
     { label: "Kupovina", icon: svgIcon(ICONS.cart),     href: "shopping-list.html",  enabled: true },
     { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: false },
-    { label: "Raspored", icon: svgIcon(ICONS.calendar), href: "raspored.html",       enabled: false },
+    { label: "Raspored", icon: svgIcon(ICONS.calendar), href: "raspored.html",       enabled: true },
     { label: "Voda",     icon: svgIcon(ICONS.droplets), href: "potrosnja-vode.html", enabled: true }
   ];
 
@@ -58,9 +58,10 @@
         activeBg: "#DEE9E3", shadow: "rgba(15,34,43,0.10)", soonBg: "#D6D1C6", soonText: "#ffffff",
         headerText: "#0F222B" };
 
-  function tabsHtml(mode) {
+  function tabsHtml(mode, list) {
     // mode: "bottom" (icon over label, stacked) or "side" (icon beside label, row)
-    return APPS.map(function (app) {
+    list = list || APPS;
+    return list.map(function (app) {
       var active = app.enabled && app.href === currentFile;
       var cls = "fh-tab fh-tab-" + mode + (active ? " active" : "") + (app.enabled ? "" : " disabled");
       var href = app.enabled ? app.href : "javascript:void(0)";
@@ -185,4 +186,14 @@
     var btn = document.getElementById(id);
     if (btn) btn.addEventListener("click", doLogout);
   });
+
+  // --- Ogranicen prikaz za djecu: samo "Raspored" tab, ostalo sakriveno. ---
+  // Stranice pozivaju ovo posto saznaju ulogu ulogovanog korisnika (users/{uid} u bazi).
+  // Sve dok se ne pozove, prikazuju se svi tabovi (podrazumijevano ponasanje za roditelje).
+  window.fhApplyRole = function (role) {
+    var visibleApps = role === "child" ? APPS.filter(function (app) { return app.href === "raspored.html"; }) : APPS;
+    bottomBar.innerHTML = tabsHtml("bottom", visibleApps);
+    var tabsEl = sideBar.querySelector(".fh-side-tabs");
+    if (tabsEl) tabsEl.innerHTML = tabsHtml("side", visibleApps);
+  };
 })();
