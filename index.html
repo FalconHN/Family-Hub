@@ -59,7 +59,13 @@
   .card .title { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
   .card .desc { font-size: 13px; color: #8A8578; }
   .topbar { display:flex; justify-content: space-between; align-items:center; margin-bottom: 24px; }
-  .logout { font-size: 13px; color: #8A8578; cursor:pointer; border: 1px solid #E6E1D8; padding: 6px 12px; border-radius: 6px; background:#FFFFFF; }
+  .logout-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 10px;
+    border: 1px solid #E6E1D8; background: #FFFFFF; color: #8A8578; cursor: pointer;
+  }
+  .logout-btn:hover { color: #B0524A; border-color: #E7C9C4; background: #FBF3F2; }
+  .logout-btn svg { display: block; }
   .hidden { display: none; }
 </style>
 </head>
@@ -86,7 +92,9 @@
         <h1 style="margin-bottom:2px;">Family Hub</h1>
         <p class="sub" id="welcome-text" style="margin-bottom:0;"></p>
       </div>
-      <button class="logout" onclick="doLogout()">Odjava</button>
+      <button class="logout-btn" onclick="doLogout()" aria-label="Odjava" title="Odjava">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
     </div>
 
     <a class="card" href="shopping-list.html">
