@@ -28,10 +28,10 @@
       'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' + pathData + '</svg>';
   }
   var APPS = [
-    { label: "Voda",     icon: svgIcon(ICONS.droplets), href: "potrosnja-vode.html", enabled: true },
     { label: "Kupovina", icon: svgIcon(ICONS.cart),     href: "shopping-list.html",  enabled: true },
+    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: false },
     { label: "Raspored", icon: svgIcon(ICONS.calendar), href: "raspored.html",       enabled: false },
-    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: false }
+    { label: "Voda",     icon: svgIcon(ICONS.droplets), href: "potrosnja-vode.html", enabled: true }
   ];
 
   var currentFile = (location.pathname.split("/").pop() || "index.html");
