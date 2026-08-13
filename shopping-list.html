@@ -39,6 +39,12 @@
       window.location.href = "index.html";
     }
   });
+  // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
+  window.fhLogout = function () {
+    firebase.auth().signOut().catch(() => {}).finally(() => {
+      window.location.href = "index.html";
+    });
+  };
 </script>
 </head>
 <body>
