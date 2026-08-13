@@ -4,11 +4,31 @@
 // Boje se automatski prilagodjavaju pozadini stranice (tamna ili svijetla tema).
 // Kad se doda nova aplikacija: izmeni APPS niz ispod (jedno mesto za sve stranice).
 (function () {
+  var ICONS = {
+    droplets:
+      '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/>' +
+      '<path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+    cart:
+      '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>' +
+      '<path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+    calendar:
+      '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>' +
+      '<line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' +
+      '<line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/>' +
+      '<line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/>',
+    chefHat:
+      '<path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>' +
+      '<path d="M6 17h12"/>'
+  };
+  function svgIcon(pathData) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+      'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' + pathData + '</svg>';
+  }
   var APPS = [
-    { label: "Voda",     icon: "💧", href: "potrosnja-vode.html", enabled: true },
-    { label: "Kupovina", icon: "🛒", href: "shopping-list.html",  enabled: true },
-    { label: "Raspored", icon: "📅", href: "raspored.html",       enabled: false },
-    { label: "Recepti",  icon: "🍳", href: "recepti.html",        enabled: false }
+    { label: "Voda",     icon: svgIcon(ICONS.droplets), href: "potrosnja-vode.html", enabled: true },
+    { label: "Kupovina", icon: svgIcon(ICONS.cart),     href: "shopping-list.html",  enabled: true },
+    { label: "Raspored", icon: svgIcon(ICONS.calendar), href: "raspored.html",       enabled: false },
+    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: false }
   ];
 
   var currentFile = (location.pathname.split("/").pop() || "index.html");
@@ -68,7 +88,8 @@
     '.fh-tab{display:flex;text-decoration:none;color:' + theme.text + ';border-radius:10px;position:relative;}' +
     '.fh-tab.active{color:' + theme.active + ';background:' + theme.activeBg + ';}' +
     '.fh-tab.disabled{color:' + theme.border + ';cursor:default;}' +
-    '.fh-icon{font-size:20px;line-height:1;}' +
+    '.fh-icon{display:inline-flex;align-items:center;justify-content:center;line-height:1;}' +
+    '.fh-icon svg{display:block;}' +
     '.fh-label{font-weight:600;}' +
 
     /* bottom bar (mobile default) */
