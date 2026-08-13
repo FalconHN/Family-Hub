@@ -240,7 +240,7 @@ const authGateConfig = {
   messagingSenderId: "1037284168970",
   appId: "1:1037284168970:web:37c560fdf96af6e5f9d6f3"
 };
-const authGateApp = initializeApp(authGateConfig, "authGate");
+const authGateApp = initializeApp(authGateConfig); // "[DEFAULT]" ime - mora se poklapati sa index.html/shopping-list.html da bi video isti login
 const authGate = getAuth(authGateApp);
 onAuthStateChanged(authGate, (user) => {
   if (!user) {
@@ -257,7 +257,7 @@ const firebaseConfig = {
   appId: "1:1633026712:web:529f17a237845bf106c6ed"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig, "waterApp"); // odvojeno ime da ne bi kolidiralo sa "[DEFAULT]" gore
 const db = getFirestore(app);
 const auth = getAuth(app);
 
