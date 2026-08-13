@@ -55,9 +55,22 @@
     box-shadow: 0 2px 8px rgba(15,34,43,0.04);
   }
   .card:hover { border-color: #007991; box-shadow: 0 4px 14px rgba(15,34,43,0.08); }
-  .card .emoji { font-size: 28px; }
+  .card.disabled { cursor: default; }
+  .card.disabled:hover { border-color: #E6E1D8; box-shadow: 0 2px 8px rgba(15,34,43,0.04); }
+  .card.disabled .title, .card.disabled .desc { color: #B7B2A4; }
+  .card-icon {
+    width: 44px; height: 44px; min-width: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    background: #DEE9E3; color: #007991;
+  }
+  .card.disabled .card-icon { background: #F0EDE5; color: #C9C3B5; }
+  .card-icon svg { display: block; }
   .card .title { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
   .card .desc { font-size: 13px; color: #8A8578; }
+  .soon-badge {
+    display: inline-block; margin-left: 8px; font-size: 9px; font-weight: 700;
+    background: #D6D1C6; color: #fff; padding: 2px 6px; border-radius: 6px; vertical-align: middle;
+  }
   .topbar { display:flex; justify-content: space-between; align-items:center; margin-bottom: 24px; }
   .logout-btn {
     display: flex; align-items: center; justify-content: center;
@@ -98,22 +111,38 @@
     </div>
 
     <a class="card" href="shopping-list.html">
-      <span class="emoji">🛒</span>
+      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>
       <div>
         <div class="title">Smart Shopping List</div>
         <div class="desc">Deljena lista za kupovinu</div>
       </div>
     </a>
 
+    <a class="card disabled" href="javascript:void(0)" aria-disabled="true" tabindex="-1">
+      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+      <div>
+        <div class="title">Recepti<span class="soon-badge">uskoro</span></div>
+        <div class="desc">Porodične recepture sa slikama</div>
+      </div>
+    </a>
+
+    <a class="card disabled" href="javascript:void(0)" aria-disabled="true" tabindex="-1">
+      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg></span>
+      <div>
+        <div class="title">Raspored<span class="soon-badge">uskoro</span></div>
+        <div class="desc">Porodični raspored i obaveze</div>
+      </div>
+    </a>
+
     <a class="card" href="potrosnja-vode.html">
-      <span class="emoji">💧</span>
+      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
       <div>
         <div class="title">Potrošnja vode</div>
         <div class="desc">Praćenje potrošnje vode - Igalo</div>
       </div>
     </a>
 
-    <!-- Nove aplikacije se dodaju ovdje kao novi .card linkovi -->
+    <!-- Nove aplikacije se dodaju ovdje kao novi .card linkovi (postavi enabled ako je gotova) -->
 
   </div>
 
