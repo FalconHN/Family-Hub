@@ -1,6 +1,8 @@
 // Family Hub - zajednicka traka za prelazak izmedju aplikacija.
 // Ubaci <script src="nav-bar.js"></script> pred kraj <body> u svaku app stranicu.
-// Kad se doda nova aplikacija: samo izmeni APPS niz ispod (jedno mesto za sve stranice).
+// Boje trake se automatski prilagodjavaju pozadini stranice na kojoj se nalazi
+// (tamna ili svijetla tema) - ne treba nista posebno podesavati po stranici.
+// Kad se doda nova aplikacija: izmeni APPS niz ispod (jedno mesto za sve stranice).
 (function () {
   var APPS = [
     { label: "Voda",     icon: "💧", href: "potrosnja-vode.html", enabled: true },
@@ -10,6 +12,26 @@
   ];
 
   var currentFile = (location.pathname.split("/").pop() || "index.html");
+
+  // --- Prepoznavanje tamne/svijetle teme na osnovu stvarne pozadine stranice ---
+  function luminance(rgbStr) {
+    var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(rgbStr || "");
+    if (!m) return 255; // ako ne mozemo da ocitamo, pretpostavi svijetlu temu
+    var r = +m[1], g = +m[2], b = +m[3];
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  }
+  function isTransparent(rgbStr) {
+    return !rgbStr || rgbStr === "transparent" || /rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/.test(rgbStr);
+  }
+  var bodyBg = getComputedStyle(document.body).backgroundColor;
+  if (isTransparent(bodyBg)) bodyBg = getComputedStyle(document.documentElement).backgroundColor;
+  var isDark = luminance(bodyBg) < 128;
+
+  var theme = isDark
+    ? { bg: "#1c1c1c", border: "#333333", text: "#9a9a96", active: "#2383e2",
+        activeBg: "#232323", shadow: "rgba(0,0,0,0.35)", soonBg: "#3a3a3a", soonText: "#cfcfcf" }
+    : { bg: "#FAF8F4", border: "#E6E1D8", text: "#8A8578", active: "#2F6690",
+        activeBg: "#EAE6DC", shadow: "rgba(27,58,74,0.10)", soonBg: "#D6D1C6", soonText: "#ffffff" };
 
   var bar = document.createElement("div");
   bar.id = "fhNavBar";
@@ -30,18 +52,18 @@
   var style = document.createElement("style");
   style.textContent =
     '#fhNavBar{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;' +
-    'background:#FAF8F4;border-top:1px solid #E6E1D8;' +
+    'background:' + theme.bg + ';border-top:1px solid ' + theme.border + ';' +
     'padding:6px 4px calc(6px + env(safe-area-inset-bottom));' +
-    'box-shadow:0 -2px 10px rgba(27,58,74,0.10);' +
+    'box-shadow:0 -2px 10px ' + theme.shadow + ';' +
     'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
     '.fh-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;' +
-    'padding:6px 2px;text-decoration:none;color:#8A8578;border-radius:10px;position:relative;}' +
-    '.fh-tab.active{color:#2F6690;background:#EAE6DC;}' +
-    '.fh-tab.disabled{color:#D6D1C6;cursor:default;}' +
+    'padding:6px 2px;text-decoration:none;color:' + theme.text + ';border-radius:10px;position:relative;}' +
+    '.fh-tab.active{color:' + theme.active + ';background:' + theme.activeBg + ';}' +
+    '.fh-tab.disabled{color:' + theme.border + ';cursor:default;}' +
     '.fh-icon{font-size:20px;line-height:1;}' +
     '.fh-label{font-size:11px;font-weight:600;}' +
     '.fh-soon{position:absolute;top:0;right:6px;font-size:8px;font-weight:700;' +
-    'background:#D6D1C6;color:#fff;padding:1px 4px;border-radius:6px;}' +
+    'background:' + theme.soonBg + ';color:' + theme.soonText + ';padding:1px 4px;border-radius:6px;}' +
     'body{padding-bottom:64px !important;}';
 
   document.head.appendChild(style);
