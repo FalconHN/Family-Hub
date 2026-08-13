@@ -54,6 +54,18 @@
   }
   .day-tab.active { background: #DEE9E3; border-color: #DEE9E3; color: #007991; }
 
+  .shift-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: #FAF8F4; border: 1px solid #E6E1D8; border-radius: 10px; padding: 10px 14px;
+    margin-bottom: 14px; font-size: 13.5px; color: #8A8578;
+  }
+  .shift-banner.active-ok { color: #1F7A52; background: #DCEFE3; border-color: #DCEFE3; }
+  .shift-banner button {
+    background: #007991; color: #fff; border: none; border-radius: 8px; padding: 7px 14px;
+    font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .shift-banner button:hover { background: #00636F; }
+
   .card {
     background: #fff; border-radius: 14px; padding: 16px; margin-top: 12px;
     box-shadow: 0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1);
@@ -101,6 +113,8 @@
     </div>
 
     <div class="tabs-scroll" id="childTabs" style="display:none;"></div>
+    <div class="tabs-scroll" id="smjenaTabs" style="display:none;"></div>
+    <div class="shift-banner" id="shiftBanner" style="display:none;"></div>
     <div class="day-tabs" id="dayTabs"></div>
 
     <div class="cards-row">
@@ -161,10 +175,17 @@ const DAYS = [
   { key: "ned", label: "Nedjelja", short: "Ned" },
 ];
 
+const SMJENE = [
+  { key: "prva", label: "Prva smjena" },
+  { key: "druga", label: "Druga smjena" },
+];
+
 let role = null; // "parent" | "child"
 let myChildId = null;
 let selectedChildId = CHILDREN[0].id;
 let selectedDay = "pon";
+let selectedSmjena = "prva"; // koja smjena se trenutno gleda/uredjuje
+let smjenaUserOverride = false; // true kad roditelj rucno izabere smjenu za pregled, dok ne promijeni dijete
 let scheduleData = null;
 let unsubscribeSnapshot = null;
 
@@ -250,20 +271,105 @@ function renderDayTabs() {
   });
 }
 
+function normalizeScheduleData(raw) {
+  if (raw && raw.smjene) {
+    return {
+      aktivnaSmjena: raw.aktivnaSmjena === "druga" ? "druga" : "prva",
+      smjene: {
+        prva: raw.smjene.prva || { casovi: {}, obaveze: {} },
+        druga: raw.smjene.druga || { casovi: {}, obaveze: {} },
+      },
+    };
+  }
+  // Stara struktura (prije uvodjenja smjena), ili nema podataka - prebaci u "prva smjena".
+  return {
+    aktivnaSmjena: "prva",
+    smjene: {
+      prva: { casovi: (raw && raw.casovi) || {}, obaveze: (raw && raw.obaveze) || {} },
+      druga: { casovi: {}, obaveze: {} },
+    },
+  };
+}
+
+function syncSelectedSmjena() {
+  // Dijete uvijek gleda smjenu koju je roditelj postavio kao aktivnu.
+  // Roditelj ostaje na smjeni koju je rucno izabrao, dok ne promijeni dijete.
+  if (role !== "parent" || !smjenaUserOverride) {
+    selectedSmjena = scheduleData.aktivnaSmjena;
+  }
+}
+
 function subscribeToChild(childId) {
   if (unsubscribeSnapshot) unsubscribeSnapshot();
   scheduleData = null;
+  smjenaUserOverride = false;
+  renderSmjenaTabs();
+  renderShiftBanner();
   renderLists();
   unsubscribeSnapshot = db.collection("raspored").doc(childId).onSnapshot(
     (snap) => {
-      scheduleData = snap.exists ? snap.data() : { casovi: {}, obaveze: {} };
+      scheduleData = normalizeScheduleData(snap.exists ? snap.data() : null);
+      syncSelectedSmjena();
+      renderSmjenaTabs();
+      renderShiftBanner();
       renderLists();
     },
     () => {
-      scheduleData = { casovi: {}, obaveze: {} };
+      scheduleData = normalizeScheduleData(null);
+      syncSelectedSmjena();
+      renderSmjenaTabs();
+      renderShiftBanner();
       renderLists();
     }
   );
+}
+
+function renderSmjenaTabs() {
+  const wrap = document.getElementById("smjenaTabs");
+  wrap.style.display = "flex";
+  if (role === "parent") {
+    wrap.innerHTML = SMJENE.map((s) =>
+      '<button type="button" class="tab-pill' + (s.key === selectedSmjena ? " active" : "") + '" data-smjena="' + s.key + '">' + s.label + '</button>'
+    ).join("");
+    wrap.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedSmjena = btn.dataset.smjena;
+        smjenaUserOverride = true;
+        renderSmjenaTabs();
+        renderShiftBanner();
+        renderLists();
+      });
+    });
+  } else {
+    const current = SMJENE.find((s) => s.key === selectedSmjena);
+    wrap.innerHTML = '<span class="tab-pill active" style="cursor:default;">' + (current ? current.label : "") + '</span>';
+  }
+}
+
+function renderShiftBanner() {
+  const el = document.getElementById("shiftBanner");
+  if (role !== "parent" || !scheduleData) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "flex";
+  const child = CHILDREN.find((c) => c.id === selectedChildId);
+  const childName = child ? child.name : "";
+  const viewingLabel = (SMJENE.find((s) => s.key === selectedSmjena) || {}).label || "";
+  if (selectedSmjena === scheduleData.aktivnaSmjena) {
+    el.className = "shift-banner active-ok";
+    el.innerHTML = '<span>Ovo je trenutno aktivna smjena za ' + escapeHtml(childName) + '.</span>';
+  } else {
+    el.className = "shift-banner";
+    el.innerHTML =
+      '<span>' + escapeHtml(childName) + ' trenutno vidi drugu smjenu. Ti uređuješ: ' + escapeHtml(viewingLabel) + '.</span>' +
+      '<button type="button" id="activateSmjenaBtn">Aktiviraj ovu smjenu</button>';
+    document.getElementById("activateSmjenaBtn").addEventListener("click", activateSelectedSmjena);
+  }
+}
+
+function activateSelectedSmjena() {
+  db.collection("raspored").doc(selectedChildId).set({ aktivnaSmjena: selectedSmjena }, { merge: true });
 }
 
 function renderLists() {
@@ -281,7 +387,8 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
     return;
   }
 
-  const entries = (scheduleData[field] && scheduleData[field][selectedDay]) || [];
+  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {}, obaveze: {} };
+  const entries = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
   if (entries.length === 0) {
     listEl.innerHTML = '<div class="entry-empty">Nema unešenih stavki za ovaj dan.</div>';
   } else {
@@ -320,7 +427,8 @@ function addEntry(field, addRowElId) {
   const vrijeme = timeEl.value.trim();
   const naziv = nameEl.value.trim();
   if (!naziv) return;
-  const current = (scheduleData && scheduleData[field] && scheduleData[field][selectedDay]) || [];
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const current = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
   const updated = current.concat([{ vrijeme: vrijeme, naziv: naziv }]);
   saveField(field, updated);
   timeEl.value = "";
@@ -329,16 +437,18 @@ function addEntry(field, addRowElId) {
 }
 
 function deleteEntry(field, index) {
-  const current = (scheduleData && scheduleData[field] && scheduleData[field][selectedDay]) || [];
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const current = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
   const updated = current.slice();
   updated.splice(index, 1);
   saveField(field, updated);
 }
 
 function saveField(field, updatedDayArray) {
-  const payload = {};
-  payload[field] = {};
-  payload[field][selectedDay] = updatedDayArray;
+  const payload = { smjene: {} };
+  payload.smjene[selectedSmjena] = {};
+  payload.smjene[selectedSmjena][field] = {};
+  payload.smjene[selectedSmjena][field][selectedDay] = updatedDayArray;
   db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
 }
 </script>
