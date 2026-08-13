@@ -153,6 +153,25 @@
   .logout-row { text-align: center; margin-top: 14px; }
   .logout-btn { background: none; border: none; color: #8A8578; font-size: 12.5px; text-decoration: underline;
     cursor: pointer; font-family: inherit; }
+
+  /* --- Desktop optimizacija (siri ekrani, npr. kad je bocna nav traka aktivna) --- */
+  @media (min-width: 900px) {
+    .wrap { max-width: 1120px; }
+    .logo-row { justify-content: flex-start; margin-bottom: 20px; }
+    .logo-row img { height: 38px; }
+    h1 { font-size: 30px; }
+    #content {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+    #content > .month-nav,
+    #content > .card:not(.meter-card) {
+      grid-column: 1 / -1;
+    }
+    .meter-card { margin-bottom: 0; }
+  }
 </style>
 </head>
 <body>
