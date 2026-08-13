@@ -124,7 +124,7 @@
     '.fh-tab-bottom .fh-label{font-size:11px;}' +
     '.fh-tab-bottom .fh-soon{position:absolute;top:0;right:6px;font-size:8px;font-weight:700;' +
     'background:' + theme.soonBg + ';color:' + theme.soonText + ';padding:1px 4px;border-radius:6px;}' +
-    'body{padding-top:52px !important;padding-bottom:64px !important;}' +
+    'body{padding-top:calc(52px + env(safe-area-inset-top)) !important;padding-bottom:64px !important;}' +
 
     /* side bar (desktop) - hidden by default, shown at >=768px */
     '#fhNavSide{display:none;}' +
