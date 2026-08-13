@@ -124,7 +124,7 @@
     '.fh-tab-bottom .fh-label{font-size:11px;}' +
     '.fh-tab-bottom .fh-soon{position:absolute;top:0;right:6px;font-size:8px;font-weight:700;' +
     'background:' + theme.soonBg + ';color:' + theme.soonText + ';padding:1px 4px;border-radius:6px;}' +
-    'body{padding-top:calc(52px + env(safe-area-inset-top)) !important;padding-bottom:64px !important;}' +
+    'body{padding-top:52px !important;padding-bottom:64px !important;}' +
 
     /* side bar (desktop) - hidden by default, shown at >=768px */
     '#fhNavSide{display:none;}' +
@@ -136,8 +136,8 @@
         'z-index:9999;background:' + theme.bg + ';border-right:1px solid ' + theme.border + ';' +
         'padding:20px 14px;box-sizing:border-box;' +
         'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
-      '.fh-side-header{display:flex;align-items:center;gap:8px;margin-bottom:22px;padding:0 6px;}' +
-      '.fh-side-logo{width:26px;height:26px;display:block;}' +
+      '.fh-side-header{display:flex;align-items:center;gap:10px;margin-bottom:24px;padding:0 6px;}' +
+      '.fh-side-logo{width:38px;height:38px;display:block;border-radius:9px;}' +
       '.fh-side-title{font-size:16px;font-weight:700;color:' + theme.headerText + ';}' +
       '.fh-side-tabs{display:flex;flex-direction:column;gap:4px;}' +
       '.fh-tab-side{flex-direction:row;align-items:center;gap:10px;padding:10px 12px;}' +
@@ -155,6 +155,26 @@
   document.body.appendChild(topBar);
   document.body.appendChild(bottomBar);
   document.body.appendChild(sideBar);
+
+  // --- Tacno mjerenje visine gornje/donje trake, umjesto nagadjanja u px. ---
+  // Sprjecava da traka (koja moze biti visa na telefonima sa "notch"-om ili
+  // zbog fonta) prekrije sadrzaj stranice ispod nje (npr. logo vodovoda).
+  var mobileQuery = window.matchMedia("(min-width:768px)");
+  function syncBodyOffsets() {
+    if (mobileQuery.matches) {
+      document.body.style.setProperty("padding-top", "0px", "important");
+      document.body.style.setProperty("padding-bottom", "0px", "important");
+    } else {
+      document.body.style.setProperty("padding-top", topBar.offsetHeight + "px", "important");
+      document.body.style.setProperty("padding-bottom", bottomBar.offsetHeight + "px", "important");
+    }
+  }
+  syncBodyOffsets();
+  window.addEventListener("resize", syncBodyOffsets);
+  window.addEventListener("orientationchange", syncBodyOffsets);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(syncBodyOffsets); // fontovi se ucitaju kasnije i mogu blago promijeniti visinu
+  }
 
   function doLogout() {
     if (typeof window.fhLogout === "function") {
