@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Raspored časova</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADvUlEQVR4nO2Wv28cRRTHP29mz/bZ5ztHYMAm6O7WB0q8Cs01RBRX0NFCiCiCaeAPQJGQkKgokOipAxQkyKFAQggJURwRBRIULmwCOLaDCSL8cHJnJ9i5nXkUe/b51/1ygRQpX2m1u+9939vvmzc7M/AA9yHkiL77FwJYwFIup3L5/Bhg4IzdsSfPJpfPj1Eup1r27iNievAr4ACXW9ucwWYWAA+zbtvefPbYzEJubXOmZUe7fSPo4BPAj06eeIjh1JPivFPR0yJ2Iheeek7VrauqAIiIithRhAnFnc4Wozm1xnK38cv671f/aebSdh9pV7nPFaMXMPKhGDMCgPeoei8mMAciFdTHXsQYTFK0en8HrzO15flPt3P2IkAAjoVh1pO+gci89/qOGI3VyytG5GVUX1TDBmgzXlQ8GUQue9WLYvQj9RIYI2+jGhn+ffzW0lK9JbWFw1oggG+49GSQsiPq3Hvry/OfA2TDkwXFPF9PKjqAbBjVROSb+rX5LwFyxWhQrL3caKQngRqtOdVRwLYOBdQjaUqlQe7kbGBqH6sf+ILp6QHu3ds7egMDajf1aTFbt5koDzNSc95J2oI2cx2KTpOwORpaY3FxC2AtsdXbkW/Br3sMxahGl1+xrYBU4KxXEPTNXBidRTEIiiLIwckEsJ+jqgVVTypwtm8BqErSLjmF6lPJYCitO7uK2/W+hyODyV3bjkJbAQ0XxEHKoOper11b+CRJ0r6X+9QLiGanorMi9lKjIXE7ZreVEFSbnJe6c3fQ5O7EtkevSQVm/WghOpcNp+fI54cAyRajC9lidAEQ8vmhbDg9N1qIzsGsp8edsVcBCmDFr4B8TaEQJzb9PrnQxCZfJZxWTDd0+w13oWJvL1evAFdYSiz15YX3d9zValyH801uANW2fd+NPvr6iE5MlIePTUVPbFsypdJ4plQab74KlUrQX86+yLNuI735mld+Pn78mTSAcYOXjBu8mPjPGKrVmEM2nE7o1oKkj5VKQPWGNS7+TAP702+PNmKmKoFe//OtHf/GkpCpJBOvSkClAqt/tXL0K0BEFKSZsBoDce06K8DKNmcdvgNg5cf94TFVIJxOMkl/e4ECktkaWL1rNm+KmHfHwpPjXsUBgkHweBBF1TbVutZCpQKIETUq5g318c3M1tDqeptDSccDSSaMnrXIB2KkhHZgH1oCqNdFh766sTT/LX0cSHb7FJCHT5Qf8y7ub3bbwP999Yc/WnJ6WxcO5DlKUD85ehlU6ZF3GJQjVv4A/xv+A5WNeHLizB58AAAAAElFTkSuQmCC">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="theme-color" content="#0F222B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Raspored časova">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Public Sans', sans-serif;
+    background: #F5F3EE;
+    color: #26313A;
+    min-height: 100vh;
+    padding: 28px 14px 60px;
+  }
+  .wrap { width: 100%; max-width: 480px; margin: 0 auto; }
+  @media (min-width: 900px) {
+    .wrap { max-width: 1120px; }
+    h1 { font-size: 30px; }
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .cards-row .card { margin-top: 0 !important; }
+  }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-weight: 700; color: #0F222B; letter-spacing: -0.02em; }
+  .sub { color: #8A8578; font-size: 13.5px; margin-top: 2px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+
+  .tabs-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
+  .tab-pill {
+    flex: 0 0 auto; padding: 8px 16px; border-radius: 999px; border: 1px solid #E6E1D8;
+    background: #fff; color: #8A8578; font-weight: 600; font-size: 13.5px; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+  }
+  .tab-pill.active { background: #007991; border-color: #007991; color: #fff; }
+
+  .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
+  .day-tab {
+    flex: 0 0 auto; padding: 8px 14px; border-radius: 10px; border: 1px solid #E6E1D8;
+    background: #fff; color: #8A8578; font-weight: 600; font-size: 13px; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+  }
+  .day-tab.active { background: #DEE9E3; border-color: #DEE9E3; color: #007991; }
+
+  .card {
+    background: #fff; border-radius: 14px; padding: 16px; margin-top: 12px;
+    box-shadow: 0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1);
+  }
+  .card:first-child { margin-top: 0; }
+  .section-title { font-family: 'Fraunces', Georgia, serif; font-size: 17px; font-weight: 700; color: #0F222B; margin-bottom: 10px; }
+
+  .entry-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #F0EDE5; }
+  .entry-row:last-child { border-bottom: none; }
+  .entry-time { font-weight: 700; color: #007991; font-size: 13.5px; min-width: 92px; }
+  .entry-name { flex: 1; color: #0F222B; font-size: 14.5px; }
+  .entry-del { background: none; border: none; color: #B0524A; cursor: pointer; padding: 4px; display: flex; align-items: center; }
+  .entry-empty { color: #8A8578; font-size: 13.5px; padding: 6px 0; }
+
+  .add-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #E6E1D8; flex-wrap: wrap; }
+  .add-row input {
+    border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px; font-size: 14px;
+    font-family: inherit; background: #FAF8F4; outline: none;
+  }
+  .add-row input:focus { border-color: #007991; }
+  .add-row input.time-input { width: 120px; flex: 0 0 auto; }
+  .add-row input.name-input { flex: 1; min-width: 120px; }
+  .add-row button {
+    background: #007991; color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
+    font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .add-row button:hover { background: #00636F; }
+
+  .status { font-size: 13px; color: #8A8578; margin-bottom: 10px; }
+  .status.err { color: #B0524A; }
+</style>
+</head>
+<body>
+
+<div id="appRoot" style="display:none;">
+  <div class="wrap">
+    <div class="header">
+      <div class="header-left">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+        <div>
+          <h1>Raspored časova</h1>
+          <div class="sub" id="childLabel"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs-scroll" id="childTabs" style="display:none;"></div>
+    <div class="day-tabs" id="dayTabs"></div>
+
+    <div class="cards-row">
+      <div class="card">
+        <div class="section-title">Časovi</div>
+        <div id="casoviList"></div>
+        <div class="add-row" id="casoviAddRow"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Obaveze</div>
+        <div id="obavezeList"></div>
+        <div class="add-row" id="obavezeAddRow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="blockedRoot" style="display:none; padding: 60px 20px; text-align:center; font-family:'Public Sans',sans-serif; color:#B0524A;">
+  Nalog nije povezan ni sa jednim djetetom. Obratite se roditelju.
+</div>
+
+<script src="nav-bar.js"></script>
+<script>
+// ==== Centralni login (isti nalog kao za sve ostale aplikacije, projekat family-hub-m) ====
+const firebaseConfig = {
+  apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
+  authDomain: "family-hub-m.firebaseapp.com",
+  projectId: "family-hub-m",
+  storageBucket: "family-hub-m.firebasestorage.app",
+  messagingSenderId: "267839729754",
+  appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
+window.fhLogout = function () {
+  auth.signOut().catch(() => {}).finally(() => {
+    window.location.href = "index.html";
+  });
+};
+
+const CHILDREN = [
+  { id: "filip", name: "Filip" },
+  { id: "jaksa", name: "Jakša" },
+  { id: "miljan", name: "Miljan" },
+  { id: "relja", name: "Relja" },
+];
+const DAYS = [
+  { key: "pon", label: "Ponedjeljak", short: "Pon" },
+  { key: "uto", label: "Utorak", short: "Uto" },
+  { key: "sre", label: "Srijeda", short: "Sre" },
+  { key: "cet", label: "Četvrtak", short: "Čet" },
+  { key: "pet", label: "Petak", short: "Pet" },
+  { key: "sub", label: "Subota", short: "Sub" },
+  { key: "ned", label: "Nedjelja", short: "Ned" },
+];
+
+let role = null; // "parent" | "child"
+let myChildId = null;
+let selectedChildId = CHILDREN[0].id;
+let selectedDay = "pon";
+let scheduleData = null;
+let unsubscribeSnapshot = null;
+
+function escapeHtml(str) {
+  return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function trashIcon() {
+  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+}
+
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+  db.collection("users").doc(user.uid).get().then((snap) => {
+    const data = snap.exists ? snap.data() : null;
+    // Ako profil (users/{uid}) ne postoji, podrazumijevamo "roditelj" - da ne bismo
+    // slucajno zakljucali postojece naloge dok se ne doda profil za njih.
+    role = (data && data.role) || "parent";
+    if (role === "child") {
+      myChildId = data.childId;
+      if (!myChildId || !CHILDREN.some((c) => c.id === myChildId)) {
+        document.getElementById("blockedRoot").style.display = "block";
+        return;
+      }
+      selectedChildId = myChildId;
+    }
+    if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
+    initUI();
+  }).catch(() => {
+    role = "parent"; // ako upit ne uspije (npr. offline), ne blokiramo postojeci pristup
+    initUI();
+  });
+});
+
+function initUI() {
+  document.getElementById("appRoot").style.display = "block";
+  renderChildTabs();
+  renderChildLabel();
+  renderDayTabs();
+  subscribeToChild(selectedChildId);
+}
+
+function renderChildTabs() {
+  const wrap = document.getElementById("childTabs");
+  if (role !== "parent") {
+    wrap.style.display = "none";
+    return;
+  }
+  wrap.style.display = "flex";
+  wrap.innerHTML = CHILDREN.map((c) =>
+    '<button type="button" class="tab-pill' + (c.id === selectedChildId ? " active" : "") + '" data-child="' + c.id + '">' + escapeHtml(c.name) + '</button>'
+  ).join("");
+  wrap.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedChildId = btn.dataset.child;
+      renderChildTabs();
+      renderChildLabel();
+      subscribeToChild(selectedChildId);
+    });
+  });
+}
+
+function renderChildLabel() {
+  const child = CHILDREN.find((c) => c.id === selectedChildId);
+  document.getElementById("childLabel").textContent = child ? child.name : "";
+}
+
+function renderDayTabs() {
+  const wrap = document.getElementById("dayTabs");
+  wrap.innerHTML = DAYS.map((d) =>
+    '<button type="button" class="day-tab' + (d.key === selectedDay ? " active" : "") + '" data-day="' + d.key + '">' + d.short + '</button>'
+  ).join("");
+  wrap.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedDay = btn.dataset.day;
+      renderDayTabs();
+      renderLists();
+    });
+  });
+}
+
+function subscribeToChild(childId) {
+  if (unsubscribeSnapshot) unsubscribeSnapshot();
+  scheduleData = null;
+  renderLists();
+  unsubscribeSnapshot = db.collection("raspored").doc(childId).onSnapshot(
+    (snap) => {
+      scheduleData = snap.exists ? snap.data() : { casovi: {}, obaveze: {} };
+      renderLists();
+    },
+    () => {
+      scheduleData = { casovi: {}, obaveze: {} };
+      renderLists();
+    }
+  );
+}
+
+function renderLists() {
+  renderSection("casovi", "casoviList", "casoviAddRow", "Vrijeme (npr. 08:00-08:45)", "Predmet");
+  renderSection("obaveze", "obavezeList", "obavezeAddRow", "Vrijeme (npr. 17:00)", "Naziv obaveze");
+}
+
+function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceholder) {
+  const listEl = document.getElementById(listElId);
+  const addRowEl = document.getElementById(addRowElId);
+
+  if (!scheduleData) {
+    listEl.innerHTML = '<div class="entry-empty">Učitavanje...</div>';
+    addRowEl.innerHTML = "";
+    return;
+  }
+
+  const entries = (scheduleData[field] && scheduleData[field][selectedDay]) || [];
+  if (entries.length === 0) {
+    listEl.innerHTML = '<div class="entry-empty">Nema unešenih stavki za ovaj dan.</div>';
+  } else {
+    listEl.innerHTML = entries.map((e, i) =>
+      '<div class="entry-row">' +
+        '<span class="entry-time">' + escapeHtml(e.vrijeme) + '</span>' +
+        '<span class="entry-name">' + escapeHtml(e.naziv) + '</span>' +
+        (role === "parent" ? '<button type="button" class="entry-del" data-field="' + field + '" data-index="' + i + '" aria-label="Obriši">' + trashIcon() + '</button>' : "") +
+      '</div>'
+    ).join("");
+    if (role === "parent") {
+      listEl.querySelectorAll(".entry-del").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          deleteEntry(btn.dataset.field, parseInt(btn.dataset.index, 10));
+        });
+      });
+    }
+  }
+
+  if (role === "parent") {
+    addRowEl.innerHTML =
+      '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
+      '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
+      '<button type="button">Dodaj</button>';
+    addRowEl.querySelector("button").addEventListener("click", () => addEntry(field, addRowElId));
+    const nameInput = document.getElementById(addRowElId + "_name");
+    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEntry(field, addRowElId); });
+  } else {
+    addRowEl.innerHTML = "";
+  }
+}
+
+function addEntry(field, addRowElId) {
+  const timeEl = document.getElementById(addRowElId + "_time");
+  const nameEl = document.getElementById(addRowElId + "_name");
+  const vrijeme = timeEl.value.trim();
+  const naziv = nameEl.value.trim();
+  if (!naziv) return;
+  const current = (scheduleData && scheduleData[field] && scheduleData[field][selectedDay]) || [];
+  const updated = current.concat([{ vrijeme: vrijeme, naziv: naziv }]);
+  saveField(field, updated);
+  timeEl.value = "";
+  nameEl.value = "";
+  nameEl.focus();
+}
+
+function deleteEntry(field, index) {
+  const current = (scheduleData && scheduleData[field] && scheduleData[field][selectedDay]) || [];
+  const updated = current.slice();
+  updated.splice(index, 1);
+  saveField(field, updated);
+}
+
+function saveField(field, updatedDayArray) {
+  const payload = {};
+  payload[field] = {};
+  payload[field][selectedDay] = updatedDayArray;
+  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
+}
+</script>
+</body>
+</html>

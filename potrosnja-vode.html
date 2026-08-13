@@ -235,25 +235,36 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// ==== Centralni login (isti nalog kao za sve ostale aplikacije, projekat shopping-list-e5217) ====
+// ==== Centralni login (isti nalog kao za sve ostale aplikacije, projekat family-hub-m) ====
 // Zaseban, imenovani Firebase "app" samo za proveru prijave - ne dira podatke o potrošnji vode.
 const authGateConfig = {
-  apiKey: "AIzaSyCK9Is1wVBv4EIB-wg9Eb1CZ2FscWZH5dM",
-  authDomain: "shopping-list-e5217.firebaseapp.com",
-  projectId: "shopping-list-e5217",
-  storageBucket: "shopping-list-e5217.firebasestorage.app",
-  messagingSenderId: "1037284168970",
-  appId: "1:1037284168970:web:37c560fdf96af6e5f9d6f3"
+  apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
+  authDomain: "family-hub-m.firebaseapp.com",
+  projectId: "family-hub-m",
+  storageBucket: "family-hub-m.firebasestorage.app",
+  messagingSenderId: "267839729754",
+  appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
 };
 const authGateApp = initializeApp(authGateConfig); // "[DEFAULT]" ime - mora se poklapati sa index.html/shopping-list.html da bi video isti login
 const authGate = getAuth(authGateApp);
+const authGateDb = getFirestore(authGateApp);
 onAuthStateChanged(authGate, (user) => {
   if (!user) {
     window.location.href = "index.html";
+    return;
   }
+  // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo.
+  getDoc(doc(authGateDb, "users", user.uid)).then((snap) => {
+    const role = (snap.exists() && snap.data().role) || "parent";
+    if (role === "child") {
+      window.location.href = "raspored.html";
+      return;
+    }
+    if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
+  }).catch(() => { /* ako upit ne uspije, ne blokiramo postojeci pristup */ });
 });
 
 const firebaseConfig = {
