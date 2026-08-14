@@ -397,38 +397,37 @@ function RecipeApp() {
   return (
     <div style={{ background: "#F5F3EE", minHeight: "100%", color: "#0F222B", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 960, margin: "0 auto", padding: "28px 14px 60px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
-            <path d="M6 17h12"/>
-          </svg>
-          <div>
-            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 700, color: "#0F222B", letterSpacing: "-0.02em", margin: 0 }}>Recepti</h1>
-            <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2 }}>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</div>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+              <path d="M6 17h12"/>
+            </svg>
+            <div>
+              <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 700, color: "#0F222B", letterSpacing: "-0.02em", margin: 0 }}>Recepti</h1>
+              <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2 }}>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</div>
+            </div>
           </div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
           <button
             type="button"
             onClick={openAddForm}
-            style={{ background: "#007991", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ background: "#007991", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
           >
             + Dodaj recept
           </button>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 14, padding: 16, boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Pretraži po nazivu ili sastojku..."
-            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", outline: "none", marginBottom: 12 }}
+            style={{ flex: "1 1 200px", minWidth: 0, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
           />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", color: "#0F222B", outline: "none" }}
+            style={{ flex: "1 1 140px", minWidth: 0, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: "#0F222B", outline: "none" }}
           >
             {allCategoriesForFilter.map((c) => (
               <option key={c} value={c}>{c === "Sve" ? "Sve kategorije" : c}</option>
