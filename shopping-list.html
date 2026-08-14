@@ -288,6 +288,12 @@ function SmartShoppingList() {
   const knownCategories = Array.from(
     new Set([...CATEGORY_LIST, ...items.map((it) => it.category).filter(Boolean)])
   );
+  // Ponuđeni nazivi namirnica - kombinacija sačuvanih favorita i trenutno/ranije unešenih stavki,
+  // isti princip kao predmeti u Rasporedu: klik/kucanje nudi poznate namirnice, ali se slobodno
+  // može upisati i potpuno nov naziv koji nije na listi.
+  const knownItemNames = Array.from(
+    new Set([...favorites, ...items.map((it) => it.name).filter(Boolean)])
+  ).sort((a, b) => a.localeCompare(b, "sr"));
 
   function groupBy(key) {
     const groups = {};
@@ -464,6 +470,8 @@ function SmartShoppingList() {
           {editingCell === `name-${it.id}` ? (
             <input
               autoFocus
+              list="item-name-options"
+              autoComplete="off"
               defaultValue={it.name}
               onBlur={(e) => {
                 updateItem(it.id, { name: e.target.value });
@@ -551,6 +559,11 @@ function SmartShoppingList() {
       <datalist id="category-options">
         {knownCategories.map((c) => (
           <option key={c} value={c} />
+        ))}
+      </datalist>
+      <datalist id="item-name-options">
+        {knownItemNames.map((n) => (
+          <option key={n} value={n} />
         ))}
       </datalist>
 
@@ -873,6 +886,8 @@ function SmartShoppingList() {
           <div style={{ display: "flex", alignItems: "center", padding: "8px 12px", borderTop: "1px solid #EAE6DC", minWidth: ROW_MIN_WIDTH, boxSizing: "border-box" }}>
             <input
               value={newName}
+              list="item-name-options"
+              autoComplete="off"
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addItem()}
               placeholder="+ New item"
