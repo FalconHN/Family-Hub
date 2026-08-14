@@ -92,7 +92,7 @@
   .add-row input:focus, .add-row select:focus { border-color: #007991; }
   .add-row input.time-input { width: 120px; flex: 0 0 auto; }
   .add-row input.broj-input { width: 60px; flex: 0 0 auto; text-align: center; }
-  .add-row select.od-do-input { width: 100px; flex: 0 0 auto; }
+  .add-row input.od-do-input { width: 92px; flex: 0 0 auto; }
   .add-row input.room-input { width: 100px; flex: 0 0 auto; }
   .add-row input.name-input { flex: 1; min-width: 120px; }
   .add-row input.note-input { flex: 1; min-width: 160px; }
@@ -400,19 +400,6 @@ function nextCasBroj(entries) {
   return String(max + 1);
 }
 
-// Generiše <option> listu vremena (06:00-22:00, na 5 minuta) da roditelj samo bira, ne kuca.
-function timeOptionsHtml(selected) {
-  const opts = ['<option value="">--:--</option>'];
-  for (let h = 6; h <= 22; h++) {
-    for (let m = 0; m < 60; m += 5) {
-      if (h === 22 && m > 0) break;
-      const val = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-      opts.push('<option value="' + val + '"' + (val === selected ? " selected" : "") + '>' + val + '</option>');
-    }
-  }
-  return opts.join("");
-}
-
 function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceholder) {
   const listEl = document.getElementById(listElId);
   const addRowEl = document.getElementById(addRowElId);
@@ -473,8 +460,8 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
     if (isCasovi) {
       addRowEl.innerHTML =
         '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
-        '<select class="od-do-input" title="Od" id="' + addRowElId + '_od">' + timeOptionsHtml("") + '</select>' +
-        '<select class="od-do-input" title="Do" id="' + addRowElId + '_do">' + timeOptionsHtml("") + '</select>' +
+        '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
+        '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
         '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
         '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
         '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
