@@ -66,6 +66,16 @@
   }
   .shift-banner button:hover { background: #00636F; }
 
+  .casovi-col { display: flex; flex-direction: column; gap: 12px; }
+
+  .subject-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .subject-chip {
+    flex: 0 0 auto; padding: 6px 12px; border-radius: 999px; border: 1px solid #E6E1D8;
+    background: #FAF8F4; color: #007991; font-weight: 600; font-size: 12.5px; cursor: pointer;
+    font-family: inherit;
+  }
+  .subject-chip:hover { background: #DEE9E3; border-color: #DEE9E3; }
+
   .card {
     background: #fff; border-radius: 14px; padding: 16px; margin-top: 12px;
     box-shadow: 0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1);
@@ -126,10 +136,16 @@
     <div class="day-tabs" id="dayTabs"></div>
 
     <div class="cards-row">
-      <div class="card">
-        <div class="section-title">Časovi</div>
-        <div id="casoviList"></div>
-        <div class="add-row" id="casoviAddRow"></div>
+      <div class="casovi-col">
+        <div class="card">
+          <div class="section-title">Časovi</div>
+          <div id="casoviList"></div>
+        </div>
+
+        <div class="card" id="casoviAddCard" style="display:none;">
+          <div class="section-title">Dodaj čas</div>
+          <div id="casoviAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -195,6 +211,8 @@ let selectedSmjena = "prva"; // koja smjena se trenutno gleda/uredjuje
 let smjenaUserOverride = false; // true kad roditelj rucno izabere smjenu za pregled, dok ne promijeni dijete
 let scheduleData = null;
 let unsubscribeSnapshot = null;
+let predmetiList = []; // zapamćeni nazivi predmeta (zajednički za svu djecu), za brzo dodavanje bez kucanja
+let unsubscribePredmeti = null;
 
 function escapeHtml(str) {
   return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
@@ -237,6 +255,30 @@ function initUI() {
   renderChildLabel();
   renderDayTabs();
   subscribeToChild(selectedChildId);
+  if (role === "parent") subscribePredmeti();
+}
+
+// Zajednička (za svu djecu) zapamćena lista predmeta - da se jednom unešen predmet ne kuca ponovo.
+function subscribePredmeti() {
+  if (unsubscribePredmeti) unsubscribePredmeti();
+  unsubscribePredmeti = db.collection("raspored").doc("_predmeti").onSnapshot(
+    (snap) => {
+      const lista = snap.exists && Array.isArray(snap.data().lista) ? snap.data().lista : [];
+      predmetiList = lista.slice().sort((a, b) => a.localeCompare(b, "sr"));
+      renderLists();
+    },
+    () => {
+      predmetiList = [];
+    }
+  );
+}
+
+function rememberPredmet(naziv) {
+  if (!naziv) return;
+  db.collection("raspored").doc("_predmeti").set(
+    { lista: firebase.firestore.FieldValue.arrayUnion(naziv) },
+    { merge: true }
+  );
 }
 
 function renderChildTabs() {
@@ -456,23 +498,40 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
     }
   }
 
+  if (isCasovi) {
+    const addCard = document.getElementById("casoviAddCard");
+    if (addCard) addCard.style.display = role === "parent" ? "block" : "none";
+  }
+
   if (role === "parent") {
     if (isCasovi) {
+      const chipsHtml = predmetiList.length
+        ? '<div class="subject-chips">' + predmetiList.map((p) =>
+            '<button type="button" class="subject-chip" data-predmet="' + escapeHtml(p) + '">' + escapeHtml(p) + '</button>'
+          ).join("") + '</div>'
+        : "";
       addRowEl.innerHTML =
+        chipsHtml +
         '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
         '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
         '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
         '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
         '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
         '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
-        '<button type="button">Dodaj</button>';
+        '<button type="button" class="submit-btn">Dodaj</button>';
+      addRowEl.querySelectorAll(".subject-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          document.getElementById(addRowElId + "_name").value = chip.dataset.predmet;
+          document.getElementById(addRowElId + "_name").focus();
+        });
+      });
     } else {
       addRowEl.innerHTML =
         '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
         '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
-        '<button type="button">Dodaj</button>';
+        '<button type="button" class="submit-btn">Dodaj</button>';
     }
-    addRowEl.querySelector("button").addEventListener("click", () => addEntry(field, addRowElId));
+    addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry(field, addRowElId));
     const nameInput = document.getElementById(addRowElId + "_name");
     nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEntry(field, addRowElId); });
   } else {
@@ -509,6 +568,7 @@ function addEntry(field, addRowElId) {
   const current = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
   const updated = current.concat([novaStavka]);
   saveField(field, updated);
+  if (field === "casovi") rememberPredmet(naziv);
 }
 
 function deleteEntry(field, index) {
