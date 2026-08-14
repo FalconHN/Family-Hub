@@ -249,6 +249,11 @@
       <div class="week-grid" id="weekGrid"></div>
     </div>
 
+    <div class="card week-grid-card">
+      <div class="section-title">Obaveze</div>
+      <div class="week-grid" id="obavezeWeekGrid"></div>
+    </div>
+
     <div class="cards-row">
       <div class="casovi-col">
         <div class="card" id="casoviAddCard" style="display:none;">
@@ -261,14 +266,13 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="section-title">Obaveze</div>
+      <div class="card" id="obavezeAddCard" style="display:none;">
+        <div class="section-title">Dodaj obavezu</div>
         <div class="day-select-row">
           <span class="day-select-label">Dan</span>
           <select class="day-select" id="daySelectObaveze"></select>
         </div>
-        <div id="obavezeList"></div>
-        <div class="add-row" id="obavezeAddRow"></div>
+        <div id="obavezeAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
       </div>
     </div>
   </div>
@@ -646,9 +650,13 @@ function renderShiftBanner() {
     el.className = "shift-banner active-ok";
     el.innerHTML = '<span>Ovo je trenutno aktivna smjena za ' + escapeHtml(childName) + '.</span>';
   } else {
+    // Napomena: prije je ovdje pisalo "[dijete] trenutno vidi drugu smjenu", što je zbunjujuće
+    // zvučalo kao da JE druga smjena već aktivna (jer je tab doslovno "Druga smjena"). Sad
+    // eksplicitno imenujemo koju smjenu dijete STVARNO trenutno vidi, da ne bi bilo zabune.
+    const activeLabel = (SMJENE.find((s) => s.key === scheduleData.aktivnaSmjena) || {}).label || "";
     el.className = "shift-banner";
     el.innerHTML =
-      '<span>' + escapeHtml(childName) + ' trenutno vidi drugu smjenu. Ti uređuješ: ' + escapeHtml(viewingLabel) + '.</span>' +
+      '<span>' + escapeHtml(childName) + ' trenutno vidi: <strong>' + escapeHtml(activeLabel) + '</strong>. Ti sada uređuješ: <strong>' + escapeHtml(viewingLabel) + '</strong> — dijete neće vidjeti ove izmjene dok ne aktiviraš ovu smjenu.</span>' +
       '<button type="button" id="activateSmjenaBtn">Aktiviraj ovu smjenu</button>';
     document.getElementById("activateSmjenaBtn").addEventListener("click", activateSelectedSmjena);
   }
@@ -663,10 +671,12 @@ let obavezeAddRowContext = null;
 
 function renderLists() {
   renderWeekGrid();
-  renderEntryList("obaveze", "obavezeList");
+  renderObavezeWeekGrid();
 
   const addCard = document.getElementById("casoviAddCard");
   if (addCard) addCard.style.display = role === "parent" ? "block" : "none";
+  const obavezeAddCard = document.getElementById("obavezeAddCard");
+  if (obavezeAddCard) obavezeAddCard.style.display = role === "parent" ? "block" : "none";
 
   const casoviAddRowEl = document.getElementById("casoviAddRow");
   const obavezeAddRowEl = document.getElementById("obavezeAddRow");
@@ -715,6 +725,24 @@ function sortedCasoviIndexed(entries) {
   return indexed;
 }
 
+// Vrijeme obaveze je slobodan tekst (npr. "17:00", ali i "poslije škole") - pokušavamo da
+// prepoznamo HH:MM na početku radi sortiranja; ono što ne liči na vrijeme ide na kraj dana.
+function obavezaSortMinutes(vrijeme) {
+  const m = /^\s*(\d{1,2}):(\d{2})/.exec(vrijeme || "");
+  if (!m) return Infinity;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+function sortedObavezeIndexed(entries) {
+  const indexed = entries.map((e, i) => ({ e: e, i: i }));
+  indexed.sort((a, b) => {
+    const vA = obavezaSortMinutes(a.e.vrijeme);
+    const vB = obavezaSortMinutes(b.e.vrijeme);
+    if (vA !== vB) return vA - vB;
+    return a.i - b.i;
+  });
+  return indexed;
+}
+
 // Sedmični pregled - stubovi po danu (kao sto je uradjeno sa bojama mjerila u potrosnja-vode.html),
 // svaki dan ima svoju boju koja se koristi za akcenat kartice i naslov kolone.
 function renderWeekGrid() {
@@ -758,6 +786,138 @@ function renderWeekGrid() {
   wrap.querySelectorAll(".week-cas-card").forEach((card) => {
     card.addEventListener("click", () => openCasDetail(card.dataset.day, parseInt(card.dataset.index, 10)));
   });
+}
+
+// Isti "sedmični pregled" raspored kao za časove, samo za obaveze (koje imaju samo vrijeme i
+// naziv - bez broja/učionice/napomene). Kartica za dodavanje ("Dodaj obavezu") je odvojena od
+// ovog pregleda, isto kao što je urađeno i za časove.
+function renderObavezeWeekGrid() {
+  const wrap = document.getElementById("obavezeWeekGrid");
+  if (!wrap) return;
+  if (!scheduleData) {
+    wrap.innerHTML = '<div class="week-day-empty">Učitavanje...</div>';
+    return;
+  }
+
+  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {}, obaveze: {} };
+
+  wrap.innerHTML = DAYS.map((d) => {
+    const entries = (smjenaData.obaveze && smjenaData.obaveze[d.key]) || [];
+    const indexed = sortedObavezeIndexed(entries);
+    const cardsHtml =
+      indexed.length === 0
+        ? '<div class="week-day-empty">Nema obaveza.</div>'
+        : indexed.map(({ e, i }) => {
+            return (
+              '<div class="week-cas-card week-obaveza-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
+                (e.vrijeme ? '<div class="week-cas-time" style="color:' + d.color + ';">' + escapeHtml(e.vrijeme) + '</div>' : "") +
+                '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
+              '</div>'
+            );
+          }).join("");
+    return (
+      '<div class="week-day-col">' +
+        '<div class="week-day-header"><span class="week-day-dot" style="background:' + d.color + ';"></span><span class="week-day-name">' + d.short + '</span></div>' +
+        cardsHtml +
+      '</div>'
+    );
+  }).join("");
+
+  wrap.querySelectorAll(".week-obaveza-card").forEach((card) => {
+    card.addEventListener("click", () => openObavezaDetail(card.dataset.day, parseInt(card.dataset.index, 10)));
+  });
+}
+
+function openObavezaDetail(dayKey, idx) {
+  renderObavezaDetailModal(dayKey, idx, "view");
+  document.getElementById("detailOverlay").style.display = "flex";
+}
+
+function renderObavezaDetailModal(dayKey, idx, mode) {
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const entries = (smjenaData.obaveze && smjenaData.obaveze[dayKey]) || [];
+  const e = entries[idx];
+  const modal = document.getElementById("detailModal");
+  if (!e) {
+    modal.innerHTML = "";
+    return;
+  }
+  const day = DAYS.find((d) => d.key === dayKey);
+
+  if (mode === "edit" && role === "parent") {
+    modal.innerHTML =
+      '<div class="detail-header">' +
+        '<span class="detail-title">Izmijeni obavezu</span>' +
+        '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
+      '</div>' +
+      '<input type="text" class="detail-field" placeholder="Vrijeme (npr. 17:00)" value="' + escapeHtml(e.vrijeme || "") + '" id="detailEdit_obVrijeme" />' +
+      '<input type="text" class="detail-field" placeholder="Naziv obaveze" value="' + escapeHtml(e.naziv || "") + '" id="detailEdit_obNaziv" />' +
+      '<div class="detail-btn-row">' +
+        '<button type="button" class="detail-save-btn" id="detailSaveBtn">Sačuvaj</button>' +
+        '<button type="button" class="detail-cancel-btn" id="detailCancelBtn">Otkaži</button>' +
+      '</div>';
+
+    document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
+    document.getElementById("detailCancelBtn").addEventListener("click", () => renderObavezaDetailModal(dayKey, idx, "view"));
+    document.getElementById("detailSaveBtn").addEventListener("click", () => {
+      const naziv = document.getElementById("detailEdit_obNaziv").value.trim();
+      if (!naziv) return;
+      const updatedEntry = {
+        vrijeme: document.getElementById("detailEdit_obVrijeme").value.trim(),
+        naziv: naziv,
+      };
+      updateObavezaForDay(dayKey, idx, updatedEntry);
+      closeCasDetail();
+    });
+    return;
+  }
+
+  modal.innerHTML =
+    '<div class="detail-header">' +
+      '<span class="detail-title">' + escapeHtml(e.naziv) + '</span>' +
+      '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
+    '</div>' +
+    '<div class="detail-prop"><span class="detail-prop-label">Dan</span><span class="detail-prop-value">' + escapeHtml(day ? day.label : "") + '</span></div>' +
+    '<div class="detail-prop"><span class="detail-prop-label">Vrijeme</span><span class="detail-prop-value">' + (e.vrijeme ? escapeHtml(e.vrijeme) : "–") + '</span></div>' +
+    (role === "parent"
+      ? '<div class="detail-btn-row">' +
+          '<button type="button" class="detail-edit-btn" id="detailEditBtn">Izmijeni</button>' +
+          '<button type="button" class="detail-delete-btn" id="detailDeleteBtn">Obriši</button>' +
+        '</div>'
+      : "");
+
+  document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
+  if (role === "parent") {
+    document.getElementById("detailEditBtn").addEventListener("click", () => renderObavezaDetailModal(dayKey, idx, "edit"));
+    document.getElementById("detailDeleteBtn").addEventListener("click", () => {
+      deleteObavezaForDay(dayKey, idx);
+      closeCasDetail();
+    });
+  }
+}
+
+function deleteObavezaForDay(dayKey, index) {
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const current = (smjenaData.obaveze && smjenaData.obaveze[dayKey]) || [];
+  const updated = current.slice();
+  updated.splice(index, 1);
+  const payload = { smjene: {} };
+  payload.smjene[selectedSmjena] = {};
+  payload.smjene[selectedSmjena].obaveze = {};
+  payload.smjene[selectedSmjena].obaveze[dayKey] = updated;
+  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
+}
+
+function updateObavezaForDay(dayKey, index, updatedEntry) {
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const current = (smjenaData.obaveze && smjenaData.obaveze[dayKey]) || [];
+  const updated = current.slice();
+  updated[index] = updatedEntry;
+  const payload = { smjene: {} };
+  payload.smjene[selectedSmjena] = {};
+  payload.smjene[selectedSmjena].obaveze = {};
+  payload.smjene[selectedSmjena].obaveze[dayKey] = updated;
+  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
 }
 
 function openCasDetail(dayKey, idx) {
@@ -889,63 +1049,6 @@ function updateEntryForDay(dayKey, index, updatedEntry) {
   payload.smjene[selectedSmjena].casovi = {};
   payload.smjene[selectedSmjena].casovi[dayKey] = updated;
   db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
-}
-
-function renderEntryList(field, listElId) {
-  const listEl = document.getElementById(listElId);
-  const isCasovi = field === "casovi";
-
-  if (!scheduleData) {
-    listEl.innerHTML = '<div class="entry-empty">Učitavanje...</div>';
-    return;
-  }
-
-  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {}, obaveze: {} };
-  const entries = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
-
-  // Za casove sortiramo po broju casa radi preglednosti, cuvajuci pravi indeks u nizu (za brisanje).
-  const indexed = entries.map((e, i) => ({ e: e, i: i }));
-  if (isCasovi) {
-    indexed.sort((a, b) => {
-      const brA = a.e.broj !== undefined && a.e.broj !== "" && !isNaN(parseFloat(a.e.broj)) ? parseFloat(a.e.broj) : Infinity;
-      const brB = b.e.broj !== undefined && b.e.broj !== "" && !isNaN(parseFloat(b.e.broj)) ? parseFloat(b.e.broj) : Infinity;
-      if (brA !== brB) return brA - brB;
-      return a.i - b.i;
-    });
-  }
-
-  if (entries.length === 0) {
-    listEl.innerHTML = '<div class="entry-empty">Nema unešenih stavki za ovaj dan.</div>';
-    return;
-  }
-
-  listEl.innerHTML = indexed.map(({ e, i }) => {
-    const timeHtml = isCasovi
-      ? '<span class="entry-time">' +
-          (e.broj ? '<span class="cas-broj">' + escapeHtml(e.broj) + '. čas</span>' : "") +
-          (formatCasTime(e) ? '<span class="cas-time">' + escapeHtml(formatCasTime(e)) + '</span>' : "") +
-        '</span>'
-      : '<span class="entry-time">' + escapeHtml(e.vrijeme) + '</span>';
-    const subLines = isCasovi
-      ? (e.ucionica ? '<span class="entry-sub">Učionica: ' + escapeHtml(e.ucionica) + '</span>' : "") +
-        (e.napomena ? '<span class="entry-sub entry-note">' + escapeHtml(e.napomena) + '</span>' : "")
-      : "";
-    return (
-      '<div class="entry-row">' +
-        timeHtml +
-        '<span class="entry-name">' + escapeHtml(e.naziv) + subLines + '</span>' +
-        (role === "parent" ? '<button type="button" class="entry-del" data-field="' + field + '" data-index="' + i + '" aria-label="Obriši">' + trashIcon() + '</button>' : "") +
-      '</div>'
-    );
-  }).join("");
-
-  if (role === "parent") {
-    listEl.querySelectorAll(".entry-del").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        deleteEntry(btn.dataset.field, parseInt(btn.dataset.index, 10));
-      });
-    });
-  }
 }
 
 // Gradi "kostur" forme za dodavanje časa SAMO kad se promijeni kontekst (dijete/smjena/dan) -
@@ -1205,14 +1308,6 @@ function addEntry(field, addRowElId) {
   nameEl.value = "";
   nameEl.focus();
   if (field === "casovi") renderPredmetDropdown(addRowElId, { forceOpen: true });
-}
-
-function deleteEntry(field, index) {
-  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
-  const current = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
-  const updated = current.slice();
-  updated.splice(index, 1);
-  saveField(field, updated);
 }
 
 function saveField(field, updatedDayArray) {
