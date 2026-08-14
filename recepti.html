@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Recepti</title>
+<meta name="theme-color" content="#F5F3EE" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Recepti" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#F5F3EE; height:100%; }
+  #root { min-height:100%; }
+  * { -webkit-tap-highlight-color: transparent; }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
+    authDomain: "family-hub-m.firebaseapp.com",
+    projectId: "family-hub-m",
+    storageBucket: "family-hub-m.firebasestorage.app",
+    messagingSenderId: "267839729754",
+    appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
+  };
+  firebase.initializeApp(firebaseConfig);
+  // Auth guard: bounce to login page if not signed in.
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo (isto kao
+    // shopping-list.html - Recepti su za sada samo za roditelje).
+    firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
+      const role = (snap.exists && snap.data().role) || 'parent';
+      if (role === 'child') {
+        window.location.href = "raspored.html";
+        return;
+      }
+      if (typeof window.fhApplyRole === 'function') window.fhApplyRole(role);
+    }).catch(() => { /* ako upit ne uspije, ne blokiramo postojeci pristup */ });
+  });
+  // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
+  window.fhLogout = function () {
+    firebase.auth().signOut().catch(() => {}).finally(() => {
+      window.location.href = "index.html";
+    });
+  };
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/plain" id="app-source-code">
+const { useState, useEffect, useRef } = React;
+
+// Firestore is used directly below for shared, real-time sync (isti obrazac kao shopping-list.html:
+// jedan zajednicki dokument, polje sa nizom snimljeno kao JSON string).
+const db = firebase.firestore();
+const sharedDocRef = db.collection('recepti').doc('shared');
+
+const DEFAULT_CATEGORIES = ["Doručak", "Ručak", "Večera", "Dezert", "Užina"];
+
+// Cloudinary - besplatan servis za čuvanje slika koje korisnici otpremaju sa telefona/računara
+// (bez kartice/naplate, sam po sebi CDN-uje i optimizuje slike). "Unsigned" upload preset znači
+// da se otpremanje radi direktno iz browsera bez tajnog ključa.
+const CLOUDINARY_CLOUD_NAME = "family-hub";
+const CLOUDINARY_UPLOAD_PRESET = "recepti";
+
+async function uploadImageToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD_NAME + "/image/upload", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error("Cloudinary upload failed with status " + res.status);
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("Cloudinary upload response missing secure_url");
+  return data.secure_url;
+}
+
+function uid() {
+  return Date.now().toString() + Math.random().toString(36).slice(2, 8);
+}
+
+function emptyRecipeForm() {
+  return {
+    id: null,
+    naziv: "",
+    kategorija: "",
+    slikaUrl: "",
+    videoUrl: "",
+    sastojci: [""],
+    priprema: "",
+  };
+}
+
+const CATEGORY_COLORS = [
+  { bg: "#DCEFE3", text: "#1F7A52" },
+  { bg: "#E3ECF5", text: "#2F6690" },
+  { bg: "#F3E8D9", text: "#B8895E" },
+  { bg: "#EEE3F0", text: "#8E6C9E" },
+  { bg: "#F5E1DC", text: "#C97B63" },
+  { bg: "#E6F1F2", text: "#007991" },
+];
+function colorForCategory(name) {
+  if (!name) return { bg: "#EAE6DC", text: "#8A8578" };
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
+}
+
+function CategoryTag({ label }) {
+  if (!label) return null;
+  const c = colorForCategory(label);
+  return (
+    <span style={{ background: c.bg, color: c.text, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+      {label}
+    </span>
+  );
+}
+
+// Prilagođena (custom) padajuća lista - zamjena za ugrađeni <datalist>, koji na iPhone/Safari-ju
+// ne prikazuje ponuđene opcije (kucanje inače radi normalno). Isti obrazac kao u ostalim
+// aplikacijama (raspored.html, shopping-list.html).
+function AutocompleteInput({ value, onChange, options, placeholder, style, onKeyDown, onBlur, autoFocus }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  const q = (value || "").trim().toLowerCase();
+  const filtered = q === "" ? options : options.filter((o) => o.toLowerCase().includes(q));
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        position: "relative",
+        width: style && style.width ? undefined : "100%",
+        flex: style && style.flex ? style.flex : undefined,
+      }}
+    >
+      <input
+        autoFocus={autoFocus}
+        autoComplete="off"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+          if (onKeyDown) onKeyDown(e);
+        }}
+        onBlur={(e) => { setOpen(false); if (onBlur) onBlur(e); }}
+        style={{ width: "100%", boxSizing: "border-box", ...style }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30, background: "#fff", border: "1px solid #E6E1D8", borderRadius: 8, marginTop: 3, maxHeight: 190, overflowY: "auto", boxShadow: "0 8px 20px -8px rgba(27,58,74,0.3)" }}>
+          {filtered.map((o) => (
+            <div
+              key={o}
+              onMouseDown={(e) => { e.preventDefault(); onChange(o); setOpen(false); }}
+              style={{ padding: "8px 10px", fontSize: 13.5, color: "#0F222B", cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#FAF8F4"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function chefHatIcon(size) {
+  const s = size || 40;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#C9C3B5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+      <path d="M6 17h12"/>
+    </svg>
+  );
+}
+function playIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  );
+}
+function cartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+    </svg>
+  );
+}
+function pencilIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
+}
+function trashIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>;
+}
+function xIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}
+function uploadIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  );
+}
+
+function RecipeApp() {
+  const [recipes, setRecipes] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Sve");
+  const [detailId, setDetailId] = useState(null);
+  const [form, setForm] = useState(null); // null = no form open, object = editing/adding
+  const [toast, setToast] = useState("");
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  const lastSentRecipes = useRef(null);
+  const saveTimer = useRef(null);
+  const toastTimer = useRef(null);
+
+  useEffect(() => {
+    const unsub = sharedDocRef.onSnapshot(
+      (snap) => {
+        if (snap.exists) {
+          const data = snap.data() || {};
+          if (typeof data.recepti === "string" && data.recepti !== lastSentRecipes.current) {
+            try {
+              const parsed = JSON.parse(data.recepti);
+              if (Array.isArray(parsed)) {
+                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", order: i, ...r })));
+              }
+            } catch (e) {}
+          }
+        } else {
+          sharedDocRef.set({ recepti: JSON.stringify([]) });
+        }
+        setLoaded(true);
+      },
+      (err) => {
+        console.error("Firestore sync error", err);
+        setLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const json = JSON.stringify(recipes);
+      lastSentRecipes.current = json;
+      sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => console.error("Failed to save recepti", e));
+    }, 400);
+    return () => clearTimeout(saveTimer.current);
+  }, [recipes, loaded]);
+
+  function showToast(msg) {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 3000);
+  }
+
+  const knownCategories = Array.from(
+    new Set([...DEFAULT_CATEGORIES, ...recipes.map((r) => r.kategorija).filter(Boolean)])
+  ).sort((a, b) => a.localeCompare(b, "sr"));
+
+  const allCategoriesForFilter = ["Sve", ...knownCategories];
+
+  const visibleRecipes = recipes
+    .filter((r) => (categoryFilter === "Sve" ? true : r.kategorija === categoryFilter))
+    .filter((r) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      if (r.naziv.toLowerCase().includes(q)) return true;
+      return (r.sastojci || []).some((s) => (s || "").toLowerCase().includes(q));
+    })
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  function openAddForm() {
+    setForm(emptyRecipeForm());
+  }
+  function openEditForm(recipe) {
+    setForm({ ...recipe, sastojci: recipe.sastojci && recipe.sastojci.length ? recipe.sastojci.slice() : [""] });
+    setDetailId(null);
+  }
+  function closeForm() {
+    setForm(null);
+  }
+  function saveForm() {
+    const naziv = (form.naziv || "").trim();
+    if (!naziv) return;
+    const cleanSastojci = (form.sastojci || []).map((s) => (s || "").trim()).filter(Boolean);
+    const cleaned = {
+      id: form.id || uid(),
+      naziv: naziv,
+      kategorija: (form.kategorija || "").trim(),
+      slikaUrl: (form.slikaUrl || "").trim(),
+      videoUrl: (form.videoUrl || "").trim(),
+      sastojci: cleanSastojci,
+      priprema: (form.priprema || "").trim(),
+    };
+    setRecipes((prev) => {
+      const existingIdx = prev.findIndex((r) => r.id === cleaned.id);
+      if (existingIdx >= 0) {
+        const next = prev.slice();
+        next[existingIdx] = { ...prev[existingIdx], ...cleaned };
+        return next;
+      }
+      const maxOrder = prev.reduce((m, r) => Math.max(m, r.order || 0), 0);
+      return prev.concat([{ ...cleaned, order: maxOrder + 1 }]);
+    });
+    setForm(null);
+  }
+  function deleteRecipe(id) {
+    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    if (detailId === id) setDetailId(null);
+  }
+
+  async function addIngredientsToShoppingList(recipe) {
+    if (!recipe.sastojci || recipe.sastojci.length === 0) {
+      showToast("Ovaj recept nema unešene sastojke.");
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      const shoppingRef = db.collection("shopping-list").doc("shared");
+      const snap = await shoppingRef.get();
+      const data = snap.exists ? snap.data() : {};
+      let items = [];
+      if (typeof data.items === "string") {
+        try {
+          const parsed = JSON.parse(data.items);
+          if (Array.isArray(parsed)) items = parsed;
+        } catch (e) {}
+      }
+      const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
+      const newItems = recipe.sastojci.map((naziv, i) => ({
+        id: uid() + i,
+        name: naziv,
+        quantity: 1,
+        store: "",
+        category: "",
+        price: 0,
+        note: "",
+        purchased: false,
+        order: maxOrder + i + 1,
+      }));
+      const updated = items.concat(newItems);
+      await shoppingRef.set({ items: JSON.stringify(updated) }, { merge: true });
+      showToast("Sastojci (" + newItems.length + ") dodati u kupovinu!");
+    } catch (e) {
+      console.error("Failed to add ingredients to shopping list", e);
+      showToast("Nije uspjelo dodavanje u kupovinu. Pokušaj ponovo.");
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  const detailRecipe = detailId ? recipes.find((r) => r.id === detailId) : null;
+
+  return (
+    <div style={{ background: "#F5F3EE", minHeight: "100%", color: "#0F222B", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 960, margin: "0 auto", padding: "28px 14px 60px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+            <path d="M6 17h12"/>
+          </svg>
+          <div>
+            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 700, color: "#0F222B", letterSpacing: "-0.02em", margin: 0 }}>Recepti</h1>
+            <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2 }}>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</div>
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 14, padding: 16, boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)", marginBottom: 16 }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pretraži po nazivu ili sastojku..."
+            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", outline: "none", marginBottom: 12 }}
+          />
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+            {allCategoriesForFilter.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategoryFilter(c)}
+                style={{
+                  flex: "0 0 auto", padding: "7px 14px", borderRadius: 999, border: "1px solid " + (c === categoryFilter ? "#007991" : "#E6E1D8"),
+                  background: c === categoryFilter ? "#007991" : "#fff", color: c === categoryFilter ? "#fff" : "#8A8578",
+                  fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button
+            type="button"
+            onClick={openAddForm}
+            style={{ background: "#007991", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            + Dodaj recept
+          </button>
+        </div>
+
+        {!loaded ? (
+          <div style={{ color: "#8A8578", fontSize: 14, padding: "20px 4px" }}>Učitavanje...</div>
+        ) : visibleRecipes.length === 0 ? (
+          <div style={{ color: "#8A8578", fontSize: 14, padding: "30px 4px", textAlign: "center" }}>
+            {recipes.length === 0 ? "Još nema dodanih recepata." : "Nema recepata koji odgovaraju pretrazi."}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14 }}>
+            {visibleRecipes.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => setDetailId(r.id)}
+                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)" }}
+              >
+                <div style={{ width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {r.slikaUrl ? (
+                    <img
+                      src={r.slikaUrl}
+                      alt={r.naziv}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => { e.target.style.display = "none"; e.target.parentElement.dataset.broken = "1"; }}
+                    />
+                  ) : (
+                    chefHatIcon(36)
+                  )}
+                </div>
+                <div style={{ padding: "10px 12px 12px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14.5, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                    <CategoryTag label={r.kategorija} />
+                    <span style={{ color: "#8A8578", fontSize: 12 }}>{(r.sastojci || []).length} sastojaka</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {toast && (
+        <div style={{ position: "fixed", left: "50%", bottom: 24, transform: "translateX(-50%)", background: "#1F7A52", color: "#fff", padding: "10px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 600, boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)", zIndex: 100 }}>
+          {toast}
+        </div>
+      )}
+
+      {detailRecipe && !form && (
+        <RecipeDetailModal
+          recipe={detailRecipe}
+          onClose={() => setDetailId(null)}
+          onEdit={() => openEditForm(detailRecipe)}
+          onDelete={() => deleteRecipe(detailRecipe.id)}
+          onAddToCart={() => addIngredientsToShoppingList(detailRecipe)}
+          addingToCart={addingToCart}
+        />
+      )}
+
+      {form && (
+        <RecipeFormModal
+          form={form}
+          setForm={setForm}
+          onSave={saveForm}
+          onCancel={closeForm}
+          knownCategories={knownCategories}
+          isNew={!recipes.some((r) => r.id === form.id)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, addingToCart }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)" }}
+      >
+        <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          {recipe.slikaUrl ? (
+            <img
+              src={recipe.slikaUrl}
+              alt={recipe.naziv}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ) : (
+            chefHatIcon(48)
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: "50%", background: "rgba(15,34,43,0.55)", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+
+        <div style={{ padding: "18px 20px 24px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 600, color: "#0F222B", lineHeight: 1.25 }}>{recipe.naziv}</div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <CategoryTag label={recipe.kategorija} />
+          </div>
+
+          {recipe.videoUrl && (
+            <a
+              href={recipe.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#0F222B", color: "#fff", textDecoration: "none", padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, marginBottom: 18 }}
+            >
+              {playIcon()} Pogledaj video
+            </a>
+          )}
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: "#0F222B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>Sastojci</div>
+            {(recipe.sastojci || []).length === 0 ? (
+              <div style={{ color: "#8A8578", fontSize: 13.5 }}>Nema unešenih sastojaka.</div>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#3A362E", fontSize: 14, lineHeight: 1.7 }}>
+                {recipe.sastojci.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {recipe.priprema && (
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: "#0F222B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>Priprema</div>
+              <div style={{ color: "#3A362E", fontSize: 14, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{recipe.priprema}</div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={onAddToCart}
+            disabled={addingToCart}
+            style={{ width: "100%", background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 700, fontSize: 14.5, cursor: addingToCart ? "default" : "pointer", opacity: addingToCart ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit", marginBottom: 12 }}
+          >
+            {cartIcon()} {addingToCart ? "Dodavanje..." : "Dodaj sve sastojke u kupovinu"}
+          </button>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              type="button"
+              onClick={onEdit}
+              style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "10px 12px", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" }}
+            >
+              {pencilIcon()} Izmijeni
+            </button>
+            {!confirmDelete ? (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                style={{ flex: 1, background: "#fff", color: "#B3413E", border: "1px solid #E4DFD3", borderRadius: 10, padding: "10px 12px", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" }}
+              >
+                {trashIcon()} Obriši
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onDelete}
+                style={{ flex: 1, background: "#B3413E", color: "#fff", border: "1px solid #B3413E", borderRadius: 10, padding: "10px 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Potvrdi brisanje
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isNew }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
+
+  function updateField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // omogući ponovni odabir istog fajla ako upload ne uspije
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      updateField("slikaUrl", url);
+    } catch (err) {
+      console.error("Cloudinary upload failed", err);
+      setUploadError("Otpremanje slike nije uspjelo. Probaj ponovo ili zalijepi link ručno.");
+    } finally {
+      setUploading(false);
+    }
+  }
+  function updateSastojak(idx, value) {
+    setForm((prev) => {
+      const next = prev.sastojci.slice();
+      next[idx] = value;
+      return { ...prev, sastojci: next };
+    });
+  }
+  function removeSastojak(idx) {
+    setForm((prev) => {
+      const next = prev.sastojci.slice();
+      next.splice(idx, 1);
+      if (next.length === 0) next.push("");
+      return { ...prev, sastojci: next };
+    });
+  }
+  function addSastojak() {
+    setForm((prev) => ({ ...prev, sastojci: prev.sastojci.concat([""]) }));
+  }
+
+  const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9, border: "1px solid #E4DFD3", fontSize: 14, fontFamily: "inherit", color: "#0F222B", background: "#fff" };
+  const labelStyle = { fontWeight: 700, fontSize: 12.5, color: "#0F222B", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.3 };
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: "#0F222B" }}>{isNew ? "Dodaj recept" : "Izmijeni recept"}</div>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0EDE4", color: "#0F222B", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Naziv</label>
+          <input type="text" value={form.naziv} onChange={(e) => updateField("naziv", e.target.value)} placeholder="Naziv recepta" style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Kategorija</label>
+          <AutocompleteInput
+            value={form.kategorija}
+            onChange={(v) => updateField("kategorija", v)}
+            options={knownCategories}
+            placeholder="Kategorija (upiši ili izaberi)"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Slika</label>
+          <input type="text" value={form.slikaUrl} onChange={(e) => updateField("slikaUrl", e.target.value)} placeholder="https://... (ili otpremi ispod)" style={inputStyle} />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} style={{ display: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              disabled={uploading}
+              style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: uploading ? "default" : "pointer", fontFamily: "inherit", opacity: uploading ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 }}
+            >
+              {uploadIcon()} {uploading ? "Otpremanje..." : "Otpremi sliku"}
+            </button>
+            {form.slikaUrl && (
+              <div style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "#F0EDE4", flexShrink: 0 }}>
+                <img src={form.slikaUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
+              </div>
+            )}
+          </div>
+          {uploadError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 6 }}>{uploadError}</div>}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Video (URL)</label>
+          <input type="text" value={form.videoUrl} onChange={(e) => updateField("videoUrl", e.target.value)} placeholder="https://..." style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Sastojci</label>
+          {form.sastojci.map((s, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                type="text"
+                value={s}
+                onChange={(e) => updateSastojak(i, e.target.value)}
+                placeholder={"Sastojak " + (i + 1)}
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={() => removeSastojak(i)}
+                style={{ flexShrink: 0, width: 38, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {xIcon()}
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addSastojak}
+            style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            + Dodaj sastojak
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Priprema</label>
+          <textarea
+            value={form.priprema}
+            onChange={(e) => updateField("priprema", e.target.value)}
+            placeholder="Koraci pripreme..."
+            rows={5}
+            style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "12px 12px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Otkaži
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            style={{ flex: 1, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "12px 12px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Sačuvaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<RecipeApp />);
+</script>
+<script>
+  const __src = document.getElementById('app-source-code').textContent;
+  const __out = Babel.transform(__src, { presets: [["react", { runtime: "classic" }]] }).code;
+  const __script = document.createElement('script');
+  __script.textContent = __out;
+  document.body.appendChild(__script);
+</script>
+<script src="nav-bar.js"></script>
+</body>
+</html>
