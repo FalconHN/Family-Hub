@@ -517,7 +517,7 @@ function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, add
   return (
     <div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -673,7 +673,7 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
   return (
     <div
       onClick={onCancel}
-      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 }}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
