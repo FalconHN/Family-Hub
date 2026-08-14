@@ -14,8 +14,6 @@
   html, body { margin:0; padding:0; background:#F5F3EE; height:100%; overflow-x: hidden; }
   #root { min-height:100%; overflow-x: hidden; }
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-  .cat-scroll { scrollbar-width: none; -ms-overflow-style: none; }
-  .cat-scroll::-webkit-scrollbar { display: none; height: 0; }
 </style>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -269,6 +267,7 @@ function RecipeApp() {
       },
       (err) => {
         console.error("Firestore sync error", err);
+        showToast("Greška pri učitavanju recepata (" + (err && err.code ? err.code : "provjeri internet") + ").");
         setLoaded(true);
       }
     );
@@ -281,7 +280,11 @@ function RecipeApp() {
     saveTimer.current = setTimeout(() => {
       const json = JSON.stringify(recipes);
       lastSentRecipes.current = json;
-      sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => console.error("Failed to save recepti", e));
+      sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => {
+        console.error("Failed to save recepti", e);
+        lastSentRecipes.current = null; // ne blokiraj ponovni pokušaj kasnije ako se doc ipak promijeni
+        showToast("Snimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + "). Recept NIJE sačuvan trajno — provjeri internet ili se javi.");
+      });
     }, 400);
     return () => clearTimeout(saveTimer.current);
   }, [recipes, loaded]);
@@ -404,34 +407,6 @@ function RecipeApp() {
           </div>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 14, padding: 16, boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)", marginBottom: 16 }}>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pretraži po nazivu ili sastojku..."
-            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", outline: "none", marginBottom: 12 }}
-          />
-          <div style={{ position: "relative" }}>
-            <div className="cat-scroll" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
-              {allCategoriesForFilter.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCategoryFilter(c)}
-                  style={{
-                    flex: "0 0 auto", padding: "7px 14px", borderRadius: 999, border: "1px solid " + (c === categoryFilter ? "#007991" : "#E6E1D8"),
-                    background: c === categoryFilter ? "#007991" : "#fff", color: c === categoryFilter ? "#fff" : "#8A8578",
-                    fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                  }}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-            <div style={{ position: "absolute", top: 0, right: 0, bottom: 2, width: 26, background: "linear-gradient(to right, rgba(255,255,255,0), #fff)", pointerEvents: "none" }} />
-          </div>
-        </div>
-
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
           <button
             type="button"
@@ -440,6 +415,24 @@ function RecipeApp() {
           >
             + Dodaj recept
           </button>
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 14, padding: 16, boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)", marginBottom: 16 }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pretraži po nazivu ili sastojku..."
+            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", outline: "none", marginBottom: 12 }}
+          />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", color: "#0F222B", outline: "none" }}
+          >
+            {allCategoriesForFilter.map((c) => (
+              <option key={c} value={c}>{c === "Sve" ? "Sve kategorije" : c}</option>
+            ))}
+          </select>
         </div>
 
         {!loaded ? (
