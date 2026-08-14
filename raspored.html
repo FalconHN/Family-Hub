@@ -79,19 +79,23 @@
   .entry-time .cas-broj { font-weight: 700; color: #007991; font-size: 13px; }
   .entry-time .cas-time { font-weight: 500; color: #8A8578; font-size: 12px; margin-top: 1px; }
   .entry-name { flex: 1; color: #0F222B; font-size: 14.5px; }
+  .entry-name .entry-sub { display: block; color: #8A8578; font-size: 12px; margin-top: 2px; }
+  .entry-name .entry-sub.entry-note { font-style: italic; }
   .entry-del { background: none; border: none; color: #B0524A; cursor: pointer; padding: 4px; display: flex; align-items: center; }
   .entry-empty { color: #8A8578; font-size: 13.5px; padding: 6px 0; }
 
   .add-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #E6E1D8; flex-wrap: wrap; }
-  .add-row input {
+  .add-row input, .add-row select {
     border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px; font-size: 14px;
     font-family: inherit; background: #FAF8F4; outline: none;
   }
-  .add-row input:focus { border-color: #007991; }
+  .add-row input:focus, .add-row select:focus { border-color: #007991; }
   .add-row input.time-input { width: 120px; flex: 0 0 auto; }
   .add-row input.broj-input { width: 60px; flex: 0 0 auto; text-align: center; }
-  .add-row input.od-do-input { width: 92px; flex: 0 0 auto; }
+  .add-row select.od-do-input { width: 100px; flex: 0 0 auto; }
+  .add-row input.room-input { width: 100px; flex: 0 0 auto; }
   .add-row input.name-input { flex: 1; min-width: 120px; }
+  .add-row input.note-input { flex: 1; min-width: 160px; }
   .add-row button {
     background: #007991; color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
     font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
@@ -396,6 +400,19 @@ function nextCasBroj(entries) {
   return String(max + 1);
 }
 
+// Generiše <option> listu vremena (06:00-22:00, na 5 minuta) da roditelj samo bira, ne kuca.
+function timeOptionsHtml(selected) {
+  const opts = ['<option value="">--:--</option>'];
+  for (let h = 6; h <= 22; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      if (h === 22 && m > 0) break;
+      const val = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+      opts.push('<option value="' + val + '"' + (val === selected ? " selected" : "") + '>' + val + '</option>');
+    }
+  }
+  return opts.join("");
+}
+
 function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceholder) {
   const listEl = document.getElementById(listElId);
   const addRowEl = document.getElementById(addRowElId);
@@ -431,10 +448,14 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
             (formatCasTime(e) ? '<span class="cas-time">' + escapeHtml(formatCasTime(e)) + '</span>' : "") +
           '</span>'
         : '<span class="entry-time">' + escapeHtml(e.vrijeme) + '</span>';
+      const subLines = isCasovi
+        ? (e.ucionica ? '<span class="entry-sub">Učionica: ' + escapeHtml(e.ucionica) + '</span>' : "") +
+          (e.napomena ? '<span class="entry-sub entry-note">' + escapeHtml(e.napomena) + '</span>' : "")
+        : "";
       return (
         '<div class="entry-row">' +
           timeHtml +
-          '<span class="entry-name">' + escapeHtml(e.naziv) + '</span>' +
+          '<span class="entry-name">' + escapeHtml(e.naziv) + subLines + '</span>' +
           (role === "parent" ? '<button type="button" class="entry-del" data-field="' + field + '" data-index="' + i + '" aria-label="Obriši">' + trashIcon() + '</button>' : "") +
         '</div>'
       );
@@ -452,9 +473,11 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
     if (isCasovi) {
       addRowEl.innerHTML =
         '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
-        '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
-        '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
+        '<select class="od-do-input" title="Od" id="' + addRowElId + '_od">' + timeOptionsHtml("") + '</select>' +
+        '<select class="od-do-input" title="Do" id="' + addRowElId + '_do">' + timeOptionsHtml("") + '</select>' +
         '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
+        '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
+        '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
         '<button type="button">Dodaj</button>';
     } else {
       addRowEl.innerHTML =
@@ -480,11 +503,15 @@ function addEntry(field, addRowElId) {
     const brojEl = document.getElementById(addRowElId + "_broj");
     const odEl = document.getElementById(addRowElId + "_od");
     const doEl = document.getElementById(addRowElId + "_do");
+    const ucionicaEl = document.getElementById(addRowElId + "_ucionica");
+    const napomenaEl = document.getElementById(addRowElId + "_napomena");
     novaStavka = {
       broj: brojEl.value.trim(),
-      od: odEl.value.trim(),
-      do: doEl.value.trim(),
+      od: odEl.value,
+      do: doEl.value,
       naziv: naziv,
+      ucionica: ucionicaEl.value.trim(),
+      napomena: napomenaEl.value.trim(),
     };
   } else {
     const timeEl = document.getElementById(addRowElId + "_time");
