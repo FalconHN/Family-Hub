@@ -131,12 +131,7 @@
   .detail-field { width: 100%; display: block; margin-top: 8px; }
   .detail-edit-row input:focus, .detail-field:focus { border-color: #007991; }
 
-  .predmet-select-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
-  .predmet-select-row select.predmet-select {
-    flex: 1; min-width: 160px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
-    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
-  }
-  .predmet-select-row select.predmet-select:focus { border-color: #007991; }
+  .predmet-manage-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
   .add-row .manage-link {
     background: none !important; border: none; color: #007991 !important; font-size: 12.5px; font-weight: 700; cursor: pointer;
     font-family: inherit; text-decoration: underline; padding: 4px 0 !important; white-space: nowrap;
@@ -863,27 +858,18 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
   }
 
   addRowEl.innerHTML =
-    '<div class="predmet-select-row">' +
-      '<select class="predmet-select" id="' + addRowElId + '_predmetSelect"></select>' +
+    '<div class="predmet-manage-row">' +
       '<button type="button" class="manage-link" id="' + addRowElId + '_toggleManage"></button>' +
     '</div>' +
     '<div id="' + addRowElId + '_managePanelWrap"></div>' +
     '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
     '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
     '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
-    '<input type="text" class="name-input" placeholder="Predmet" id="' + addRowElId + '_name" />' +
+    '<input type="text" class="name-input" placeholder="Predmet (upiši ili izaberi)" id="' + addRowElId + '_name" list="' + addRowElId + '_predmetOptions" autocomplete="off" />' +
+    '<datalist id="' + addRowElId + '_predmetOptions"></datalist>' +
     '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
     '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
     '<button type="button" class="submit-btn">Dodaj</button>';
-
-  const selectEl = document.getElementById(addRowElId + "_predmetSelect");
-  selectEl.addEventListener("change", () => {
-    if (selectEl.value) {
-      document.getElementById(addRowElId + "_name").value = selectEl.value;
-      document.getElementById(addRowElId + "_name").focus();
-    }
-    selectEl.value = "";
-  });
 
   document.getElementById(addRowElId + "_toggleManage").addEventListener("click", () => {
     predmetiPanelOpen = !predmetiPanelOpen;
@@ -900,14 +886,14 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
   refreshPredmetSelectAndPanel(addRowElId);
 }
 
-// Osvježava SAMO padajuću listu predmeta i panel za uređivanje - ne dira broj/od/do/predmet/učionicu/napomenu,
-// pa roditelj ne gubi ono što trenutno kuca kad se lista predmeta promijeni (npr. sa drugog uređaja).
+// Osvježava SAMO ponuđene predmete (datalist ispod polja "Predmet") i panel za uređivanje - ne dira
+// broj/od/do/predmet/učionicu/napomenu, pa roditelj ne gubi ono što trenutno kuca kad se lista
+// predmeta promijeni (npr. sa drugog uređaja). Polje "Predmet" je obično tekstualno polje sa
+// datalist-om: klik/kucanje nudi zapamćene predmete, ali se slobodno može upisati i potpuno nov naziv.
 function refreshPredmetSelectAndPanel(addRowElId) {
-  const selectEl = document.getElementById(addRowElId + "_predmetSelect");
-  if (selectEl) {
-    selectEl.innerHTML =
-      '<option value="">Izaberi predmet iz liste...</option>' +
-      predmetiList.map((p) => '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</option>').join("");
+  const datalistEl = document.getElementById(addRowElId + "_predmetOptions");
+  if (datalistEl) {
+    datalistEl.innerHTML = predmetiList.map((p) => '<option value="' + escapeHtml(p) + '"></option>').join("");
   }
 
   const toggleBtn = document.getElementById(addRowElId + "_toggleManage");
