@@ -16,6 +16,14 @@
   html, body { margin:0; padding:0; background:#F5F3EE; height:100%; }
   #root { min-height:100%; }
   * { -webkit-tap-highlight-color: transparent; }
+  input.no-spin-input::-webkit-outer-spin-button,
+  input.no-spin-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input.no-spin-input {
+    -moz-appearance: textfield;
+  }
 </style>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -486,6 +494,7 @@ function SmartShoppingList() {
         </span>
         <input
           type="number"
+          className="no-spin-input"
           min="0"
           value={it.quantity}
           onChange={(e) => updateItem(it.id, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
@@ -507,6 +516,7 @@ function SmartShoppingList() {
         />
         <input
           type="number"
+          className="no-spin-input"
           min="0"
           step="0.01"
           value={it.price}
