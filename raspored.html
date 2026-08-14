@@ -106,11 +106,30 @@
   .detail-prop-value { color: #0F222B; font-weight: 600; text-align: right; }
   .detail-note-title { font-size: 12px; font-weight: 700; color: #8A8578; text-transform: uppercase; letter-spacing: 0.03em; margin: 14px 0 6px; }
   .detail-note-body { font-size: 14px; color: #0F222B; background: #FAF8F4; border-radius: 10px; padding: 10px 12px; min-height: 20px; line-height: 1.4; }
+  .detail-btn-row { display: flex; gap: 10px; margin-top: 16px; }
+  .detail-edit-btn, .detail-save-btn {
+    flex: 1; background: #007991; color: #fff; border: none; border-radius: 10px; padding: 10px;
+    font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .detail-edit-btn:hover, .detail-save-btn:hover { background: #00636F; }
   .detail-delete-btn {
-    margin-top: 16px; width: 100%; background: #fff; border: 1px solid #B0524A; color: #B0524A;
+    flex: 1; background: #fff; border: 1px solid #B0524A; color: #B0524A;
     border-radius: 10px; padding: 10px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
   }
   .detail-delete-btn:hover { background: #FBEEEC; }
+  .detail-cancel-btn {
+    flex: 0 0 auto; background: none; border: 1px solid #E6E1D8; color: #8A8578; border-radius: 10px;
+    padding: 10px 16px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .detail-cancel-btn:hover { border-color: #C9C3B6; color: #0F222B; }
+  .detail-edit-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .detail-edit-row input, .detail-field {
+    border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px; font-size: 14px;
+    font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
+  }
+  .detail-edit-row input { flex: 1; min-width: 0; }
+  .detail-field { width: 100%; display: block; margin-top: 8px; }
+  .detail-edit-row input:focus, .detail-field:focus { border-color: #007991; }
 
   .predmet-select-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
   .predmet-select-row select.predmet-select {
@@ -204,18 +223,18 @@
       <div class="week-grid" id="weekGrid"></div>
     </div>
 
-    <div class="day-tabs" id="dayTabs"></div>
-
     <div class="cards-row">
       <div class="casovi-col">
         <div class="card" id="casoviAddCard" style="display:none;">
           <div class="section-title">Dodaj čas</div>
+          <div class="day-tabs" id="dayTabsCasovi" style="margin-top:0;"></div>
           <div id="casoviAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
         </div>
       </div>
 
       <div class="card">
         <div class="section-title">Obaveze</div>
+        <div class="day-tabs" id="dayTabsObaveze" style="margin-top:0;"></div>
         <div id="obavezeList"></div>
         <div class="add-row" id="obavezeAddRow"></div>
       </div>
@@ -424,16 +443,23 @@ function renderChildLabel() {
   document.getElementById("childLabel").textContent = child ? child.name : "";
 }
 
+// Dani se prikazuju na dva mjesta (u kartici "Dodaj čas" i u kartici "Obaveze") umjesto kao
+// zasebna plutajuća traka - oba mjesta dijele isti selectedDay i ostaju sinhronizovana.
+const DAY_TABS_TARGETS = ["dayTabsCasovi", "dayTabsObaveze"];
+
 function renderDayTabs() {
-  const wrap = document.getElementById("dayTabs");
-  wrap.innerHTML = DAYS.map((d) =>
-    '<button type="button" class="day-tab' + (d.key === selectedDay ? " active" : "") + '" data-day="' + d.key + '">' + d.short + '</button>'
-  ).join("");
-  wrap.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      selectedDay = btn.dataset.day;
-      renderDayTabs();
-      renderLists();
+  DAY_TABS_TARGETS.forEach((elId) => {
+    const wrap = document.getElementById(elId);
+    if (!wrap) return;
+    wrap.innerHTML = DAYS.map((d) =>
+      '<button type="button" class="day-tab' + (d.key === selectedDay ? " active" : "") + '" data-day="' + d.key + '">' + d.short + '</button>'
+    ).join("");
+    wrap.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedDay = btn.dataset.day;
+        renderDayTabs();
+        renderLists();
+      });
     });
   });
 }
@@ -640,16 +666,64 @@ function renderWeekGrid() {
 }
 
 function openCasDetail(dayKey, idx) {
+  renderDetailModal(dayKey, idx, "view");
+  document.getElementById("detailOverlay").style.display = "flex";
+}
+
+function renderDetailModal(dayKey, idx, mode) {
   const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
   const entries = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
   const e = entries[idx];
-  if (!e) return;
+  const modal = document.getElementById("detailModal");
+  if (!e) {
+    modal.innerHTML = "";
+    return;
+  }
   const day = DAYS.find((d) => d.key === dayKey);
+
+  if (mode === "edit" && role === "parent") {
+    modal.innerHTML =
+      '<div class="detail-header">' +
+        '<span class="detail-title">Izmijeni čas</span>' +
+        '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
+      '</div>' +
+      '<div class="detail-edit-row">' +
+        '<input type="number" min="1" placeholder="Čas" title="Broj časa" value="' + escapeHtml(e.broj || "") + '" id="detailEdit_broj" />' +
+        '<input type="time" title="Od" value="' + escapeHtml(e.od || "") + '" id="detailEdit_od" />' +
+        '<input type="time" title="Do" value="' + escapeHtml(e.do || "") + '" id="detailEdit_do" />' +
+      '</div>' +
+      '<input type="text" class="detail-field" placeholder="Predmet" value="' + escapeHtml(e.naziv || "") + '" id="detailEdit_naziv" />' +
+      '<input type="text" class="detail-field" placeholder="Učionica (opciono)" value="' + escapeHtml(e.ucionica || "") + '" id="detailEdit_ucionica" />' +
+      '<input type="text" class="detail-field" placeholder="Napomena (opciono)" value="' + escapeHtml(e.napomena || "") + '" id="detailEdit_napomena" />' +
+      '<div class="detail-btn-row">' +
+        '<button type="button" class="detail-save-btn" id="detailSaveBtn">Sačuvaj</button>' +
+        '<button type="button" class="detail-cancel-btn" id="detailCancelBtn">Otkaži</button>' +
+      '</div>';
+
+    document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
+    document.getElementById("detailCancelBtn").addEventListener("click", () => renderDetailModal(dayKey, idx, "view"));
+    document.getElementById("detailSaveBtn").addEventListener("click", () => {
+      const naziv = document.getElementById("detailEdit_naziv").value.trim();
+      if (!naziv) return;
+      const updatedEntry = {
+        broj: document.getElementById("detailEdit_broj").value.trim(),
+        od: document.getElementById("detailEdit_od").value,
+        do: document.getElementById("detailEdit_do").value,
+        naziv: naziv,
+        ucionica: document.getElementById("detailEdit_ucionica").value.trim(),
+        napomena: document.getElementById("detailEdit_napomena").value.trim(),
+      };
+      rememberPredmet(naziv);
+      updateEntryForDay(dayKey, idx, updatedEntry);
+      closeCasDetail();
+    });
+    return;
+  }
+
   const brojPart = e.broj ? e.broj + ". čas" : "";
   const timePart = formatCasTime(e);
   const timeLine = [brojPart, timePart].filter(Boolean).join(" · ") || "–";
 
-  const modal = document.getElementById("detailModal");
   modal.innerHTML =
     '<div class="detail-header">' +
       '<span class="detail-title">' + escapeHtml(e.naziv) + '</span>' +
@@ -660,11 +734,16 @@ function openCasDetail(dayKey, idx) {
     '<div class="detail-prop"><span class="detail-prop-label">Učionica</span><span class="detail-prop-value">' + (e.ucionica ? escapeHtml(e.ucionica) : "–") + '</span></div>' +
     '<div class="detail-note-title">Napomena</div>' +
     '<div class="detail-note-body">' + (e.napomena ? escapeHtml(e.napomena) : '<span style="color:#8A8578;">Nema napomene.</span>') + '</div>' +
-    (role === "parent" ? '<button type="button" class="detail-delete-btn" id="detailDeleteBtn">Obriši ovaj čas</button>' : "");
+    (role === "parent"
+      ? '<div class="detail-btn-row">' +
+          '<button type="button" class="detail-edit-btn" id="detailEditBtn">Izmijeni</button>' +
+          '<button type="button" class="detail-delete-btn" id="detailDeleteBtn">Obriši</button>' +
+        '</div>'
+      : "");
 
-  document.getElementById("detailOverlay").style.display = "flex";
   document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
   if (role === "parent") {
+    document.getElementById("detailEditBtn").addEventListener("click", () => renderDetailModal(dayKey, idx, "edit"));
     document.getElementById("detailDeleteBtn").addEventListener("click", () => {
       deleteEntryForDay(dayKey, idx);
       closeCasDetail();
@@ -690,6 +769,18 @@ function deleteEntryForDay(dayKey, index) {
   const current = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
   const updated = current.slice();
   updated.splice(index, 1);
+  const payload = { smjene: {} };
+  payload.smjene[selectedSmjena] = {};
+  payload.smjene[selectedSmjena].casovi = {};
+  payload.smjene[selectedSmjena].casovi[dayKey] = updated;
+  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
+}
+
+function updateEntryForDay(dayKey, index, updatedEntry) {
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const current = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
+  const updated = current.slice();
+  updated[index] = updatedEntry;
   const payload = { smjene: {} };
   payload.smjene[selectedSmjena] = {};
   payload.smjene[selectedSmjena].casovi = {};
