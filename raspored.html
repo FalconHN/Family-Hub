@@ -68,13 +68,34 @@
 
   .casovi-col { display: flex; flex-direction: column; gap: 12px; }
 
-  .subject-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-  .subject-chip {
-    flex: 0 0 auto; padding: 6px 12px; border-radius: 999px; border: 1px solid #E6E1D8;
-    background: #FAF8F4; color: #007991; font-weight: 600; font-size: 12.5px; cursor: pointer;
-    font-family: inherit;
+  .predmet-select-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
+  .predmet-select-row select.predmet-select {
+    flex: 1; min-width: 160px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
+    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
   }
-  .subject-chip:hover { background: #DEE9E3; border-color: #DEE9E3; }
+  .predmet-select-row select.predmet-select:focus { border-color: #007991; }
+  .add-row .manage-link {
+    background: none !important; border: none; color: #007991 !important; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    font-family: inherit; text-decoration: underline; padding: 4px 0 !important; white-space: nowrap;
+  }
+  .predmeti-manage-panel {
+    background: #FAF8F4; border: 1px solid #E6E1D8; border-radius: 10px; padding: 8px 12px;
+    margin-bottom: 12px; flex-basis: 100%; width: 100%;
+  }
+  .predmeti-manage-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #F0EDE5; }
+  .predmeti-manage-row:last-child { border-bottom: none; }
+  .predmeti-manage-row .pm-name { flex: 1; font-size: 13.5px; color: #0F222B; }
+  .predmeti-manage-row input.pm-edit-input {
+    flex: 1; border: 1px solid #007991; border-radius: 7px; padding: 5px 8px; font-size: 13.5px;
+    font-family: inherit; outline: none;
+  }
+  .add-row .pm-icon-btn {
+    background: none !important; border: none; cursor: pointer; padding: 4px !important; display: flex;
+    align-items: center; color: #8A8578 !important; flex: 0 0 auto;
+  }
+  .add-row .pm-icon-btn:hover { color: #007991 !important; }
+  .add-row .pm-icon-btn.pm-delete:hover { color: #B0524A !important; }
+  .predmeti-empty { color: #8A8578; font-size: 13px; padding: 4px 0; }
 
   .card {
     background: #fff; border-radius: 14px; padding: 16px; margin-top: 12px;
@@ -213,6 +234,8 @@ let scheduleData = null;
 let unsubscribeSnapshot = null;
 let predmetiList = []; // zapamćeni nazivi predmeta (zajednički za svu djecu), za brzo dodavanje bez kucanja
 let unsubscribePredmeti = null;
+let predmetiPanelOpen = false; // da li je otvoren panel za uređivanje liste predmeta
+let editingPredmet = null; // naziv predmeta koji se trenutno uređuje (preimenovanje) u panelu
 
 function escapeHtml(str) {
   return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
@@ -221,6 +244,15 @@ function escapeHtml(str) {
 }
 function trashIcon() {
   return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+}
+function pencilIcon() {
+  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
+}
+function checkIcon() {
+  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+}
+function xIcon() {
+  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 }
 
 auth.onAuthStateChanged((user) => {
@@ -279,6 +311,31 @@ function rememberPredmet(naziv) {
     { lista: firebase.firestore.FieldValue.arrayUnion(naziv) },
     { merge: true }
   );
+}
+
+// Lista zapamćenih predmeta je samo pomoć za brže dodavanje - uređivanje ove liste
+// (brisanje/preimenovanje) NE dira već unešene časove, samo mijenja ponuđene stavke ubuduće.
+function overwritePredmetiList(newList) {
+  const deduped = [];
+  newList.forEach((p) => {
+    const t = (p || "").trim();
+    if (t && deduped.indexOf(t) === -1) deduped.push(t);
+  });
+  db.collection("raspored").doc("_predmeti").set({ lista: deduped }, { merge: true });
+}
+
+function deletePredmetFromList(naziv) {
+  overwritePredmetiList(predmetiList.filter((p) => p !== naziv));
+}
+
+function renamePredmetInList(oldNaziv, newNaziv) {
+  const trimmed = (newNaziv || "").trim();
+  editingPredmet = null;
+  if (!trimmed || trimmed === oldNaziv) {
+    renderLists();
+    return;
+  }
+  overwritePredmetiList(predmetiList.map((p) => (p === oldNaziv ? trimmed : p)));
 }
 
 function renderChildTabs() {
@@ -505,13 +562,43 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
 
   if (role === "parent") {
     if (isCasovi) {
-      const chipsHtml = predmetiList.length
-        ? '<div class="subject-chips">' + predmetiList.map((p) =>
-            '<button type="button" class="subject-chip" data-predmet="' + escapeHtml(p) + '">' + escapeHtml(p) + '</button>'
-          ).join("") + '</div>'
+      const selectHtml =
+        '<div class="predmet-select-row">' +
+          '<select class="predmet-select" id="' + addRowElId + '_predmetSelect">' +
+            '<option value="">Izaberi predmet iz liste...</option>' +
+            predmetiList.map((p) => '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</option>').join("") +
+          '</select>' +
+          '<button type="button" class="manage-link" id="' + addRowElId + '_toggleManage">' + (predmetiPanelOpen ? "Zatvori uređivanje" : "Uredi listu predmeta") + '</button>' +
+        '</div>';
+
+      const managePanelHtml = predmetiPanelOpen
+        ? '<div class="predmeti-manage-panel">' +
+            (predmetiList.length === 0
+              ? '<div class="predmeti-empty">Još nema zapamćenih predmeta.</div>'
+              : predmetiList.map((p, idx) => {
+                  if (editingPredmet === p) {
+                    return (
+                      '<div class="predmeti-manage-row">' +
+                        '<input type="text" class="pm-edit-input" value="' + escapeHtml(p) + '" id="' + addRowElId + '_pmEdit_' + idx + '" />' +
+                        '<button type="button" class="pm-icon-btn pm-save" data-old="' + escapeHtml(p) + '" data-input="' + addRowElId + '_pmEdit_' + idx + '" aria-label="Sačuvaj">' + checkIcon() + '</button>' +
+                        '<button type="button" class="pm-icon-btn pm-cancel" aria-label="Otkaži">' + xIcon() + '</button>' +
+                      '</div>'
+                    );
+                  }
+                  return (
+                    '<div class="predmeti-manage-row">' +
+                      '<span class="pm-name">' + escapeHtml(p) + '</span>' +
+                      '<button type="button" class="pm-icon-btn pm-edit" data-name="' + escapeHtml(p) + '" aria-label="Izmijeni">' + pencilIcon() + '</button>' +
+                      '<button type="button" class="pm-icon-btn pm-delete" data-name="' + escapeHtml(p) + '" aria-label="Obriši">' + trashIcon() + '</button>' +
+                    '</div>'
+                  );
+                }).join(""))
+          + '</div>'
         : "";
+
       addRowEl.innerHTML =
-        chipsHtml +
+        selectHtml +
+        managePanelHtml +
         '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
         '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
         '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
@@ -519,12 +606,59 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
         '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
         '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
         '<button type="button" class="submit-btn">Dodaj</button>';
-      addRowEl.querySelectorAll(".subject-chip").forEach((chip) => {
-        chip.addEventListener("click", () => {
-          document.getElementById(addRowElId + "_name").value = chip.dataset.predmet;
+
+      const selectEl = document.getElementById(addRowElId + "_predmetSelect");
+      selectEl.addEventListener("change", () => {
+        if (selectEl.value) {
+          document.getElementById(addRowElId + "_name").value = selectEl.value;
           document.getElementById(addRowElId + "_name").focus();
-        });
+        }
+        selectEl.value = "";
       });
+
+      document.getElementById(addRowElId + "_toggleManage").addEventListener("click", () => {
+        predmetiPanelOpen = !predmetiPanelOpen;
+        editingPredmet = null;
+        renderLists();
+      });
+
+      if (predmetiPanelOpen) {
+        addRowEl.querySelectorAll(".pm-edit").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            editingPredmet = btn.dataset.name;
+            renderLists();
+          });
+        });
+        addRowEl.querySelectorAll(".pm-delete").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            deletePredmetFromList(btn.dataset.name);
+          });
+        });
+        addRowEl.querySelectorAll(".pm-save").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const inputEl = document.getElementById(btn.dataset.input);
+            renamePredmetInList(btn.dataset.old, inputEl.value);
+          });
+        });
+        addRowEl.querySelectorAll(".pm-cancel").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            editingPredmet = null;
+            renderLists();
+          });
+        });
+        addRowEl.querySelectorAll(".pm-edit-input").forEach((input) => {
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              const row = e.target.closest(".predmeti-manage-row");
+              const saveBtn = row && row.querySelector(".pm-save");
+              if (saveBtn) saveBtn.click();
+            } else if (e.key === "Escape") {
+              editingPredmet = null;
+              renderLists();
+            }
+          });
+        });
+      }
     } else {
       addRowEl.innerHTML =
         '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
