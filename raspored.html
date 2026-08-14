@@ -206,6 +206,18 @@
   }
   .add-row button:hover { background: #00636F; }
 
+  .add-row .autocomplete-wrap { position: relative; flex: 1; min-width: 120px; }
+  .add-row .autocomplete-wrap input.name-input { width: 100%; box-sizing: border-box; }
+  .autocomplete-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
+    background: #fff; border: 1px solid #E6E1D8; border-radius: 8px; margin-top: 3px;
+    max-height: 190px; overflow-y: auto; box-shadow: 0 8px 20px -8px rgba(27,58,74,0.3);
+    display: none;
+  }
+  .autocomplete-dropdown.open { display: block; }
+  .autocomplete-option { padding: 8px 10px; font-size: 13.5px; color: #0F222B; cursor: pointer; }
+  .autocomplete-option:hover, .autocomplete-option.active { background: #FAF8F4; }
+
   .status { font-size: 13px; color: #8A8578; margin-bottom: 10px; }
   .status.err { color: #B0524A; }
 </style>
@@ -947,8 +959,10 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
     '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
     '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
     '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
-    '<input type="text" class="name-input" placeholder="Predmet (upiši ili izaberi)" id="' + addRowElId + '_name" list="' + addRowElId + '_predmetOptions" autocomplete="off" />' +
-    '<datalist id="' + addRowElId + '_predmetOptions"></datalist>' +
+    '<div class="autocomplete-wrap" id="' + addRowElId + '_nameWrap">' +
+      '<input type="text" class="name-input" placeholder="Predmet (upiši ili izaberi)" id="' + addRowElId + '_name" autocomplete="off" />' +
+      '<div class="autocomplete-dropdown" id="' + addRowElId + '_nameDropdown"></div>' +
+    '</div>' +
     '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
     '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
     '<div class="napomena-datum-row">' +
@@ -964,23 +978,82 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
   });
 
   addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("casovi", addRowElId));
-  document.getElementById(addRowElId + "_name").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addEntry("casovi", addRowElId);
-  });
+  setupPredmetAutocomplete(addRowElId);
 
   casoviAddRowContext = contextKey;
   refreshPredmetSelectAndPanel(addRowElId);
 }
 
+// Prilagođena (custom) padajuća lista za polje "Predmet" - zamjena za ugrađeni <datalist>, koji na
+// iPhone/Safari-ju ne prikazuje ponuđene opcije (samo kucanje radi, predlozi se ne pojavljuju).
+// forceOpen=true znači "korisnik je upravo fokusirao/kucao u polje, otvori listu ako ima predloga";
+// bez forceOpen se lista samo osvježava sadržajem ako je već otvorena (ne otvara se sama od sebe).
+function renderPredmetDropdown(addRowElId, opts) {
+  const forceOpen = !!(opts && opts.forceOpen);
+  const input = document.getElementById(addRowElId + "_name");
+  const dropdown = document.getElementById(addRowElId + "_nameDropdown");
+  if (!input || !dropdown) return;
+
+  const wasOpen = dropdown.classList.contains("open");
+  if (!forceOpen && !wasOpen) return;
+
+  const q = (input.value || "").trim().toLowerCase();
+  const filtered = q === "" ? predmetiList : predmetiList.filter((p) => p.toLowerCase().includes(q));
+
+  if (filtered.length === 0) {
+    dropdown.innerHTML = "";
+    dropdown.classList.remove("open");
+    return;
+  }
+
+  dropdown.innerHTML = filtered.map((p) =>
+    '<div class="autocomplete-option" data-value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</div>'
+  ).join("");
+  dropdown.querySelectorAll(".autocomplete-option").forEach((opt) => {
+    // mousedown (ne click) + preventDefault sprječava da polje izgubi fokus (blur) prije nego
+    // što se klik/tap registruje - bez ovoga bi se lista zatvorila prije nego što se izbor upiše.
+    opt.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      input.value = opt.dataset.value;
+      dropdown.classList.remove("open");
+      dropdown.innerHTML = "";
+    });
+  });
+  dropdown.classList.add("open");
+}
+
+function setupPredmetAutocomplete(addRowElId) {
+  const input = document.getElementById(addRowElId + "_name");
+  const dropdown = document.getElementById(addRowElId + "_nameDropdown");
+  if (!input || !dropdown) return;
+
+  input.addEventListener("focus", () => renderPredmetDropdown(addRowElId, { forceOpen: true }));
+  input.addEventListener("input", () => renderPredmetDropdown(addRowElId, { forceOpen: true }));
+  // I klik (ne samo focus) otvara listu - npr. nakon što je korisnik zatvorio listu tasterom Esc,
+  // a polje je i dalje fokusirano, klik na njega treba ponovo da otvori ponuđene predmete.
+  input.addEventListener("click", () => renderPredmetDropdown(addRowElId, { forceOpen: true }));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addEntry("casovi", addRowElId);
+    if (e.key === "Escape") {
+      dropdown.classList.remove("open");
+      dropdown.innerHTML = "";
+    }
+  });
+  input.addEventListener("blur", () => {
+    dropdown.classList.remove("open");
+  });
+}
+
 // Osvježava SAMO ponuđene predmete (datalist ispod polja "Predmet") i panel za uređivanje - ne dira
 // broj/od/do/predmet/učionicu/napomenu, pa roditelj ne gubi ono što trenutno kuca kad se lista
-// predmeta promijeni (npr. sa drugog uređaja). Polje "Predmet" je obično tekstualno polje sa
-// datalist-om: klik/kucanje nudi zapamćene predmete, ali se slobodno može upisati i potpuno nov naziv.
+// predmeta promijeni (npr. sa drugog uređaja). Polje "Predmet" je tekstualno polje sa custom
+// (JS) padajućom listom - klik/kucanje nudi zapamćene predmete, ali se slobodno može upisati i
+// potpuno nov naziv. Custom lista se koristi umjesto ugrađenog <datalist> jer na iPhone/Safari-ju
+// <datalist> ne prikazuje ponuđene opcije (kucanje inače radi normalno).
 function refreshPredmetSelectAndPanel(addRowElId) {
-  const datalistEl = document.getElementById(addRowElId + "_predmetOptions");
-  if (datalistEl) {
-    datalistEl.innerHTML = predmetiList.map((p) => '<option value="' + escapeHtml(p) + '"></option>').join("");
-  }
+  // Ako je padajuća lista predmeta trenutno otvorena, osvježi je - ali je ne otvaraj sama od sebe
+  // (npr. kad stigne osvježenje sa drugog uređaja dok roditelj ne gleda u to polje).
+  renderPredmetDropdown(addRowElId);
 
   const toggleBtn = document.getElementById(addRowElId + "_toggleManage");
   if (toggleBtn) toggleBtn.textContent = predmetiPanelOpen ? "Zatvori uređivanje" : "Uredi listu predmeta";
@@ -1126,6 +1199,7 @@ function addEntry(field, addRowElId) {
   }
   nameEl.value = "";
   nameEl.focus();
+  if (field === "casovi") renderPredmetDropdown(addRowElId, { forceOpen: true });
 }
 
 function deleteEntry(field, index) {
