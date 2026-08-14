@@ -409,21 +409,24 @@ function RecipeApp() {
             placeholder="Pretraži po nazivu ili sastojku..."
             style={{ width: "100%", boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#FAF8F4", outline: "none", marginBottom: 12 }}
           />
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
-            {allCategoriesForFilter.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCategoryFilter(c)}
-                style={{
-                  flex: "0 0 auto", padding: "7px 14px", borderRadius: 999, border: "1px solid " + (c === categoryFilter ? "#007991" : "#E6E1D8"),
-                  background: c === categoryFilter ? "#007991" : "#fff", color: c === categoryFilter ? "#fff" : "#8A8578",
-                  fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                }}
-              >
-                {c}
-              </button>
-            ))}
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+              {allCategoriesForFilter.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategoryFilter(c)}
+                  style={{
+                    flex: "0 0 auto", padding: "7px 14px", borderRadius: 999, border: "1px solid " + (c === categoryFilter ? "#007991" : "#E6E1D8"),
+                    background: c === categoryFilter ? "#007991" : "#fff", color: c === categoryFilter ? "#fff" : "#8A8578",
+                    fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <div style={{ position: "absolute", top: 0, right: 0, bottom: 2, width: 26, background: "linear-gradient(to right, rgba(255,255,255,0), #fff)", pointerEvents: "none" }} />
           </div>
         </div>
 
@@ -444,14 +447,14 @@ function RecipeApp() {
             {recipes.length === 0 ? "Još nema dodanih recepata." : "Nema recepata koji odgovaraju pretrazi."}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
             {visibleRecipes.map((r) => (
               <div
                 key={r.id}
                 onClick={() => setDetailId(r.id)}
                 style={{ background: "#fff", borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)" }}
               >
-                <div style={{ width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {r.slikaUrl ? (
                     <img
                       src={r.slikaUrl}
@@ -464,10 +467,10 @@ function RecipeApp() {
                   )}
                 </div>
                 <div style={{ padding: "10px 12px 12px" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14.5, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                     <CategoryTag label={r.kategorija} />
-                    <span style={{ color: "#8A8578", fontSize: 12 }}>{(r.sastojci || []).length} sastojaka</span>
+                    <span style={{ color: "#8A8578", fontSize: 11.5 }}>{(r.sastojci || []).length} sastojaka</span>
                   </div>
                 </div>
               </div>
