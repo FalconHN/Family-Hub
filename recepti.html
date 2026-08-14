@@ -411,7 +411,7 @@ function RecipeApp() {
           <button
             type="button"
             onClick={openAddForm}
-            style={{ background: "#007991", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+            style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: 160, height: 40, boxSizing: "border-box" }}
           >
             + Dodaj recept
           </button>
@@ -422,12 +422,12 @@ function RecipeApp() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Pretraži po nazivu ili sastojku..."
-            style={{ flex: "3 1 160px", minWidth: 0, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
+            style={{ flex: "3 1 160px", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "0 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
           />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            style={{ flex: "0 1 150px", minWidth: 110, maxWidth: 220, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: "#0F222B", outline: "none" }}
+            style={{ flex: "0 1 160px", minWidth: 110, maxWidth: 160, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "0 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: "#0F222B", outline: "none" }}
           >
             {allCategoriesForFilter.map((c) => (
               <option key={c} value={c}>{c === "Sve" ? "Sve kategorije" : c}</option>
