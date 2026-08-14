@@ -84,6 +84,8 @@
   .week-cas-time { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
   .week-cas-name { font-size: 13px; font-weight: 600; color: #0F222B; line-height: 1.25; }
   .week-cas-room { font-size: 11px; color: #8A8578; margin-top: 3px; }
+  .week-cas-note-date { display: flex; align-items: center; gap: 3px; font-size: 10.5px; color: #8A8578; margin-top: 3px; font-weight: 600; }
+  .week-cas-note-date svg { flex: 0 0 auto; }
   @media (min-width: 900px) {
     .week-day-col { flex: 1 1 0; min-width: 0; }
   }
@@ -106,6 +108,7 @@
   .detail-prop-value { color: #0F222B; font-weight: 600; text-align: right; }
   .detail-note-title { font-size: 12px; font-weight: 700; color: #8A8578; text-transform: uppercase; letter-spacing: 0.03em; margin: 14px 0 6px; }
   .detail-note-body { font-size: 14px; color: #0F222B; background: #FAF8F4; border-radius: 10px; padding: 10px 12px; min-height: 20px; line-height: 1.4; }
+  .detail-note-expiry { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #8A8578; margin-top: 6px; font-weight: 600; }
   .detail-btn-row { display: flex; gap: 10px; margin-top: 16px; }
   .detail-edit-btn, .detail-save-btn {
     flex: 1; background: #007991; color: #fff; border: none; border-radius: 10px; padding: 10px;
@@ -130,6 +133,13 @@
   .detail-edit-row input { flex: 1; min-width: 0; }
   .detail-field { width: 100%; display: block; margin-top: 8px; }
   .detail-edit-row input:focus, .detail-field:focus { border-color: #007991; }
+  .detail-field-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .detail-field-row .detail-field-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
+  .detail-field-row input.detail-date-input {
+    flex: 0 0 auto; width: 150px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
+    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
+  }
+  .detail-field-row input.detail-date-input:focus { border-color: #007991; }
 
   .predmet-manage-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
   .add-row .manage-link {
@@ -187,6 +197,9 @@
   .add-row input.room-input { width: 100px; flex: 0 0 auto; }
   .add-row input.name-input { flex: 1; min-width: 120px; }
   .add-row input.note-input { flex: 1; min-width: 160px; }
+  .napomena-datum-row { display: flex; align-items: center; gap: 8px; flex-basis: 100%; width: 100%; margin-top: -2px; }
+  .napomena-datum-row .napomena-datum-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
+  .add-row input.napomena-datum-input { width: 150px; flex: 0 0 auto; }
   .add-row button {
     background: #007991; color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
     font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
@@ -331,6 +344,28 @@ function checkIcon() {
 }
 function xIcon() {
   return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+}
+function clockIcon() {
+  return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>';
+}
+
+// Datumi za "napomena važi do" - čuvamo kao "YYYY-MM-DD" (isti format kao <input type="date">),
+// pa poređenje niski (string) radi ispravno bez parsiranja.
+function todayISO() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + mm + "-" + dd;
+}
+function formatDatumSrShort(dateStr) {
+  const parts = (dateStr || "").split("-");
+  if (parts.length !== 3) return dateStr || "";
+  return parts[2] + "." + parts[1] + ".";
+}
+function formatDatumSrFull(dateStr) {
+  const parts = (dateStr || "").split("-");
+  if (parts.length !== 3) return dateStr || "";
+  return parts[2] + "." + parts[1] + "." + parts[0] + ".";
 }
 
 auth.onAuthStateChanged((user) => {
@@ -506,6 +541,7 @@ function subscribeToChild(childId) {
   unsubscribeSnapshot = db.collection("raspored").doc(childId).onSnapshot(
     (snap) => {
       scheduleData = normalizeScheduleData(snap.exists ? snap.data() : null);
+      sweepExpiredNapomene();
       syncSelectedSmjena();
       renderSmjenaTabs();
       renderShiftBanner();
@@ -519,6 +555,43 @@ function subscribeToChild(childId) {
       renderLists();
     }
   );
+}
+
+// Napomena vezana za datum (npr. "kontrolni 15.09.") se automatski uklanja čim taj datum prođe -
+// čas, vrijeme, predmet i učionica ostaju netaknuti, jer se čas i dalje ponavlja svake sedmice.
+// Nema pozadinskog servera, pa se ovo dešava čim neko (roditelj ili dijete) sledeći put otvori
+// aplikaciju poslije tog datuma: lokalno se odmah sakriva za sve, a u bazu upisuje samo roditelj.
+function sweepExpiredNapomene() {
+  if (!scheduleData) return;
+  const today = todayISO();
+  let changed = false;
+  const writePayload = { smjene: {} };
+
+  ["prva", "druga"].forEach((smjenaKey) => {
+    const smjenaData = scheduleData.smjene[smjenaKey];
+    if (!smjenaData || !smjenaData.casovi) return;
+    Object.keys(smjenaData.casovi).forEach((day) => {
+      const entries = smjenaData.casovi[day] || [];
+      let dayChanged = false;
+      const updated = entries.map((e) => {
+        if (e && e.napomenaDatum && e.napomenaDatum < today) {
+          dayChanged = true;
+          return Object.assign({}, e, { napomena: "", napomenaDatum: "" });
+        }
+        return e;
+      });
+      if (dayChanged) {
+        changed = true;
+        smjenaData.casovi[day] = updated; // primijeni odmah lokalno, da se istekla napomena ne "sevne" prije potvrde sa servera
+        if (!writePayload.smjene[smjenaKey]) writePayload.smjene[smjenaKey] = { casovi: {} };
+        writePayload.smjene[smjenaKey].casovi[day] = updated;
+      }
+    });
+  });
+
+  if (changed && role === "parent") {
+    db.collection("raspored").doc(selectedChildId).set(writePayload, { merge: true });
+  }
 }
 
 function renderSmjenaTabs() {
@@ -653,6 +726,7 @@ function renderWeekGrid() {
                 (timeLine ? '<div class="week-cas-time" style="color:' + d.color + ';">' + escapeHtml(timeLine) + '</div>' : "") +
                 '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
                 (e.ucionica ? '<div class="week-cas-room">' + escapeHtml(e.ucionica) + '</div>' : "") +
+                (e.napomenaDatum ? '<div class="week-cas-note-date">' + clockIcon() + '<span>do ' + escapeHtml(formatDatumSrShort(e.napomenaDatum)) + '</span></div>' : "") +
               '</div>'
             );
           }).join("");
@@ -699,6 +773,10 @@ function renderDetailModal(dayKey, idx, mode) {
       '<input type="text" class="detail-field" placeholder="Predmet" value="' + escapeHtml(e.naziv || "") + '" id="detailEdit_naziv" />' +
       '<input type="text" class="detail-field" placeholder="Učionica (opciono)" value="' + escapeHtml(e.ucionica || "") + '" id="detailEdit_ucionica" />' +
       '<input type="text" class="detail-field" placeholder="Napomena (opciono)" value="' + escapeHtml(e.napomena || "") + '" id="detailEdit_napomena" />' +
+      '<div class="detail-field-row">' +
+        '<span class="detail-field-label">Napomena važi do</span>' +
+        '<input type="date" class="detail-date-input" value="' + escapeHtml(e.napomenaDatum || "") + '" id="detailEdit_napomenaDatum" />' +
+      '</div>' +
       '<div class="detail-btn-row">' +
         '<button type="button" class="detail-save-btn" id="detailSaveBtn">Sačuvaj</button>' +
         '<button type="button" class="detail-cancel-btn" id="detailCancelBtn">Otkaži</button>' +
@@ -716,6 +794,7 @@ function renderDetailModal(dayKey, idx, mode) {
         naziv: naziv,
         ucionica: document.getElementById("detailEdit_ucionica").value.trim(),
         napomena: document.getElementById("detailEdit_napomena").value.trim(),
+        napomenaDatum: document.getElementById("detailEdit_napomenaDatum").value,
       };
       rememberPredmet(naziv);
       updateEntryForDay(dayKey, idx, updatedEntry);
@@ -738,6 +817,9 @@ function renderDetailModal(dayKey, idx, mode) {
     '<div class="detail-prop"><span class="detail-prop-label">Učionica</span><span class="detail-prop-value">' + (e.ucionica ? escapeHtml(e.ucionica) : "–") + '</span></div>' +
     '<div class="detail-note-title">Napomena</div>' +
     '<div class="detail-note-body">' + (e.napomena ? escapeHtml(e.napomena) : '<span style="color:#8A8578;">Nema napomene.</span>') + '</div>' +
+    (e.napomenaDatum
+      ? '<div class="detail-note-expiry">' + clockIcon() + '<span>Napomena važi do ' + escapeHtml(formatDatumSrFull(e.napomenaDatum)) + '</span></div>'
+      : "") +
     (role === "parent"
       ? '<div class="detail-btn-row">' +
           '<button type="button" class="detail-edit-btn" id="detailEditBtn">Izmijeni</button>' +
@@ -869,6 +951,10 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
     '<datalist id="' + addRowElId + '_predmetOptions"></datalist>' +
     '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
     '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
+    '<div class="napomena-datum-row">' +
+      '<span class="napomena-datum-label">Napomena važi do</span>' +
+      '<input type="date" class="napomena-datum-input" title="Napomena važi do (opciono - ako se ostavi prazno, napomena ostaje trajno)" id="' + addRowElId + '_napomenaDatum" />' +
+    '</div>' +
     '<button type="button" class="submit-btn">Dodaj</button>';
 
   document.getElementById(addRowElId + "_toggleManage").addEventListener("click", () => {
@@ -995,6 +1081,7 @@ function addEntry(field, addRowElId) {
     const doEl = document.getElementById(addRowElId + "_do");
     const ucionicaEl = document.getElementById(addRowElId + "_ucionica");
     const napomenaEl = document.getElementById(addRowElId + "_napomena");
+    const napomenaDatumEl = document.getElementById(addRowElId + "_napomenaDatum");
     novaStavka = {
       broj: brojEl.value.trim(),
       od: odEl.value,
@@ -1002,6 +1089,7 @@ function addEntry(field, addRowElId) {
       naziv: naziv,
       ucionica: ucionicaEl.value.trim(),
       napomena: napomenaEl.value.trim(),
+      napomenaDatum: napomenaDatumEl ? napomenaDatumEl.value : "",
     };
   } else {
     const timeEl = document.getElementById(addRowElId + "_time");
@@ -1030,6 +1118,8 @@ function addEntry(field, addRowElId) {
     if (ucionicaEl) ucionicaEl.value = "";
     const napomenaEl = document.getElementById(addRowElId + "_napomena");
     if (napomenaEl) napomenaEl.value = "";
+    const napomenaDatumEl = document.getElementById(addRowElId + "_napomenaDatum");
+    if (napomenaDatumEl) napomenaDatumEl.value = "";
   } else {
     const timeEl = document.getElementById(addRowElId + "_time");
     if (timeEl) timeEl.value = "";
