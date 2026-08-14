@@ -29,7 +29,7 @@
   }
   var APPS = [
     { label: "Kupovina", icon: svgIcon(ICONS.cart),     href: "shopping-list.html",  enabled: true },
-    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: false },
+    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: true },
     { label: "Raspored", icon: svgIcon(ICONS.calendar), href: "raspored.html",       enabled: true },
     { label: "Voda",     icon: svgIcon(ICONS.droplets), href: "potrosnja-vode.html", enabled: true }
   ];
