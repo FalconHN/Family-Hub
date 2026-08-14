@@ -46,13 +46,13 @@
   }
   .tab-pill.active { background: #007991; border-color: #007991; color: #fff; }
 
-  .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-top: 4px; margin-bottom: 16px; }
-  .day-tab {
-    flex: 0 0 auto; padding: 8px 14px; border-radius: 10px; border: 1px solid #E6E1D8;
-    background: #fff; color: #8A8578; font-weight: 600; font-size: 13px; cursor: pointer;
-    font-family: inherit; white-space: nowrap;
+  .day-select-row { display: flex; align-items: center; gap: 8px; margin-top: 0; margin-bottom: 12px; }
+  .day-select-row .day-select-label { font-size: 12.5px; font-weight: 700; color: #8A8578; white-space: nowrap; }
+  .day-select-row select.day-select {
+    flex: 0 0 auto; min-width: 150px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
+    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B; font-weight: 600;
   }
-  .day-tab.active { background: #DEE9E3; border-color: #DEE9E3; color: #007991; }
+  .day-select-row select.day-select:focus { border-color: #007991; }
 
   .shift-banner {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
@@ -229,14 +229,20 @@
       <div class="casovi-col">
         <div class="card" id="casoviAddCard" style="display:none;">
           <div class="section-title">Dodaj čas</div>
-          <div class="day-tabs" id="dayTabsCasovi" style="margin-top:0;"></div>
+          <div class="day-select-row">
+            <span class="day-select-label">Dan</span>
+            <select class="day-select" id="daySelectCasovi"></select>
+          </div>
           <div id="casoviAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
         </div>
       </div>
 
       <div class="card">
         <div class="section-title">Obaveze</div>
-        <div class="day-tabs" id="dayTabsObaveze" style="margin-top:0;"></div>
+        <div class="day-select-row">
+          <span class="day-select-label">Dan</span>
+          <select class="day-select" id="daySelectObaveze"></select>
+        </div>
         <div id="obavezeList"></div>
         <div class="add-row" id="obavezeAddRow"></div>
       </div>
@@ -362,7 +368,7 @@ function initUI() {
   document.getElementById("appRoot").style.display = "block";
   renderChildTabs();
   renderChildLabel();
-  renderDayTabs();
+  renderDaySelectors();
   subscribeToChild(selectedChildId);
   if (role === "parent") subscribePredmeti();
 }
@@ -445,24 +451,25 @@ function renderChildLabel() {
   document.getElementById("childLabel").textContent = child ? child.name : "";
 }
 
-// Dani se prikazuju na dva mjesta (u kartici "Dodaj čas" i u kartici "Obaveze") umjesto kao
-// zasebna plutajuća traka - oba mjesta dijele isti selectedDay i ostaju sinhronizovana.
-const DAY_TABS_TARGETS = ["dayTabsCasovi", "dayTabsObaveze"];
+// Dani se biraju padajućom listom na dva mjesta (u kartici "Dodaj čas" i u kartici "Obaveze")
+// umjesto dugmadi - oba mjesta dijele isti selectedDay i ostaju sinhronizovana. Opcije i change
+// listener se grade samo jednom po elementu, poslije se samo sinhronizuje izabrana vrijednost.
+const DAY_SELECT_TARGETS = ["daySelectCasovi", "daySelectObaveze"];
 
-function renderDayTabs() {
-  DAY_TABS_TARGETS.forEach((elId) => {
-    const wrap = document.getElementById(elId);
-    if (!wrap) return;
-    wrap.innerHTML = DAYS.map((d) =>
-      '<button type="button" class="day-tab' + (d.key === selectedDay ? " active" : "") + '" data-day="' + d.key + '">' + d.short + '</button>'
-    ).join("");
-    wrap.querySelectorAll("button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedDay = btn.dataset.day;
-        renderDayTabs();
+function renderDaySelectors() {
+  DAY_SELECT_TARGETS.forEach((elId) => {
+    const selectEl = document.getElementById(elId);
+    if (!selectEl) return;
+    if (selectEl.dataset.built !== "1") {
+      selectEl.innerHTML = DAYS.map((d) => '<option value="' + d.key + '">' + escapeHtml(d.label) + '</option>').join("");
+      selectEl.addEventListener("change", () => {
+        selectedDay = selectEl.value;
+        renderDaySelectors();
         renderLists();
       });
-    });
+      selectEl.dataset.built = "1";
+    }
+    selectEl.value = selectedDay;
   });
 }
 
