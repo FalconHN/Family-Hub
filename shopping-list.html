@@ -154,6 +154,96 @@ function Tag({ label, color }) {
   );
 }
 
+// Prilagođena (custom) padajuća lista - zamjena za ugrađeni <datalist>, koji na iPhone/Safari-ju
+// ne prikazuje ponuđene opcije (kucanje samo po sebi radi, ali se prijedlozi ne pojavljuju).
+// Radi identično na desktopu, Android-u i iPhone-u: klik/fokus prikazuje sve opcije, kucanje ih
+// filtrira, a slobodno se može upisati i naziv koji nije na listi.
+function AutocompleteInput({ value, onChange, options, placeholder, style, onKeyDown, onBlur, autoFocus }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  const q = (value || "").trim().toLowerCase();
+  const filtered = q === "" ? options : options.filter((o) => o.toLowerCase().includes(q));
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        position: "relative",
+        width: style && style.width ? undefined : "100%",
+        flex: style && style.flex ? style.flex : undefined,
+      }}
+    >
+      <input
+        autoFocus={autoFocus}
+        autoComplete="off"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+          if (onKeyDown) onKeyDown(e);
+        }}
+        onBlur={(e) => { setOpen(false); if (onBlur) onBlur(e); }}
+        style={{ width: "100%", boxSizing: "border-box", ...style }}
+      />
+      {open && filtered.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            zIndex: 30,
+            background: "#fff",
+            border: "1px solid #E6E1D8",
+            borderRadius: 8,
+            marginTop: 3,
+            maxHeight: 190,
+            overflowY: "auto",
+            boxShadow: "0 8px 20px -8px rgba(27,58,74,0.3)",
+          }}
+        >
+          {filtered.map((o) => (
+            <div
+              key={o}
+              onMouseDown={(e) => {
+                // sprječava da input izgubi fokus (blur) prije nego što se klik registruje
+                e.preventDefault();
+                onChange(o);
+                setOpen(false);
+              }}
+              style={{
+                padding: "8px 10px",
+                fontSize: 13.5,
+                color: "#0F222B",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#FAF8F4"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SmartShoppingList() {
   const [items, setItems] = useState(SAMPLE_ITEMS);
   const [favorites, setFavorites] = useState(DEFAULT_FAVORITES);
@@ -476,15 +566,12 @@ function SmartShoppingList() {
           }}
         >
           {editingCell === `name-${it.id}` ? (
-            <input
+            <AutocompleteInput
               autoFocus
-              list="item-name-options"
-              autoComplete="off"
-              defaultValue={it.name}
-              onBlur={(e) => {
-                updateItem(it.id, { name: e.target.value });
-                setEditingCell(null);
-              }}
+              value={it.name}
+              options={knownItemNames}
+              onChange={(v) => updateItem(it.id, { name: v })}
+              onBlur={() => setEditingCell(null)}
               onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
               style={inputStyle}
             />
@@ -500,18 +587,18 @@ function SmartShoppingList() {
           onChange={(e) => updateItem(it.id, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
           style={{ ...inputStyle, width: 50, textAlign: "right" }}
         />
-        <input
-          list="store-options"
+        <AutocompleteInput
           value={it.store || ""}
+          options={knownStores}
           placeholder="—"
-          onChange={(e) => updateItem(it.id, { store: e.target.value })}
+          onChange={(v) => updateItem(it.id, { store: v })}
           style={selectStyle}
         />
-        <input
-          list="category-options"
+        <AutocompleteInput
           value={it.category || ""}
+          options={knownCategories}
           placeholder="—"
-          onChange={(e) => updateItem(it.id, { category: e.target.value })}
+          onChange={(v) => updateItem(it.id, { category: v })}
           style={selectStyle}
         />
         <input
@@ -561,22 +648,6 @@ function SmartShoppingList() {
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
       }}
     >
-      <datalist id="store-options">
-        {knownStores.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
-      <datalist id="category-options">
-        {knownCategories.map((c) => (
-          <option key={c} value={c} />
-        ))}
-      </datalist>
-      <datalist id="item-name-options">
-        {knownItemNames.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
-
       <div
         style={{
           height: 160,
@@ -894,11 +965,10 @@ function SmartShoppingList() {
             })}
 
           <div style={{ display: "flex", alignItems: "center", padding: "8px 12px", borderTop: "1px solid #EAE6DC", minWidth: ROW_MIN_WIDTH, boxSizing: "border-box" }}>
-            <input
+            <AutocompleteInput
               value={newName}
-              list="item-name-options"
-              autoComplete="off"
-              onChange={(e) => setNewName(e.target.value)}
+              options={knownItemNames}
+              onChange={setNewName}
               onKeyDown={(e) => e.key === "Enter" && addItem()}
               placeholder="+ New item"
               style={{
