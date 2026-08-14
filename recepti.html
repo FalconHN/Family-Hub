@@ -240,7 +240,7 @@ function RecipeApp() {
   const [categoryFilter, setCategoryFilter] = useState("Sve");
   const [detailId, setDetailId] = useState(null);
   const [form, setForm] = useState(null); // null = no form open, object = editing/adding
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState(null); // null ili { msg, type: "success" | "error" }
   const [addingToCart, setAddingToCart] = useState(false);
 
   const lastSentRecipes = useRef(null);
@@ -267,7 +267,7 @@ function RecipeApp() {
       },
       (err) => {
         console.error("Firestore sync error", err);
-        showToast("Greška pri učitavanju recepata (" + (err && err.code ? err.code : "provjeri internet") + ").");
+        showToast("Greška pri učitavanju recepata (" + (err && err.code ? err.code : "provjeri internet") + ").", "error");
         setLoaded(true);
       }
     );
@@ -283,16 +283,17 @@ function RecipeApp() {
       sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => {
         console.error("Failed to save recepti", e);
         lastSentRecipes.current = null; // ne blokiraj ponovni pokušaj kasnije ako se doc ipak promijeni
-        showToast("Snimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + "). Recept NIJE sačuvan trajno — provjeri internet ili se javi.");
+        showToast("Snimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + "). Recept NIJE sačuvan trajno — provjeri internet ili se javi.", "error");
       });
     }, 400);
     return () => clearTimeout(saveTimer.current);
   }, [recipes, loaded]);
 
-  function showToast(msg) {
-    setToast(msg);
+  function showToast(msg, type) {
+    const t = type || "success";
+    setToast({ msg, type: t });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3000);
+    toastTimer.current = setTimeout(() => setToast(null), t === "error" ? 6000 : 3000);
   }
 
   const knownCategories = Array.from(
@@ -353,7 +354,7 @@ function RecipeApp() {
 
   async function addIngredientsToShoppingList(recipe) {
     if (!recipe.sastojci || recipe.sastojci.length === 0) {
-      showToast("Ovaj recept nema unešene sastojke.");
+      showToast("Ovaj recept nema unešene sastojke.", "error");
       return;
     }
     setAddingToCart(true);
@@ -385,7 +386,7 @@ function RecipeApp() {
       showToast("Sastojci (" + newItems.length + ") dodati u kupovinu!");
     } catch (e) {
       console.error("Failed to add ingredients to shopping list", e);
-      showToast("Nije uspjelo dodavanje u kupovinu. Pokušaj ponovo.");
+      showToast("Nije uspjelo dodavanje u kupovinu. Pokušaj ponovo.", "error");
     } finally {
       setAddingToCart(false);
     }
@@ -475,8 +476,15 @@ function RecipeApp() {
       </div>
 
       {toast && (
-        <div style={{ position: "fixed", left: "50%", bottom: 24, transform: "translateX(-50%)", background: "#1F7A52", color: "#fff", padding: "10px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 600, boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)", zIndex: 100 }}>
-          {toast}
+        <div
+          style={{
+            position: "fixed", left: "50%", bottom: "calc(90px + env(safe-area-inset-bottom))", transform: "translateX(-50%)",
+            background: toast.type === "error" ? "#B3413E" : "#1F7A52", color: "#fff", padding: "12px 16px", borderRadius: 10,
+            fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, textAlign: "center", boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)",
+            zIndex: 10001, maxWidth: "calc(100vw - 32px)", boxSizing: "border-box",
+          }}
+        >
+          {toast.msg}
         </div>
       )}
 
