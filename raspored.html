@@ -46,7 +46,7 @@
   }
   .tab-pill.active { background: #007991; border-color: #007991; color: #fff; }
 
-  .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; }
+  .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-top: 4px; margin-bottom: 16px; }
   .day-tab {
     flex: 0 0 auto; padding: 8px 14px; border-radius: 10px; border: 1px solid #E6E1D8;
     background: #fff; color: #8A8578; font-weight: 600; font-size: 13px; cursor: pointer;
@@ -67,6 +67,50 @@
   .shift-banner button:hover { background: #00636F; }
 
   .casovi-col { display: flex; flex-direction: column; gap: 12px; }
+
+  .week-grid-card { padding: 16px 12px 14px; }
+  .week-grid { display: flex; gap: 10px; overflow-x: auto; padding: 2px 4px 8px; scroll-snap-type: x proximity; }
+  .week-day-col { flex: 0 0 128px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
+  .week-day-header { display: flex; align-items: center; gap: 6px; padding: 2px 2px 6px; border-bottom: 2px solid #F0EDE5; margin-bottom: 2px; }
+  .week-day-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+  .week-day-name { font-weight: 700; font-size: 12.5px; color: #0F222B; white-space: nowrap; }
+  .week-day-empty { color: #8A8578; font-size: 12px; padding: 6px 2px; }
+  .week-cas-card {
+    border-radius: 10px; padding: 9px 10px; cursor: pointer; border-left: 3px solid transparent;
+    transition: transform 0.08s ease;
+  }
+  .week-cas-card:hover { transform: translateY(-1px); }
+  .week-cas-card:active { transform: scale(0.97); }
+  .week-cas-time { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+  .week-cas-name { font-size: 13px; font-weight: 600; color: #0F222B; line-height: 1.25; }
+  .week-cas-room { font-size: 11px; color: #8A8578; margin-top: 3px; }
+  @media (min-width: 900px) {
+    .week-day-col { flex: 1 1 0; min-width: 0; }
+  }
+
+  .detail-overlay {
+    position: fixed; inset: 0; background: rgba(15,34,43,0.45); display: flex;
+    align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .detail-modal {
+    background: #fff; border-radius: 16px; padding: 22px; width: 100%; max-width: 360px;
+    box-shadow: 0 20px 50px -18px rgba(27,58,74,0.35);
+  }
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .detail-title { font-family: 'Fraunces', Georgia, serif; font-size: 19px; font-weight: 700; color: #0F222B; }
+  .detail-close { background: none; border: none; cursor: pointer; color: #8A8578; padding: 4px; flex: 0 0 auto; }
+  .detail-close:hover { color: #0F222B; }
+  .detail-prop { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #F0EDE5; font-size: 14px; }
+  .detail-prop:last-of-type { border-bottom: none; }
+  .detail-prop-label { color: #8A8578; font-weight: 600; }
+  .detail-prop-value { color: #0F222B; font-weight: 600; text-align: right; }
+  .detail-note-title { font-size: 12px; font-weight: 700; color: #8A8578; text-transform: uppercase; letter-spacing: 0.03em; margin: 14px 0 6px; }
+  .detail-note-body { font-size: 14px; color: #0F222B; background: #FAF8F4; border-radius: 10px; padding: 10px 12px; min-height: 20px; line-height: 1.4; }
+  .detail-delete-btn {
+    margin-top: 16px; width: 100%; background: #fff; border: 1px solid #B0524A; color: #B0524A;
+    border-radius: 10px; padding: 10px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .detail-delete-btn:hover { background: #FBEEEC; }
 
   .predmet-select-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
   .predmet-select-row select.predmet-select {
@@ -154,15 +198,16 @@
     <div class="tabs-scroll" id="childTabs" style="display:none;"></div>
     <div class="tabs-scroll" id="smjenaTabs" style="display:none;"></div>
     <div class="shift-banner" id="shiftBanner" style="display:none;"></div>
+
+    <div class="card week-grid-card">
+      <div class="section-title">Sedmični pregled</div>
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+
     <div class="day-tabs" id="dayTabs"></div>
 
     <div class="cards-row">
       <div class="casovi-col">
-        <div class="card">
-          <div class="section-title">Časovi</div>
-          <div id="casoviList"></div>
-        </div>
-
         <div class="card" id="casoviAddCard" style="display:none;">
           <div class="section-title">Dodaj čas</div>
           <div id="casoviAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
@@ -176,6 +221,10 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="detail-overlay" id="detailOverlay" style="display:none;">
+  <div class="detail-modal" id="detailModal"></div>
 </div>
 
 <div id="blockedRoot" style="display:none; padding: 60px 20px; text-align:center; font-family:'Public Sans',sans-serif; color:#B0524A;">
@@ -211,13 +260,13 @@ const CHILDREN = [
   { id: "relja", name: "Relja" },
 ];
 const DAYS = [
-  { key: "pon", label: "Ponedjeljak", short: "Pon" },
-  { key: "uto", label: "Utorak", short: "Uto" },
-  { key: "sre", label: "Srijeda", short: "Sre" },
-  { key: "cet", label: "Četvrtak", short: "Čet" },
-  { key: "pet", label: "Petak", short: "Pet" },
-  { key: "sub", label: "Subota", short: "Sub" },
-  { key: "ned", label: "Nedjelja", short: "Ned" },
+  { key: "pon", label: "Ponedjeljak", short: "Pon", color: "#2F6690" },
+  { key: "uto", label: "Utorak", short: "Uto", color: "#5E8B7E" },
+  { key: "sre", label: "Srijeda", short: "Sre", color: "#B8895E" },
+  { key: "cet", label: "Četvrtak", short: "Čet", color: "#8E6C9E" },
+  { key: "pet", label: "Petak", short: "Pet", color: "#007991" },
+  { key: "sub", label: "Subota", short: "Sub", color: "#C97B63" },
+  { key: "ned", label: "Nedjelja", short: "Ned", color: "#6B7280" },
 ];
 const SMJENE = [
   { key: "prva", label: "Prva smjena" },
@@ -237,6 +286,13 @@ let unsubscribePredmeti = null;
 let predmetiPanelOpen = false; // da li je otvoren panel za uređivanje liste predmeta
 let editingPredmet = null; // naziv predmeta koji se trenutno uređuje (preimenovanje) u panelu
 
+function hexToRgba(hex, alpha) {
+  const h = (hex || "#8A8578").replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+}
 function escapeHtml(str) {
   return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -297,7 +353,8 @@ function subscribePredmeti() {
     (snap) => {
       const lista = snap.exists && Array.isArray(snap.data().lista) ? snap.data().lista : [];
       predmetiList = lista.slice().sort((a, b) => a.localeCompare(b, "sr"));
-      renderLists();
+      // Samo osvježi listu/panel predmeta - ne diraj ostatak forme koju roditelj možda kuca.
+      refreshPredmetSelectAndPanel("casoviAddRow");
     },
     () => {
       predmetiList = [];
@@ -325,17 +382,21 @@ function overwritePredmetiList(newList) {
 }
 
 function deletePredmetFromList(naziv) {
-  overwritePredmetiList(predmetiList.filter((p) => p !== naziv));
+  predmetiList = predmetiList.filter((p) => p !== naziv);
+  refreshPredmetSelectAndPanel("casoviAddRow");
+  overwritePredmetiList(predmetiList);
 }
 
 function renamePredmetInList(oldNaziv, newNaziv) {
   const trimmed = (newNaziv || "").trim();
   editingPredmet = null;
   if (!trimmed || trimmed === oldNaziv) {
-    renderLists();
+    refreshPredmetSelectAndPanel("casoviAddRow");
     return;
   }
-  overwritePredmetiList(predmetiList.map((p) => (p === oldNaziv ? trimmed : p)));
+  predmetiList = predmetiList.map((p) => (p === oldNaziv ? trimmed : p));
+  refreshPredmetSelectAndPanel("casoviAddRow");
+  overwritePredmetiList(predmetiList);
 }
 
 function renderChildTabs() {
@@ -478,9 +539,34 @@ function activateSelectedSmjena() {
   db.collection("raspored").doc(selectedChildId).set({ aktivnaSmjena: selectedSmjena }, { merge: true });
 }
 
+let casoviAddRowContext = null; // "childId|smjena|dan" za koji je forma "Dodaj čas" trenutno izgrađena
+let obavezeAddRowContext = null;
+
 function renderLists() {
-  renderSection("casovi", "casoviList", "casoviAddRow", "Vrijeme (npr. 08:00-08:45)", "Predmet");
-  renderSection("obaveze", "obavezeList", "obavezeAddRow", "Vrijeme (npr. 17:00)", "Naziv obaveze");
+  renderWeekGrid();
+  renderEntryList("obaveze", "obavezeList");
+
+  const addCard = document.getElementById("casoviAddCard");
+  if (addCard) addCard.style.display = role === "parent" ? "block" : "none";
+
+  const casoviAddRowEl = document.getElementById("casoviAddRow");
+  const obavezeAddRowEl = document.getElementById("obavezeAddRow");
+
+  if (!scheduleData || role !== "parent") {
+    if (casoviAddRowEl) casoviAddRowEl.innerHTML = "";
+    if (obavezeAddRowEl) obavezeAddRowEl.innerHTML = "";
+    casoviAddRowContext = null;
+    obavezeAddRowContext = null;
+    return;
+  }
+
+  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {}, obaveze: {} };
+  const casoviEntries = (smjenaData.casovi && smjenaData.casovi[selectedDay]) || [];
+
+  // Forma za dodavanje se NE gradi iznova na svaku sitnicu (npr. promjenu liste predmeta u pozadini) -
+  // samo kad se stvarno promijeni dijete/smjena/dan. Time se ne briše ono što roditelj trenutno kuca.
+  ensureCasoviAddRowSkeleton(casoviAddRowEl, "casoviAddRow", casoviEntries);
+  ensureObavezeAddRowSkeleton(obavezeAddRowEl, "obavezeAddRow", "Vrijeme (npr. 17:00)", "Naziv obaveze");
 }
 
 function formatCasTime(e) {
@@ -499,14 +585,124 @@ function nextCasBroj(entries) {
   return String(max + 1);
 }
 
-function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceholder) {
+function sortedCasoviIndexed(entries) {
+  const indexed = entries.map((e, i) => ({ e: e, i: i }));
+  indexed.sort((a, b) => {
+    const brA = a.e.broj !== undefined && a.e.broj !== "" && !isNaN(parseFloat(a.e.broj)) ? parseFloat(a.e.broj) : Infinity;
+    const brB = b.e.broj !== undefined && b.e.broj !== "" && !isNaN(parseFloat(b.e.broj)) ? parseFloat(b.e.broj) : Infinity;
+    if (brA !== brB) return brA - brB;
+    return a.i - b.i;
+  });
+  return indexed;
+}
+
+// Sedmični pregled - stubovi po danu (kao sto je uradjeno sa bojama mjerila u potrosnja-vode.html),
+// svaki dan ima svoju boju koja se koristi za akcenat kartice i naslov kolone.
+function renderWeekGrid() {
+  const wrap = document.getElementById("weekGrid");
+  if (!wrap) return;
+  if (!scheduleData) {
+    wrap.innerHTML = '<div class="week-day-empty">Učitavanje...</div>';
+    return;
+  }
+
+  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {}, obaveze: {} };
+
+  wrap.innerHTML = DAYS.map((d) => {
+    const entries = (smjenaData.casovi && smjenaData.casovi[d.key]) || [];
+    const indexed = sortedCasoviIndexed(entries);
+    const cardsHtml =
+      indexed.length === 0
+        ? '<div class="week-day-empty">Nema časova.</div>'
+        : indexed.map(({ e, i }) => {
+            const brojPart = e.broj ? e.broj + ". čas" : "";
+            const timePart = formatCasTime(e);
+            const timeLine = [brojPart, timePart].filter(Boolean).join(" · ");
+            return (
+              '<div class="week-cas-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
+                (timeLine ? '<div class="week-cas-time" style="color:' + d.color + ';">' + escapeHtml(timeLine) + '</div>' : "") +
+                '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
+                (e.ucionica ? '<div class="week-cas-room">' + escapeHtml(e.ucionica) + '</div>' : "") +
+              '</div>'
+            );
+          }).join("");
+    return (
+      '<div class="week-day-col">' +
+        '<div class="week-day-header"><span class="week-day-dot" style="background:' + d.color + ';"></span><span class="week-day-name">' + d.short + '</span></div>' +
+        cardsHtml +
+      '</div>'
+    );
+  }).join("");
+
+  wrap.querySelectorAll(".week-cas-card").forEach((card) => {
+    card.addEventListener("click", () => openCasDetail(card.dataset.day, parseInt(card.dataset.index, 10)));
+  });
+}
+
+function openCasDetail(dayKey, idx) {
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const entries = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
+  const e = entries[idx];
+  if (!e) return;
+  const day = DAYS.find((d) => d.key === dayKey);
+  const brojPart = e.broj ? e.broj + ". čas" : "";
+  const timePart = formatCasTime(e);
+  const timeLine = [brojPart, timePart].filter(Boolean).join(" · ") || "–";
+
+  const modal = document.getElementById("detailModal");
+  modal.innerHTML =
+    '<div class="detail-header">' +
+      '<span class="detail-title">' + escapeHtml(e.naziv) + '</span>' +
+      '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
+    '</div>' +
+    '<div class="detail-prop"><span class="detail-prop-label">Dan</span><span class="detail-prop-value">' + escapeHtml(day ? day.label : "") + '</span></div>' +
+    '<div class="detail-prop"><span class="detail-prop-label">Vrijeme</span><span class="detail-prop-value">' + escapeHtml(timeLine) + '</span></div>' +
+    '<div class="detail-prop"><span class="detail-prop-label">Učionica</span><span class="detail-prop-value">' + (e.ucionica ? escapeHtml(e.ucionica) : "–") + '</span></div>' +
+    '<div class="detail-note-title">Napomena</div>' +
+    '<div class="detail-note-body">' + (e.napomena ? escapeHtml(e.napomena) : '<span style="color:#8A8578;">Nema napomene.</span>') + '</div>' +
+    (role === "parent" ? '<button type="button" class="detail-delete-btn" id="detailDeleteBtn">Obriši ovaj čas</button>' : "");
+
+  document.getElementById("detailOverlay").style.display = "flex";
+  document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
+  if (role === "parent") {
+    document.getElementById("detailDeleteBtn").addEventListener("click", () => {
+      deleteEntryForDay(dayKey, idx);
+      closeCasDetail();
+    });
+  }
+}
+
+function closeCasDetail() {
+  document.getElementById("detailOverlay").style.display = "none";
+}
+
+document.getElementById("detailOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "detailOverlay") closeCasDetail();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.getElementById("detailOverlay").style.display !== "none") {
+    closeCasDetail();
+  }
+});
+
+function deleteEntryForDay(dayKey, index) {
+  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
+  const current = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
+  const updated = current.slice();
+  updated.splice(index, 1);
+  const payload = { smjene: {} };
+  payload.smjene[selectedSmjena] = {};
+  payload.smjene[selectedSmjena].casovi = {};
+  payload.smjene[selectedSmjena].casovi[dayKey] = updated;
+  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
+}
+
+function renderEntryList(field, listElId) {
   const listEl = document.getElementById(listElId);
-  const addRowEl = document.getElementById(addRowElId);
   const isCasovi = field === "casovi";
 
   if (!scheduleData) {
     listEl.innerHTML = '<div class="entry-empty">Učitavanje...</div>';
-    addRowEl.innerHTML = "";
     return;
   }
 
@@ -526,151 +722,179 @@ function renderSection(field, listElId, addRowElId, timePlaceholder, namePlaceho
 
   if (entries.length === 0) {
     listEl.innerHTML = '<div class="entry-empty">Nema unešenih stavki za ovaj dan.</div>';
-  } else {
-    listEl.innerHTML = indexed.map(({ e, i }) => {
-      const timeHtml = isCasovi
-        ? '<span class="entry-time">' +
-            (e.broj ? '<span class="cas-broj">' + escapeHtml(e.broj) + '. čas</span>' : "") +
-            (formatCasTime(e) ? '<span class="cas-time">' + escapeHtml(formatCasTime(e)) + '</span>' : "") +
-          '</span>'
-        : '<span class="entry-time">' + escapeHtml(e.vrijeme) + '</span>';
-      const subLines = isCasovi
-        ? (e.ucionica ? '<span class="entry-sub">Učionica: ' + escapeHtml(e.ucionica) + '</span>' : "") +
-          (e.napomena ? '<span class="entry-sub entry-note">' + escapeHtml(e.napomena) + '</span>' : "")
-        : "";
-      return (
-        '<div class="entry-row">' +
-          timeHtml +
-          '<span class="entry-name">' + escapeHtml(e.naziv) + subLines + '</span>' +
-          (role === "parent" ? '<button type="button" class="entry-del" data-field="' + field + '" data-index="' + i + '" aria-label="Obriši">' + trashIcon() + '</button>' : "") +
-        '</div>'
-      );
-    }).join("");
-    if (role === "parent") {
-      listEl.querySelectorAll(".entry-del").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          deleteEntry(btn.dataset.field, parseInt(btn.dataset.index, 10));
-        });
-      });
-    }
+    return;
   }
 
-  if (isCasovi) {
-    const addCard = document.getElementById("casoviAddCard");
-    if (addCard) addCard.style.display = role === "parent" ? "block" : "none";
-  }
+  listEl.innerHTML = indexed.map(({ e, i }) => {
+    const timeHtml = isCasovi
+      ? '<span class="entry-time">' +
+          (e.broj ? '<span class="cas-broj">' + escapeHtml(e.broj) + '. čas</span>' : "") +
+          (formatCasTime(e) ? '<span class="cas-time">' + escapeHtml(formatCasTime(e)) + '</span>' : "") +
+        '</span>'
+      : '<span class="entry-time">' + escapeHtml(e.vrijeme) + '</span>';
+    const subLines = isCasovi
+      ? (e.ucionica ? '<span class="entry-sub">Učionica: ' + escapeHtml(e.ucionica) + '</span>' : "") +
+        (e.napomena ? '<span class="entry-sub entry-note">' + escapeHtml(e.napomena) + '</span>' : "")
+      : "";
+    return (
+      '<div class="entry-row">' +
+        timeHtml +
+        '<span class="entry-name">' + escapeHtml(e.naziv) + subLines + '</span>' +
+        (role === "parent" ? '<button type="button" class="entry-del" data-field="' + field + '" data-index="' + i + '" aria-label="Obriši">' + trashIcon() + '</button>' : "") +
+      '</div>'
+    );
+  }).join("");
 
   if (role === "parent") {
-    if (isCasovi) {
-      const selectHtml =
-        '<div class="predmet-select-row">' +
-          '<select class="predmet-select" id="' + addRowElId + '_predmetSelect">' +
-            '<option value="">Izaberi predmet iz liste...</option>' +
-            predmetiList.map((p) => '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</option>').join("") +
-          '</select>' +
-          '<button type="button" class="manage-link" id="' + addRowElId + '_toggleManage">' + (predmetiPanelOpen ? "Zatvori uređivanje" : "Uredi listu predmeta") + '</button>' +
-        '</div>';
-
-      const managePanelHtml = predmetiPanelOpen
-        ? '<div class="predmeti-manage-panel">' +
-            (predmetiList.length === 0
-              ? '<div class="predmeti-empty">Još nema zapamćenih predmeta.</div>'
-              : predmetiList.map((p, idx) => {
-                  if (editingPredmet === p) {
-                    return (
-                      '<div class="predmeti-manage-row">' +
-                        '<input type="text" class="pm-edit-input" value="' + escapeHtml(p) + '" id="' + addRowElId + '_pmEdit_' + idx + '" />' +
-                        '<button type="button" class="pm-icon-btn pm-save" data-old="' + escapeHtml(p) + '" data-input="' + addRowElId + '_pmEdit_' + idx + '" aria-label="Sačuvaj">' + checkIcon() + '</button>' +
-                        '<button type="button" class="pm-icon-btn pm-cancel" aria-label="Otkaži">' + xIcon() + '</button>' +
-                      '</div>'
-                    );
-                  }
-                  return (
-                    '<div class="predmeti-manage-row">' +
-                      '<span class="pm-name">' + escapeHtml(p) + '</span>' +
-                      '<button type="button" class="pm-icon-btn pm-edit" data-name="' + escapeHtml(p) + '" aria-label="Izmijeni">' + pencilIcon() + '</button>' +
-                      '<button type="button" class="pm-icon-btn pm-delete" data-name="' + escapeHtml(p) + '" aria-label="Obriši">' + trashIcon() + '</button>' +
-                    '</div>'
-                  );
-                }).join(""))
-          + '</div>'
-        : "";
-
-      addRowEl.innerHTML =
-        selectHtml +
-        managePanelHtml +
-        '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
-        '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
-        '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
-        '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
-        '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
-        '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
-        '<button type="button" class="submit-btn">Dodaj</button>';
-
-      const selectEl = document.getElementById(addRowElId + "_predmetSelect");
-      selectEl.addEventListener("change", () => {
-        if (selectEl.value) {
-          document.getElementById(addRowElId + "_name").value = selectEl.value;
-          document.getElementById(addRowElId + "_name").focus();
-        }
-        selectEl.value = "";
+    listEl.querySelectorAll(".entry-del").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        deleteEntry(btn.dataset.field, parseInt(btn.dataset.index, 10));
       });
-
-      document.getElementById(addRowElId + "_toggleManage").addEventListener("click", () => {
-        predmetiPanelOpen = !predmetiPanelOpen;
-        editingPredmet = null;
-        renderLists();
-      });
-
-      if (predmetiPanelOpen) {
-        addRowEl.querySelectorAll(".pm-edit").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            editingPredmet = btn.dataset.name;
-            renderLists();
-          });
-        });
-        addRowEl.querySelectorAll(".pm-delete").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            deletePredmetFromList(btn.dataset.name);
-          });
-        });
-        addRowEl.querySelectorAll(".pm-save").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const inputEl = document.getElementById(btn.dataset.input);
-            renamePredmetInList(btn.dataset.old, inputEl.value);
-          });
-        });
-        addRowEl.querySelectorAll(".pm-cancel").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            editingPredmet = null;
-            renderLists();
-          });
-        });
-        addRowEl.querySelectorAll(".pm-edit-input").forEach((input) => {
-          input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-              const row = e.target.closest(".predmeti-manage-row");
-              const saveBtn = row && row.querySelector(".pm-save");
-              if (saveBtn) saveBtn.click();
-            } else if (e.key === "Escape") {
-              editingPredmet = null;
-              renderLists();
-            }
-          });
-        });
-      }
-    } else {
-      addRowEl.innerHTML =
-        '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
-        '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
-        '<button type="button" class="submit-btn">Dodaj</button>';
-    }
-    addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry(field, addRowElId));
-    const nameInput = document.getElementById(addRowElId + "_name");
-    nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addEntry(field, addRowElId); });
-  } else {
-    addRowEl.innerHTML = "";
+    });
   }
+}
+
+// Gradi "kostur" forme za dodavanje časa SAMO kad se promijeni kontekst (dijete/smjena/dan) -
+// da se ne bi brisalo ono što je roditelj već upisao dok se lista predmeta mijenja u pozadini.
+function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
+  const contextKey = selectedChildId + "|" + selectedSmjena + "|" + selectedDay;
+  if (casoviAddRowContext === contextKey && document.getElementById(addRowElId + "_name")) {
+    return;
+  }
+
+  addRowEl.innerHTML =
+    '<div class="predmet-select-row">' +
+      '<select class="predmet-select" id="' + addRowElId + '_predmetSelect"></select>' +
+      '<button type="button" class="manage-link" id="' + addRowElId + '_toggleManage"></button>' +
+    '</div>' +
+    '<div id="' + addRowElId + '_managePanelWrap"></div>' +
+    '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
+    '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
+    '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
+    '<input type="text" class="name-input" placeholder="Predmet" id="' + addRowElId + '_name" />' +
+    '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
+    '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
+    '<button type="button" class="submit-btn">Dodaj</button>';
+
+  const selectEl = document.getElementById(addRowElId + "_predmetSelect");
+  selectEl.addEventListener("change", () => {
+    if (selectEl.value) {
+      document.getElementById(addRowElId + "_name").value = selectEl.value;
+      document.getElementById(addRowElId + "_name").focus();
+    }
+    selectEl.value = "";
+  });
+
+  document.getElementById(addRowElId + "_toggleManage").addEventListener("click", () => {
+    predmetiPanelOpen = !predmetiPanelOpen;
+    editingPredmet = null;
+    refreshPredmetSelectAndPanel(addRowElId);
+  });
+
+  addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("casovi", addRowElId));
+  document.getElementById(addRowElId + "_name").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addEntry("casovi", addRowElId);
+  });
+
+  casoviAddRowContext = contextKey;
+  refreshPredmetSelectAndPanel(addRowElId);
+}
+
+// Osvježava SAMO padajuću listu predmeta i panel za uređivanje - ne dira broj/od/do/predmet/učionicu/napomenu,
+// pa roditelj ne gubi ono što trenutno kuca kad se lista predmeta promijeni (npr. sa drugog uređaja).
+function refreshPredmetSelectAndPanel(addRowElId) {
+  const selectEl = document.getElementById(addRowElId + "_predmetSelect");
+  if (selectEl) {
+    selectEl.innerHTML =
+      '<option value="">Izaberi predmet iz liste...</option>' +
+      predmetiList.map((p) => '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</option>').join("");
+  }
+
+  const toggleBtn = document.getElementById(addRowElId + "_toggleManage");
+  if (toggleBtn) toggleBtn.textContent = predmetiPanelOpen ? "Zatvori uređivanje" : "Uredi listu predmeta";
+
+  const wrap = document.getElementById(addRowElId + "_managePanelWrap");
+  if (!wrap) return;
+  if (!predmetiPanelOpen) {
+    wrap.innerHTML = "";
+    return;
+  }
+
+  wrap.innerHTML =
+    '<div class="predmeti-manage-panel">' +
+      (predmetiList.length === 0
+        ? '<div class="predmeti-empty">Još nema zapamćenih predmeta.</div>'
+        : predmetiList.map((p, idx) => {
+            if (editingPredmet === p) {
+              return (
+                '<div class="predmeti-manage-row">' +
+                  '<input type="text" class="pm-edit-input" value="' + escapeHtml(p) + '" id="' + addRowElId + '_pmEdit_' + idx + '" />' +
+                  '<button type="button" class="pm-icon-btn pm-save" data-old="' + escapeHtml(p) + '" data-input="' + addRowElId + '_pmEdit_' + idx + '" aria-label="Sačuvaj">' + checkIcon() + '</button>' +
+                  '<button type="button" class="pm-icon-btn pm-cancel" aria-label="Otkaži">' + xIcon() + '</button>' +
+                '</div>'
+              );
+            }
+            return (
+              '<div class="predmeti-manage-row">' +
+                '<span class="pm-name">' + escapeHtml(p) + '</span>' +
+                '<button type="button" class="pm-icon-btn pm-edit" data-name="' + escapeHtml(p) + '" aria-label="Izmijeni">' + pencilIcon() + '</button>' +
+                '<button type="button" class="pm-icon-btn pm-delete" data-name="' + escapeHtml(p) + '" aria-label="Obriši">' + trashIcon() + '</button>' +
+              '</div>'
+            );
+          }).join(""))
+    + '</div>';
+
+  wrap.querySelectorAll(".pm-edit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      editingPredmet = btn.dataset.name;
+      refreshPredmetSelectAndPanel(addRowElId);
+    });
+  });
+  wrap.querySelectorAll(".pm-delete").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      deletePredmetFromList(btn.dataset.name);
+    });
+  });
+  wrap.querySelectorAll(".pm-save").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const inputEl = document.getElementById(btn.dataset.input);
+      renamePredmetInList(btn.dataset.old, inputEl.value);
+    });
+  });
+  wrap.querySelectorAll(".pm-cancel").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      editingPredmet = null;
+      refreshPredmetSelectAndPanel(addRowElId);
+    });
+  });
+  wrap.querySelectorAll(".pm-edit-input").forEach((input) => {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const row = e.target.closest(".predmeti-manage-row");
+        const saveBtn = row && row.querySelector(".pm-save");
+        if (saveBtn) saveBtn.click();
+      } else if (e.key === "Escape") {
+        editingPredmet = null;
+        refreshPredmetSelectAndPanel(addRowElId);
+      }
+    });
+  });
+}
+
+function ensureObavezeAddRowSkeleton(addRowEl, addRowElId, timePlaceholder, namePlaceholder) {
+  const contextKey = selectedChildId + "|" + selectedSmjena + "|" + selectedDay;
+  if (obavezeAddRowContext === contextKey && document.getElementById(addRowElId + "_name")) {
+    return;
+  }
+  addRowEl.innerHTML =
+    '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
+    '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
+    '<button type="button" class="submit-btn">Dodaj</button>';
+  addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("obaveze", addRowElId));
+  document.getElementById(addRowElId + "_name").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addEntry("obaveze", addRowElId);
+  });
+  obavezeAddRowContext = contextKey;
 }
 
 function addEntry(field, addRowElId) {
@@ -702,7 +926,30 @@ function addEntry(field, addRowElId) {
   const current = (smjenaData[field] && smjenaData[field][selectedDay]) || [];
   const updated = current.concat([novaStavka]);
   saveField(field, updated);
-  if (field === "casovi") rememberPredmet(naziv);
+
+  // Rucno cistimo polja za sledeci unos (umjesto da se cijela forma ponovo gradi) - tako
+  // upis ne nestaje ako u medjuvremenu stigne osvjezenje liste predmeta iz pozadine.
+  if (field === "casovi") {
+    rememberPredmet(naziv);
+    const brojEl = document.getElementById(addRowElId + "_broj");
+    if (brojEl) {
+      const n = parseInt(brojEl.value, 10);
+      brojEl.value = String((isNaN(n) ? 0 : n) + 1);
+    }
+    const odEl = document.getElementById(addRowElId + "_od");
+    if (odEl) odEl.value = "";
+    const doEl = document.getElementById(addRowElId + "_do");
+    if (doEl) doEl.value = "";
+    const ucionicaEl = document.getElementById(addRowElId + "_ucionica");
+    if (ucionicaEl) ucionicaEl.value = "";
+    const napomenaEl = document.getElementById(addRowElId + "_napomena");
+    if (napomenaEl) napomenaEl.value = "";
+  } else {
+    const timeEl = document.getElementById(addRowElId + "_time");
+    if (timeEl) timeEl.value = "";
+  }
+  nameEl.value = "";
+  nameEl.focus();
 }
 
 function deleteEntry(field, index) {
