@@ -88,8 +88,80 @@ async function uploadImageToCloudinary(file) {
   return data.secure_url;
 }
 
+// "Skeniraj recept": šalje fotografiju Cloudflare Worker-u (koji drži Gemini ključ)
+// i dobija nazad strukturisan recept. VAŽNO: zamijeni URL ispod svojim Worker URL-om
+// nakon što ga deployuješ (vidi recept-ocr-worker.js).
+const RECIPE_OCR_WORKER_URL = "https://recept-ocr.ivanmitrovic82usa-503.workers.dev";
+
+// Smanjuje sliku (radi brzine i limita) i vraća base64 (bez "data:" prefiksa).
+function fileToDownscaledBase64(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = () => reject(new Error("Ne mogu da učitam sliku."));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("Ne mogu da pročitam fajl."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function scanRecipeFromImage(file) {
+  if (!RECIPE_OCR_WORKER_URL || RECIPE_OCR_WORKER_URL.indexOf("REPLACE-WITH") !== -1) {
+    throw new Error("Skener još nije podešen (Worker URL nije unešen u recepti.html).");
+  }
+  const { base64, mimeType } = await fileToDownscaledBase64(file, 1600);
+  const res = await fetch(RECIPE_OCR_WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: base64, mimeType }),
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    throw new Error((data && data.error) || ("Greška servera (" + res.status + ")."));
+  }
+  return data || {};
+}
+
 function uid() {
   return Date.now().toString() + Math.random().toString(36).slice(2, 8);
+}
+
+// Propušta samo http(s) linkove. Sprječava npr. "javascript:..." u polju slike/videa
+// da se iskoristi kao klik-XSS. Prazno polje ostaje prazno.
+function safeUrl(u) {
+  const s = (u || "").trim();
+  if (!s) return "";
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+
+// Slika recepta sa sigurnim fallback-om: ako nema URL-a ili se slika ne učita
+// (npr. slomljen link), prikazuje ikonicu kuvarske kape umjesto praznog sivog kvadrata.
+function RecipeImage({ url, alt, iconSize }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [url]); // reset kad se recept izmijeni
+  if (!url || broken) return chefHatIcon(iconSize);
+  return (
+    <img
+      src={url}
+      alt={alt || ""}
+      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      onError={() => setBroken(true)}
+    />
+  );
 }
 
 function emptyRecipeForm() {
@@ -314,6 +386,14 @@ function uploadIcon() {
     </svg>
   );
 }
+function heartIcon(filled, size) {
+  const s = size || 18;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  );
+}
 
 function RecipeApp() {
   const [recipes, setRecipes] = useState([]);
@@ -338,7 +418,7 @@ function RecipeApp() {
             try {
               const parsed = JSON.parse(data.recepti);
               if (Array.isArray(parsed)) {
-                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", order: i, ...r })));
+                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, ...r })));
               }
             } catch (e) {}
           }
@@ -382,10 +462,14 @@ function RecipeApp() {
     new Set([...DEFAULT_CATEGORIES, ...recipes.map((r) => r.kategorija).filter(Boolean)])
   ).sort((a, b) => a.localeCompare(b, "sr"));
 
-  const allCategoriesForFilter = ["Sve", ...knownCategories];
+  const allCategoriesForFilter = ["Sve", "Omiljeni", ...knownCategories];
 
   const visibleRecipes = recipes
-    .filter((r) => (categoryFilter === "Sve" ? true : r.kategorija === categoryFilter))
+    .filter((r) => {
+      if (categoryFilter === "Sve") return true;
+      if (categoryFilter === "Omiljeni") return !!r.omiljen;
+      return r.kategorija === categoryFilter;
+    })
     .filter((r) => {
       const q = search.trim().toLowerCase();
       if (!q) return true;
@@ -412,8 +496,8 @@ function RecipeApp() {
       id: form.id || uid(),
       naziv: naziv,
       kategorija: (form.kategorija || "").trim(),
-      slikaUrl: (form.slikaUrl || "").trim(),
-      videoUrl: (form.videoUrl || "").trim(),
+      slikaUrl: safeUrl(form.slikaUrl),
+      videoUrl: safeUrl(form.videoUrl),
       sastojci: cleanSastojci,
       priprema: (form.priprema || "").trim(),
     };
@@ -433,6 +517,9 @@ function RecipeApp() {
     setRecipes((prev) => prev.filter((r) => r.id !== id));
     if (detailId === id) setDetailId(null);
   }
+  function toggleFavorite(id) {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, omiljen: !r.omiljen } : r)));
+  }
 
   async function addIngredientsToShoppingList(recipe) {
     if (!recipe.sastojci || recipe.sastojci.length === 0) {
@@ -442,30 +529,34 @@ function RecipeApp() {
     setAddingToCart(true);
     try {
       const shoppingRef = db.collection("shopping-list").doc("shared");
-      const snap = await shoppingRef.get();
-      const data = snap.exists ? snap.data() : {};
-      let items = [];
-      if (typeof data.items === "string") {
-        try {
-          const parsed = JSON.parse(data.items);
-          if (Array.isArray(parsed)) items = parsed;
-        } catch (e) {}
-      }
-      const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
-      const newItems = recipe.sastojci.map((naziv, i) => ({
-        id: uid() + i,
-        name: naziv,
-        quantity: 1,
-        store: "",
-        category: "",
-        price: 0,
-        note: "",
-        purchased: false,
-        order: maxOrder + i + 1,
-      }));
-      const updated = items.concat(newItems);
-      await shoppingRef.set({ items: JSON.stringify(updated) }, { merge: true });
-      showToast("Sastojci (" + newItems.length + ") dodati u kupovinu!");
+      // Transakcija: čita i piše atomično, pa se stavke ne izgube ako neko u istom
+      // trenutku mijenja kupovinu na drugom uređaju (sprječava "gaženje" liste).
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(shoppingRef);
+        const data = snap.exists ? snap.data() : {};
+        let items = [];
+        if (typeof data.items === "string") {
+          try {
+            const parsed = JSON.parse(data.items);
+            if (Array.isArray(parsed)) items = parsed;
+          } catch (e) {}
+        }
+        const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
+        const newItems = recipe.sastojci.map((naziv, i) => ({
+          id: uid() + i,
+          name: naziv,
+          quantity: 1,
+          store: "",
+          category: "",
+          price: 0,
+          note: "",
+          purchased: false,
+          order: maxOrder + i + 1,
+        }));
+        const updated = items.concat(newItems);
+        tx.set(shoppingRef, { items: JSON.stringify(updated) }, { merge: true });
+      });
+      showToast("Sastojci (" + recipe.sastojci.length + ") dodati u kupovinu!");
     } catch (e) {
       console.error("Failed to add ingredients to shopping list", e);
       showToast("Nije uspjelo dodavanje u kupovinu. Pokušaj ponovo.", "error");
@@ -528,17 +619,16 @@ function RecipeApp() {
                 onClick={() => setDetailId(r.id)}
                 style={{ background: "#fff", borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)" }}
               >
-                <div style={{ width: "100%", aspectRatio: "1 / 1", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {r.slikaUrl ? (
-                    <img
-                      src={r.slikaUrl}
-                      alt={r.naziv}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      onError={(e) => { e.target.style.display = "none"; e.target.parentElement.dataset.broken = "1"; }}
-                    />
-                  ) : (
-                    chefHatIcon(36)
-                  )}
+                <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <RecipeImage url={r.slikaUrl} alt={r.naziv} iconSize={36} />
+                  <button
+                    type="button"
+                    aria-label={r.omiljen ? "Ukloni iz omiljenih" : "Dodaj u omiljene"}
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(r.id); }}
+                    style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.9)", color: r.omiljen ? "#E0555A" : "#8A8578", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 4px rgba(15,34,43,0.18)", padding: 0 }}
+                  >
+                    {heartIcon(r.omiljen, 16)}
+                  </button>
                 </div>
                 <div style={{ padding: "10px 12px 12px" }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
@@ -573,6 +663,7 @@ function RecipeApp() {
           onEdit={() => openEditForm(detailRecipe)}
           onDelete={() => deleteRecipe(detailRecipe.id)}
           onAddToCart={() => addIngredientsToShoppingList(detailRecipe)}
+          onToggleFavorite={() => toggleFavorite(detailRecipe.id)}
           addingToCart={addingToCart}
         />
       )}
@@ -591,7 +682,7 @@ function RecipeApp() {
   );
 }
 
-function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, addingToCart }) {
+function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onToggleFavorite, addingToCart }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div
@@ -603,16 +694,15 @@ function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, add
         style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)" }}
       >
         <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-          {recipe.slikaUrl ? (
-            <img
-              src={recipe.slikaUrl}
-              alt={recipe.naziv}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
-          ) : (
-            chefHatIcon(48)
-          )}
+          <RecipeImage url={recipe.slikaUrl} alt={recipe.naziv} iconSize={48} />
+          <button
+            type="button"
+            aria-label={recipe.omiljen ? "Ukloni iz omiljenih" : "Dodaj u omiljene"}
+            onClick={onToggleFavorite}
+            style={{ position: "absolute", top: 12, left: 12, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.92)", color: recipe.omiljen ? "#E0555A" : "#8A8578", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(15,34,43,0.2)", padding: 0 }}
+          >
+            {heartIcon(recipe.omiljen, 19)}
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -706,9 +796,40 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const scanInputRef = useRef(null);
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleScanSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // dozvoli ponovni odabir iste slike
+    if (!file) return;
+    setScanError("");
+    setScanning(true);
+    try {
+      const r = await scanRecipeFromImage(file);
+      setForm((prev) => {
+        const sastojci = Array.isArray(r.sastojci) && r.sastojci.length
+          ? r.sastojci.map((s) => String(s))
+          : prev.sastojci;
+        return {
+          ...prev,
+          naziv: r.naziv ? String(r.naziv) : prev.naziv,
+          kategorija: r.kategorija ? String(r.kategorija) : prev.kategorija,
+          sastojci: sastojci && sastojci.length ? sastojci : [""],
+          priprema: r.priprema ? String(r.priprema) : prev.priprema,
+        };
+      });
+    } catch (err) {
+      console.error("Scan failed", err);
+      setScanError((err && err.message) || "Skeniranje nije uspjelo. Unesi ručno.");
+    } finally {
+      setScanning(false);
+    }
   }
 
   async function handleFileSelected(e) {
@@ -767,6 +888,22 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
           >
             {xIcon()}
           </button>
+        </div>
+
+        <div style={{ marginBottom: 16, padding: "12px 14px", background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 12 }}>
+          <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={handleScanSelected} style={{ display: "none" }} />
+          <button
+            type="button"
+            onClick={() => scanInputRef.current && scanInputRef.current.click()}
+            disabled={scanning}
+            style={{ width: "100%", background: "#007991", color: "#fff", border: "none", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, cursor: scanning ? "default" : "pointer", opacity: scanning ? 0.7 : 1, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            {uploadIcon()} {scanning ? "Čitam recept sa slike..." : "Skeniraj recept (slika)"}
+          </button>
+          <div style={{ color: "#5A6B6E", fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
+            Slikaj rukom pisan ili kucan recept — polja se popune sama. Provjeri i ispravi prije nego sačuvaš.
+          </div>
+          {scanError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 8 }}>{scanError}</div>}
         </div>
 
         <div style={{ marginBottom: 14 }}>
