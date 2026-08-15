@@ -216,6 +216,12 @@
 </head>
 <body>
 
+<style>@keyframes fhspin { to { transform: rotate(360deg); } }</style>
+<div id="appLoading" style="position:fixed; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:#F5F3EE; font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="width:34px; height:34px; border:3px solid #DDE7E4; border-top-color:#007991; border-radius:50%; animation:fhspin 0.8s linear infinite;"></div>
+  <div style="font-size:14px; font-weight:600; color:#5B6B70;">Učitavanje…</div>
+</div>
+
 <div id="appRoot" style="display:none;">
   <div class="wrap">
     <div class="header">
@@ -287,6 +293,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// Lokalni kes (IndexedDB): pri sljedecem otvaranju raspored iskoci odmah iz memorije,
+// a svjeza verzija se povuce u pozadini. Ako kes nije dostupan (npr. incognito ili vise
+// otvorenih tabova), samo se preskoci i sve radi kao i do sad.
+db.enablePersistence({ synchronizeTabs: true }).catch(function () {});
 
 // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
 window.fhLogout = function () {
@@ -394,6 +404,8 @@ auth.onAuthStateChanged((user) => {
     if (role === "child") {
       myChildId = data.childId;
       if (!myChildId || !CHILDREN.some((c) => c.id === myChildId)) {
+        var l = document.getElementById("appLoading");
+        if (l) l.style.display = "none";
         document.getElementById("blockedRoot").style.display = "block";
         return;
       }
@@ -408,6 +420,8 @@ auth.onAuthStateChanged((user) => {
 });
 
 function initUI() {
+  var l = document.getElementById("appLoading");
+  if (l) l.style.display = "none";
   document.getElementById("appRoot").style.display = "block";
   renderChildTabs();
   renderChildLabel();
