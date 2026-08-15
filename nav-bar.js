@@ -82,15 +82,25 @@
     '<span class="fh-top-title">Family Hub</span>' +
     '<button class="fh-top-logout" id="fhLogoutBtnTop" aria-label="Odjava">' + svgIcon(ICONS.logOut) + '</button>';
 
+  // Zapamcena uloga iz proslog logina (localStorage) - da odmah iscrtamo pravu
+  // verziju trake, bez treptaja svih tabova dok se uloga tek ucita iz baze.
+  var cachedRole = null;
+  try { cachedRole = localStorage.getItem("fhRole"); } catch (e) {}
+  function appsForRole(role) {
+    return role === "child"
+      ? APPS.filter(function (app) { return app.href === "raspored.html"; })
+      : APPS;
+  }
+
   var bottomBar = document.createElement("div");
   bottomBar.id = "fhNavBottom";
-  bottomBar.innerHTML = tabsHtml("bottom");
+  bottomBar.innerHTML = tabsHtml("bottom", appsForRole(cachedRole));
 
   var sideBar = document.createElement("div");
   sideBar.id = "fhNavSide";
   sideBar.innerHTML =
     '<div class="fh-side-header"><img class="fh-side-logo" src="data:image/png;base64,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" alt="Family Hub" /><span class="fh-side-title">Family Hub</span></div>' +
-    '<div class="fh-side-tabs">' + tabsHtml("side") + '</div>' +
+    '<div class="fh-side-tabs">' + tabsHtml("side", appsForRole(cachedRole)) + '</div>' +
     '<button class="fh-logout-btn" id="fhLogoutBtn">' +
       '<span class="fh-icon">' + svgIcon(ICONS.logOut) + '</span>' +
       '<span class="fh-label">Odjava</span>' +
@@ -178,6 +188,7 @@
   }
 
   function doLogout() {
+    try { localStorage.removeItem("fhRole"); } catch (e) {}
     if (typeof window.fhLogout === "function") {
       window.fhLogout();
     }
@@ -191,7 +202,8 @@
   // Stranice pozivaju ovo posto saznaju ulogu ulogovanog korisnika (users/{uid} u bazi).
   // Sve dok se ne pozove, prikazuju se svi tabovi (podrazumijevano ponasanje za roditelje).
   window.fhApplyRole = function (role) {
-    var visibleApps = role === "child" ? APPS.filter(function (app) { return app.href === "raspored.html"; }) : APPS;
+    try { localStorage.setItem("fhRole", role); } catch (e) {}
+    var visibleApps = appsForRole(role);
     bottomBar.innerHTML = tabsHtml("bottom", visibleApps);
     var tabsEl = sideBar.querySelector(".fh-side-tabs");
     if (tabsEl) tabsEl.innerHTML = tabsHtml("side", visibleApps);
