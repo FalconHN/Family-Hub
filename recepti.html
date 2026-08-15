@@ -698,7 +698,7 @@ function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onT
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)" }}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)" }}
       >
         <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           <RecipeImage url={recipe.slikaUrl} alt={recipe.naziv} iconSize={48} />
@@ -884,7 +884,7 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: "#0F222B" }}>{isNew ? "Dodaj recept" : "Izmijeni recept"}</div>
