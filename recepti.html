@@ -891,15 +891,12 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
         </div>
 
         <div style={{ marginBottom: 16, padding: "12px 14px", background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 12 }}>
-          <input ref={scanInputRef} type="file" accept="image/*" capture="environment" onChange={handleScanSelected} style={{ display: "none" }} />
-          <button
-            type="button"
-            onClick={() => scanInputRef.current && scanInputRef.current.click()}
-            disabled={scanning}
-            style={{ width: "100%", background: "#007991", color: "#fff", border: "none", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, cursor: scanning ? "default" : "pointer", opacity: scanning ? 0.7 : 1, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          <label
+            style={{ width: "100%", boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, cursor: scanning ? "default" : "pointer", opacity: scanning ? 0.7 : 1, pointerEvents: scanning ? "none" : "auto", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, WebkitTapHighlightColor: "transparent" }}
           >
+            <input ref={scanInputRef} type="file" accept="image/*" onChange={handleScanSelected} style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", border: 0 }} />
             {uploadIcon()} {scanning ? "Čitam recept sa slike..." : "Skeniraj recept (slika)"}
-          </button>
+          </label>
           <div style={{ color: "#5A6B6E", fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
             Slikaj rukom pisan ili kucan recept — polja se popune sama. Provjeri i ispravi prije nego sačuvaš.
           </div>
