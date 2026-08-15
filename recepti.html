@@ -386,6 +386,13 @@ function uploadIcon() {
     </svg>
   );
 }
+function cameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+    </svg>
+  );
+}
 function heartIcon(filled, size) {
   const s = size || 18;
   return (
@@ -891,14 +898,24 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
         </div>
 
         <div style={{ marginBottom: 16, padding: "12px 14px", background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 12 }}>
-          <label
-            style={{ width: "100%", boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, cursor: scanning ? "default" : "pointer", opacity: scanning ? 0.7 : 1, pointerEvents: scanning ? "none" : "auto", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, WebkitTapHighlightColor: "transparent" }}
-          >
-            <input ref={scanInputRef} type="file" accept="image/*" onChange={handleScanSelected} style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", border: 0 }} />
-            {uploadIcon()} {scanning ? "Čitam recept sa slike..." : "Skeniraj recept (slika)"}
-          </label>
+          {scanning ? (
+            <div style={{ width: "100%", boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, opacity: 0.75, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {uploadIcon()} Čitam recept sa slike...
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              <label style={{ flex: 1, boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 10px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, WebkitTapHighlightColor: "transparent" }}>
+                <input type="file" accept="image/*" capture="environment" onChange={handleScanSelected} style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", border: 0 }} />
+                {cameraIcon()} Slikaj
+              </label>
+              <label style={{ flex: 1, boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 10px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, WebkitTapHighlightColor: "transparent" }}>
+                <input ref={scanInputRef} type="file" accept="image/*" onChange={handleScanSelected} style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0 0 0 0)", border: 0 }} />
+                {uploadIcon()} Galerija
+              </label>
+            </div>
+          )}
           <div style={{ color: "#5A6B6E", fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
-            Slikaj rukom pisan ili kucan recept — polja se popune sama. Provjeri i ispravi prije nego sačuvaš.
+„Slikaj" — fotografiši recept kamerom. „Galerija" — izaberi postojeću sliku ili screenshot. Polja se popune sama; provjeri prije nego sačuvaš.
           </div>
           {scanError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 8 }}>{scanError}</div>}
         </div>
