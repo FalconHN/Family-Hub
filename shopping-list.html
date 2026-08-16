@@ -244,6 +244,79 @@ function AutocompleteInput({ value, onChange, options, placeholder, style, onKey
   );
 }
 
+// Palette people can pick from for stores/categories (matches the app's soft tags).
+const PICKER_COLORS = [
+  { bg: "#DCE9F5", text: "#1B4D7A" },
+  { bg: "#F5E6D3", text: "#8A5A1F" },
+  { bg: "#EDE0F5", text: "#6B3FA0" },
+  { bg: "#DCF0E4", text: "#1F7A52" },
+  { bg: "#F5DCE3", text: "#A02E52" },
+  { bg: "#F5DCDC", text: "#A02E3A" },
+  { bg: "#DCEEF5", text: "#1B6B8A" },
+  { bg: "#F0EFD3", text: "#7A7A1F" },
+  { bg: "#EAE6DC", text: "#6B6559" },
+];
+
+// Line-style SVG icons (no emoji) to match the rest of the app's screens.
+function IconCircle({ checked, color }) {
+  return (
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+      <circle cx="13" cy="13" r="11.5" fill={checked ? (color || "#007991") : "#FFFFFF"}
+        stroke={checked ? (color || "#007991") : "#C9C3B5"} strokeWidth="1.5" />
+      {checked && (
+        <path d="M8 13.5l3 3 6-6.5" stroke="#FFFFFF" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      )}
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v12a1 1 0 01-1 1H7a1 1 0 01-1-1V7"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconPlus() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconDroplet() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3s6 6.5 6 11a6 6 0 11-12 0c0-4.5 6-11 6-11z"
+        stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+// Track whether we're on a phone-width screen (cards) vs desktop (table).
+function useIsMobile(breakpoint = 720) {
+  const query = `(max-width: ${breakpoint}px)`;
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia(query).matches
+      : false
+  );
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mql = window.matchMedia(query);
+    const onChange = (e) => setIsMobile(e.matches);
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
+    setIsMobile(mql.matches);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
+    };
+  }, [query]);
+  return isMobile;
+}
+
 function SmartShoppingList() {
   const [items, setItems] = useState(SAMPLE_ITEMS);
   const [favorites, setFavorites] = useState(DEFAULT_FAVORITES);
@@ -257,11 +330,19 @@ function SmartShoppingList() {
   const [showExport, setShowExport] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [dragId, setDragId] = useState(null);
+  // Custom colors for stores/categories, shared via Firestore so everyone sees the same.
+  const [storeColors, setStoreColors] = useState({});
+  const [categoryColors, setCategoryColors] = useState({});
+  // Which name's color palette is currently open, e.g. "store:Lidl" or "cat:Drinks".
+  const [colorPickerFor, setColorPickerFor] = useState(null);
+  const isMobile = useIsMobile();
   const saveTimer = useRef(null);
 
   const lastSentItems = useRef(null);
   const lastSentFavorites = useRef(null);
   const lastSentBudget = useRef(null);
+  const lastSentStoreColors = useRef(null);
+  const lastSentCategoryColors = useRef(null);
 
   // Live two-way sync via Firestore onSnapshot: any change made by either
   // person (on any device) pushes here in real time.
@@ -293,12 +374,26 @@ function SmartShoppingList() {
               }
             } catch (e) {}
           }
+          if (typeof data.storeColors === "string" && data.storeColors !== lastSentStoreColors.current) {
+            try {
+              const parsed = JSON.parse(data.storeColors);
+              if (parsed && typeof parsed === "object") setStoreColors(parsed);
+            } catch (e) {}
+          }
+          if (typeof data.categoryColors === "string" && data.categoryColors !== lastSentCategoryColors.current) {
+            try {
+              const parsed = JSON.parse(data.categoryColors);
+              if (parsed && typeof parsed === "object") setCategoryColors(parsed);
+            } catch (e) {}
+          }
         } else {
           // First run ever: seed the shared document with current (sample) data.
           sharedDocRef.set({
             items: JSON.stringify(items),
             favorites: JSON.stringify(favorites),
             budget: JSON.stringify(budget),
+            storeColors: JSON.stringify(storeColors),
+            categoryColors: JSON.stringify(categoryColors),
           });
         }
         setLoaded(true);
@@ -335,6 +430,20 @@ function SmartShoppingList() {
     lastSentBudget.current = json;
     sharedDocRef.set({ budget: json }, { merge: true }).catch(() => {});
   }, [budget, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const json = JSON.stringify(storeColors);
+    lastSentStoreColors.current = json;
+    sharedDocRef.set({ storeColors: json }, { merge: true }).catch(() => {});
+  }, [storeColors, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const json = JSON.stringify(categoryColors);
+    lastSentCategoryColors.current = json;
+    sharedDocRef.set({ categoryColors: json }, { merge: true }).catch(() => {});
+  }, [categoryColors, loaded]);
 
   function updateItem(id, patch) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -470,6 +579,94 @@ function SmartShoppingList() {
     });
     setDragId(null);
   }
+
+  // Prefer a custom color if one was chosen; otherwise fall back to the auto color.
+  function resolveStoreColor(name) {
+    if (name && storeColors[name]) return storeColors[name];
+    return colorForStore(name);
+  }
+  function resolveCategoryMeta(name) {
+    const base = metaForCategory(name);
+    if (name && categoryColors[name]) return { ...base, ...categoryColors[name] };
+    return base;
+  }
+  function setStoreColor(name, color) {
+    setStoreColors((prev) => ({ ...prev, [name]: color }));
+  }
+  function setCategoryColor(name, color) {
+    setCategoryColors((prev) => ({ ...prev, [name]: color }));
+  }
+
+  // Small swatch that opens a palette. `pickerKey` keeps one popover open at a time.
+  const renderColorControl = (pickerKey, currentColor, apply) => {
+    const open = colorPickerFor === pickerKey;
+    return (
+      <span style={{ position: "relative", display: "inline-flex" }}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setColorPickerFor(open ? null : pickerKey);
+          }}
+          title="Promijeni boju"
+          aria-label="Promijeni boju"
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: "50%",
+            border: "1px solid rgba(0,0,0,0.15)",
+            background: (currentColor && currentColor.bg) || "#EAE6DC",
+            cursor: "pointer",
+            padding: 0,
+            flexShrink: 0,
+          }}
+        />
+        {open && (
+          <span
+            style={{
+              position: "absolute",
+              top: 26,
+              left: 0,
+              zIndex: 30,
+              background: "#FFFFFF",
+              border: "1px solid #E6E1D8",
+              borderRadius: 10,
+              padding: 8,
+              boxShadow: "0 6px 20px rgba(15,34,43,0.14)",
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 24px)",
+              gap: 8,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {PICKER_COLORS.map((c) => (
+              <button
+                key={c.bg}
+                type="button"
+                onClick={() => {
+                  apply(c);
+                  setColorPickerFor(null);
+                }}
+                title={c.text}
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  border:
+                    currentColor && currentColor.bg === c.bg
+                      ? "2px solid #0F222B"
+                      : "1px solid rgba(0,0,0,0.12)",
+                  background: c.bg,
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              />
+            ))}
+          </span>
+        )}
+      </span>
+    );
+  };
 
   const inputStyle = {
     background: "transparent",
@@ -638,11 +835,246 @@ function SmartShoppingList() {
     );
   };
 
+  const renderCard = (it) => {
+    const over = totalCost(it) > HIGH_COST_THRESHOLD;
+    const done = !!it.purchased;
+    const storeColor = it.store ? resolveStoreColor(it.store) : null;
+    const catMeta = it.category ? resolveCategoryMeta(it.category) : null;
+    const hasPrice = it.price !== "" && it.price !== undefined && it.price !== null && Number(it.price) > 0;
+    return (
+      <div
+        key={it.id}
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start",
+          padding: "14px 14px",
+          borderRadius: 14,
+          border: "1px solid " + (over ? "#EBC9C4" : "#EFEAE0"),
+          background: over ? "#FCF3F1" : done ? "#F3F1EA" : "#FFFFFF",
+          marginBottom: 10,
+          boxShadow: done ? "none" : "0 1px 2px rgba(15,34,43,0.04)",
+          opacity: done ? 0.65 : 1,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => updateItem(it.id, { purchased: !done })}
+          aria-label={done ? "Označi kao nekupljeno" : "Označi kao kupljeno"}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", marginTop: 1, flexShrink: 0 }}
+        >
+          <IconCircle checked={done} color={storeColor ? storeColor.text : "#007991"} />
+        </button>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <div
+              onClick={() => setEditingCell(`name-${it.id}`)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: 16,
+                fontWeight: 600,
+                color: done ? "#A39E90" : "#0F222B",
+                textDecoration: done ? "line-through" : "none",
+                cursor: "text",
+                wordBreak: "break-word",
+              }}
+            >
+              {editingCell === `name-${it.id}` ? (
+                <AutocompleteInput
+                  autoFocus
+                  value={it.name}
+                  options={knownItemNames}
+                  onChange={(v) => updateItem(it.id, { name: v })}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  style={{ ...inputStyle, fontSize: 16, fontWeight: 600 }}
+                />
+              ) : (
+                it.name || "Bez naziva"
+              )}
+            </div>
+            <div
+              onClick={() => setEditingCell(`price-${it.id}`)}
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                color: over ? "#B0524A" : hasPrice ? "#0F222B" : "#B5AFA0",
+                cursor: "text",
+              }}
+            >
+              {editingCell === `price-${it.id}` ? (
+                <input
+                  autoFocus
+                  type="number"
+                  className="no-spin-input"
+                  min="0"
+                  step="0.01"
+                  value={it.price}
+                  onChange={(e) => updateItem(it.id, { price: e.target.value === "" ? "" : Number(e.target.value) })}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  style={{ ...inputStyle, width: 82, textAlign: "right", fontSize: 16, fontWeight: 600 }}
+                />
+              ) : hasPrice ? (
+                fmtEUR(totalCost(it))
+              ) : (
+                "cijena —"
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {editingCell === `store-${it.id}` ? (
+              <AutocompleteInput
+                autoFocus
+                value={it.store || ""}
+                options={knownStores}
+                placeholder="Prodavnica"
+                onChange={(v) => updateItem(it.id, { store: v })}
+                onBlur={() => setEditingCell(null)}
+                onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                style={{ ...selectStyle, width: 150 }}
+              />
+            ) : (
+              <span onClick={() => setEditingCell(`store-${it.id}`)} style={{ cursor: "pointer" }}>
+                {it.store ? <Tag label={it.store} color={storeColor} /> : (
+                  <span style={{ fontSize: 12, color: "#B5AFA0" }}>+ prodavnica</span>
+                )}
+              </span>
+            )}
+
+            {it.category && (
+              editingCell === `cat-${it.id}` ? (
+                <AutocompleteInput
+                  autoFocus
+                  value={it.category || ""}
+                  options={knownCategories}
+                  placeholder="Kategorija"
+                  onChange={(v) => updateItem(it.id, { category: v })}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  style={{ ...selectStyle, width: 150 }}
+                />
+              ) : (
+                <span onClick={() => setEditingCell(`cat-${it.id}`)} style={{ cursor: "pointer" }}>
+                  <Tag label={it.category} color={catMeta} />
+                </span>
+              )
+            )}
+
+            <span
+              onClick={() => setEditingCell(`qty-${it.id}`)}
+              style={{ fontSize: 13, color: "#8A8578", cursor: "text", display: "inline-flex", alignItems: "center", gap: 4 }}
+            >
+              {editingCell === `qty-${it.id}` ? (
+                <input
+                  autoFocus
+                  type="number"
+                  className="no-spin-input"
+                  min="0"
+                  value={it.quantity}
+                  onChange={(e) => updateItem(it.id, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  style={{ ...inputStyle, width: 44, textAlign: "center" }}
+                />
+              ) : (
+                <>{it.quantity || 1} kom{hasPrice ? ` · ×${fmtEUR(Number(it.price) || 0)}` : ""}</>
+              )}
+            </span>
+
+            <span style={{ flex: 1 }} />
+
+            <button
+              type="button"
+              onClick={() => deleteItem(it.id)}
+              aria-label="Obriši stavku"
+              style={{ background: "none", border: "none", color: "#B5AFA0", cursor: "pointer", padding: 4, display: "inline-flex" }}
+            >
+              <IconTrash />
+            </button>
+          </div>
+
+          {(it.note || editingCell === `note-${it.id}`) && (
+            <div
+              onClick={() => setEditingCell(`note-${it.id}`)}
+              style={{
+                marginTop: 10,
+                background: "#F5F3EE",
+                border: "1px solid #EBE6DB",
+                borderRadius: 10,
+                padding: "8px 10px",
+                fontSize: 13,
+                color: "#6B6559",
+                cursor: "text",
+              }}
+            >
+              {editingCell === `note-${it.id}` ? (
+                <input
+                  autoFocus
+                  value={it.note || ""}
+                  placeholder="napomena..."
+                  onChange={(e) => updateItem(it.id, { note: e.target.value })}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  style={{ ...inputStyle, color: "#6B6559", fontSize: 13 }}
+                />
+              ) : (
+                it.note
+              )}
+            </div>
+          )}
+
+          {!it.note && editingCell !== `note-${it.id}` && (
+            <button
+              type="button"
+              onClick={() => setEditingCell(`note-${it.id}`)}
+              style={{
+                marginTop: 8,
+                background: "none",
+                border: "none",
+                color: "#B5AFA0",
+                fontSize: 12,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              + napomena
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Section header for grouped card views, with a color swatch to recolor the group.
+  const renderCardGroupHeader = (label, meta, list, kind) => {
+    const groupTotal = list.reduce((s, it) => s + totalCost(it), 0);
+    const pickerKey = `${kind}:${label}`;
+    const apply =
+      kind === "store"
+        ? (c) => setStoreColor(label, c)
+        : (c) => setCategoryColor(label, c);
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 2px 10px" }}>
+        {label !== "Unassigned" && renderColorControl(pickerKey, meta, apply)}
+        <Tag label={label === "Unassigned" ? "Bez oznake" : label} color={meta} />
+        <span style={{ color: "#A39E90", fontSize: 12 }}>{list.length}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ color: "#8A8578", fontSize: 12 }}>{fmtEUR(groupTotal)}</span>
+      </div>
+    );
+  };
+
   const budgetPct = budget && budget > 0 ? Math.min(100, (remainingTotal / budget) * 100) : 0;
   const budgetOver = budget !== null && remainingTotal > budget;
 
   return (
     <div
+      onClick={() => colorPickerFor && setColorPickerFor(null)}
       style={{
         background: "#F5F3EE",
         minHeight: "100%",
@@ -898,17 +1330,32 @@ function SmartShoppingList() {
           </button>
         </div>
 
-        <div style={{ border: "1px solid #E6E1D8", borderRadius: 8, overflowX: "auto" }}>
+        <div style={isMobile ? {} : { border: "1px solid #E6E1D8", borderRadius: 8, overflowX: "auto" }}>
           {tab === "all" && (
-            <>
-              {header}
-              {sortedForAll.map(renderRow)}
-            </>
+            isMobile ? (
+              <div>{sortedForAll.map(renderCard)}</div>
+            ) : (
+              <>
+                {header}
+                {sortedForAll.map(renderRow)}
+              </>
+            )
           )}
 
-          {tab === "category" &&
+          {tab === "category" && isMobile &&
             Object.entries(groupBy("category")).map(([cat, list]) => {
-              const meta = metaForCategory(cat === "Unassigned" ? null : cat);
+              const meta = resolveCategoryMeta(cat === "Unassigned" ? null : cat);
+              return (
+                <div key={cat}>
+                  {renderCardGroupHeader(cat, meta, list, "cat")}
+                  {list.sort((a, b) => (a.order || 0) - (b.order || 0)).map(renderCard)}
+                </div>
+              );
+            })}
+
+          {tab === "category" && !isMobile &&
+            Object.entries(groupBy("category")).map(([cat, list]) => {
+              const meta = resolveCategoryMeta(cat === "Unassigned" ? null : cat);
               const groupTotal = list.reduce((s, it) => s + totalCost(it), 0);
               return (
                 <div key={cat}>
@@ -937,7 +1384,18 @@ function SmartShoppingList() {
               );
             })}
 
-          {tab === "store" &&
+          {tab === "store" && isMobile &&
+            Object.entries(groupBy("store")).map(([store, list]) => {
+              const meta = resolveStoreColor(store === "Unassigned" ? null : store);
+              return (
+                <div key={store}>
+                  {renderCardGroupHeader(store, meta, list, "store")}
+                  {list.sort((a, b) => (a.order || 0) - (b.order || 0)).map(renderCard)}
+                </div>
+              );
+            })}
+
+          {tab === "store" && !isMobile &&
             Object.entries(groupBy("store")).map(([store, list]) => {
               const groupTotal = list.reduce((s, it) => s + totalCost(it), 0);
               return (
@@ -953,7 +1411,7 @@ function SmartShoppingList() {
                       boxSizing: "border-box",
                     }}
                   >
-                    <Tag label={store} color={colorForStore(store === "Unassigned" ? null : store)} />
+                    <Tag label={store} color={resolveStoreColor(store === "Unassigned" ? null : store)} />
                     <span style={{ color: "#A39E90", fontSize: 12 }}>{list.length} item(s)</span>
                     <span style={{ flex: 1 }} />
                     <span style={{ color: "#8A8578", fontSize: 12 }}>{fmtEUR(groupTotal)}</span>
@@ -966,7 +1424,7 @@ function SmartShoppingList() {
               );
             })}
 
-          <div style={{ display: "flex", alignItems: "center", padding: "8px 12px", borderTop: "1px solid #EAE6DC", minWidth: ROW_MIN_WIDTH, boxSizing: "border-box" }}>
+          <div style={{ display: "flex", alignItems: "center", padding: isMobile ? "12px 4px 4px" : "8px 12px", borderTop: isMobile ? "none" : "1px solid #EAE6DC", minWidth: isMobile ? 0 : ROW_MIN_WIDTH, boxSizing: "border-box", gap: 8 }}>
             <AutocompleteInput
               value={newName}
               options={knownItemNames}
@@ -988,27 +1446,35 @@ function SmartShoppingList() {
                 background: "#007991",
                 border: "none",
                 color: "#fff",
-                borderRadius: 6,
-                padding: "5px 12px",
+                borderRadius: isMobile ? 10 : 6,
+                padding: isMobile ? "9px 16px" : "5px 12px",
                 fontSize: 13,
+                fontWeight: 600,
                 cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                flexShrink: 0,
               }}
             >
-              Add
+              <IconPlus /> {isMobile ? "Dodaj stavku" : "Add"}
             </button>
           </div>
 
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-end",
+              justifyContent: isMobile ? "space-between" : "flex-end",
+              flexWrap: "wrap",
               gap: 8,
-              padding: "10px 12px",
+              padding: isMobile ? "14px 12px" : "10px 12px",
               borderTop: "1px solid #E6E1D8",
+              borderRadius: isMobile ? 12 : 0,
+              marginTop: isMobile ? 12 : 0,
               background: "#FFFFFF",
               fontSize: 13,
               color: "#8A8578",
-              minWidth: ROW_MIN_WIDTH,
+              minWidth: isMobile ? 0 : ROW_MIN_WIDTH,
               boxSizing: "border-box",
             }}
           >
@@ -1046,7 +1512,7 @@ function SmartShoppingList() {
                   }}
                 >
                   <div style={{ width: 90 }}>
-                    <Tag label={store} color={colorForStore(store === "Unassigned" ? null : store)} />
+                    <Tag label={store} color={resolveStoreColor(store === "Unassigned" ? null : store)} />
                   </div>
                   <div style={{ flex: 1, height: 6, background: "#EAE6DC", borderRadius: 3, overflow: "hidden" }}>
                     <div
