@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Smart Shopping List</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#F5F3EE" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -322,26 +323,30 @@ function IconDroplet() {
   );
 }
 
-// Track whether we're on a phone-width screen (cards) vs desktop (table).
-function useIsMobile(breakpoint = 720) {
-  const query = `(max-width: ${breakpoint}px)`;
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.matchMedia
-      ? window.matchMedia(query).matches
-      : false
-  );
+// Track whether the app's OWN available width is phone/tablet-narrow (cards)
+// or wide enough for the table (desktop). Measures the container itself via
+// ResizeObserver instead of window width, so it stays correct regardless of
+// how wide the shared Family Hub sidebar is — that's what caused the layout
+// to look broken at in-between browser widths before.
+const CARD_LAYOUT_BREAKPOINT = 900;
+function useIsMobile(containerRef, breakpoint = CARD_LAYOUT_BREAKPOINT) {
+  const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
-    if (!window.matchMedia) return;
-    const mql = window.matchMedia(query);
-    const onChange = (e) => setIsMobile(e.matches);
-    if (mql.addEventListener) mql.addEventListener("change", onChange);
-    else mql.addListener(onChange);
-    setIsMobile(mql.matches);
-    return () => {
-      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
-      else mql.removeListener(onChange);
-    };
-  }, [query]);
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = (width) => setIsMobile(width < breakpoint);
+    if (typeof ResizeObserver === "undefined") {
+      measure(el.getBoundingClientRect().width);
+      return;
+    }
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect?.width;
+      if (typeof w === "number") measure(w);
+    });
+    ro.observe(el);
+    measure(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, [containerRef, breakpoint]);
   return isMobile;
 }
 
@@ -373,7 +378,8 @@ function SmartShoppingList() {
   const [priceAlertInput, setPriceAlertInput] = useState("");
   // Which name's color palette is currently open, e.g. "store:Lidl" or "cat:Drinks".
   const [colorPickerFor, setColorPickerFor] = useState(null);
-  const isMobile = useIsMobile();
+  const shellRef = useRef(null);
+  const isMobile = useIsMobile(shellRef);
   const saveTimer = useRef(null);
 
   const lastSentItems = useRef(null);
@@ -1237,16 +1243,20 @@ function SmartShoppingList() {
 
   return (
     <div
+      ref={shellRef}
       onClick={() => colorPickerFor && setColorPickerFor(null)}
       className="app-shell"
     >
       <style>{`
-        .app-shell{min-height:100vh;background:#eef3f1;color:#16313a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding-bottom:90px;overflow-x:hidden;}
+        /* Same pairing as raspored.html: Public Sans for body text, Fraunces for
+           headings — kept as variables so both files can be updated from one place. */
+        :root{--app-font:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--app-display-font:'Fraunces',Georgia,serif;}
+        .app-shell{min-height:100vh;background:#eef3f1;color:#16313a;font-family:var(--app-font);padding-bottom:90px;overflow-x:hidden;}
         .app-inner{width:100%;max-width:1120px;margin:0 auto;padding:0 24px;box-sizing:border-box;}
         .app-hero{background:linear-gradient(135deg,#176a73 0%,#24828a 58%,#dcecea 100%);color:#fff;overflow:hidden;}
         .hero-content{padding:26px 0 22px;box-sizing:border-box;}
         .eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.16em;opacity:.72;margin-bottom:6px;font-weight:800;}
-        .hero-title{font-size:32px;line-height:1.08;margin:0;font-weight:800;letter-spacing:-.035em;}
+        .hero-title{font-family:var(--app-display-font);font-size:32px;line-height:1.08;margin:0;font-weight:700;letter-spacing:-.02em;}
         .hero-sub{margin:7px 0 0;color:rgba(255,255,255,.78);font-size:13px;}
         .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;}
         .stat{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.14);border-radius:17px;padding:12px 14px;backdrop-filter:blur(8px);}
@@ -1255,7 +1265,7 @@ function SmartShoppingList() {
         .main{padding:18px 0 45px;}
         .panel{background:transparent;border:0;border-radius:0;box-shadow:none;}
         .budget-card{background:#fff;border:1px solid #dfe8e4;border-radius:17px;padding:13px 15px;margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;box-shadow:0 3px 16px rgba(25,57,63,.045);}
-        .budget-title{font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px;}
+        .budget-title{font-family:var(--app-display-font);font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;}
         .budget-title svg{color:#176b76;}
         .budget-input{width:100px!important;background:#f5f8f7!important;border:1px solid #dce6e2!important;border-radius:11px!important;padding:9px 10px!important;color:#16313a!important;}
         .budget-track{height:7px;background:#e4ece9;border-radius:99px;overflow:hidden;min-width:150px;flex:1;}
@@ -1296,17 +1306,24 @@ function SmartShoppingList() {
         .color-dot{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.12);padding:0;cursor:pointer;flex:0 0 auto;}
         .palette{display:flex;gap:6px;flex-wrap:wrap;padding:7px 0 3px;}
         .palette button{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.13);padding:0;cursor:pointer;}
-        .list-panel{overflow:visible;}
+        /* Safety net: if the desktop table is ever wider than its panel
+           (e.g. unusual browser zoom), scroll instead of overflowing or
+           getting clipped by .app-shell's overflow-x:hidden. */
+        .list-panel{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;}
         .list-panel > div{border-color:#dfe8e4!important;}
         .group-header{background:#e6f0ed!important;border:1px solid #d6e4e0!important;border-radius:15px 15px 0 0!important;}
         .secondary-panel{margin-top:14px;padding:15px;background:#fff;border:1px solid #dfe8e4;border-radius:17px;box-shadow:0 3px 16px rgba(25,57,63,.045);}
-        .section-title{font-weight:800;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+        .section-title{font-family:var(--app-display-font);font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
         .export-panel{background:#fff;border:1px solid #dfe8e4;border-radius:17px;padding:12px;margin:0 0 12px;}
         .mobile-card{background:#f8fbfa!important;border:1px solid #dce7e3!important;box-shadow:none!important;border-radius:15px!important;margin-bottom:8px!important;}
         .mobile-card.expensive{background:#f8fbfa!important;border-color:#dce7e3!important;}
         .mobile-card .price{color:#16313a!important;}
         .group-total{color:#527078!important;}
-        @media(max-width:720px){
+        /* Kicks in at the same width as the JS card/table switch (see
+           CARD_LAYOUT_BREAKPOINT) so the compact styling and the card
+           layout always change together — no more dead zone where the
+           desktop table doesn't fit but compact styles haven't kicked in. */
+        @media(max-width:900px){
           html,body{overflow-x:hidden!important;background:#eef3f1!important;}
           .app-shell{min-height:100svh;padding-bottom:82px;}
           .app-inner{padding:0 12px;width:100%;}
