@@ -115,7 +115,7 @@ function metaForCategory(name) {
 
 function fmtEUR(n) {
   const v = Number.isFinite(n) ? n : 0;
-  return "\u20AC" + v.toFixed(2);
+  return v.toFixed(2) + " \u20AC";
 }
 
 const HIGH_COST_THRESHOLD = 50;
@@ -290,6 +290,50 @@ function IconDroplet() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 3s6 6.5 6 11a6 6 0 11-12 0c0-4.5 6-11 6-11z"
         stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+function IconWallet() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M21 12V7H5a2 2 0 010-4h14v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 5v14a2 2 0 002 2h16v-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18 12a2 2 0 000 4h4v-4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconBroom() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M19 5L10 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M10 14l-2 2a3 3 0 01-4-4l2-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 17.5L4.5 21M9 15l-1 4.5M4 13l4 1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconExport() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3v12M8 7l4-4 4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconPin() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 17v5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M7 14h10l-1.2-1.6a3 3 0 01-.6-1.8V7a1 1 0 011-1 1.5 1.5 0 000-3H7.8a1.5 1.5 0 000 3 1 1 0 011 1v3.6a3 3 0 01-.6 1.8L7 14z"
+        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconReceipt() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+        stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M8 7h8M8 11h8M8 15h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
@@ -845,10 +889,11 @@ function SmartShoppingList() {
       <div
         key={it.id}
         style={{
+          position: "relative",
           display: "flex",
           gap: 12,
           alignItems: "flex-start",
-          padding: "14px 14px",
+          padding: "14px 34px 14px 14px",
           borderRadius: 14,
           border: "1px solid " + (over ? "#EBC9C4" : "#EFEAE0"),
           background: over ? "#FCF3F1" : done ? "#F3F1EA" : "#FFFFFF",
@@ -857,6 +902,25 @@ function SmartShoppingList() {
           opacity: done ? 0.65 : 1,
         }}
       >
+        <button
+          type="button"
+          onClick={() => deleteItem(it.id)}
+          aria-label="Obriši stavku"
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 8,
+            background: "none",
+            border: "none",
+            color: "#B5AFA0",
+            cursor: "pointer",
+            padding: 4,
+            display: "inline-flex",
+          }}
+        >
+          <IconTrash />
+        </button>
+
         <button
           type="button"
           onClick={() => updateItem(it.id, { purchased: !done })}
@@ -938,31 +1002,41 @@ function SmartShoppingList() {
                 onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
                 style={{ ...selectStyle, width: 150 }}
               />
+            ) : it.store ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {renderColorControl(`store-item:${it.store}`, storeColor, (c) => setStoreColor(it.store, c))}
+                <span onClick={() => setEditingCell(`store-${it.id}`)} style={{ cursor: "pointer" }}>
+                  <Tag label={it.store} color={storeColor} />
+                </span>
+              </span>
             ) : (
               <span onClick={() => setEditingCell(`store-${it.id}`)} style={{ cursor: "pointer" }}>
-                {it.store ? <Tag label={it.store} color={storeColor} /> : (
-                  <span style={{ fontSize: 12, color: "#B5AFA0" }}>+ prodavnica</span>
-                )}
+                <span style={{ fontSize: 12, color: "#B5AFA0" }}>+ prodavnica</span>
               </span>
             )}
 
-            {it.category && (
-              editingCell === `cat-${it.id}` ? (
-                <AutocompleteInput
-                  autoFocus
-                  value={it.category || ""}
-                  options={knownCategories}
-                  placeholder="Kategorija"
-                  onChange={(v) => updateItem(it.id, { category: v })}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
-                  style={{ ...selectStyle, width: 150 }}
-                />
-              ) : (
+            {editingCell === `cat-${it.id}` ? (
+              <AutocompleteInput
+                autoFocus
+                value={it.category || ""}
+                options={knownCategories}
+                placeholder="Kategorija"
+                onChange={(v) => updateItem(it.id, { category: v })}
+                onBlur={() => setEditingCell(null)}
+                onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                style={{ ...selectStyle, width: 150 }}
+              />
+            ) : it.category ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {renderColorControl(`cat-item:${it.category}`, catMeta, (c) => setCategoryColor(it.category, c))}
                 <span onClick={() => setEditingCell(`cat-${it.id}`)} style={{ cursor: "pointer" }}>
                   <Tag label={it.category} color={catMeta} />
                 </span>
-              )
+              </span>
+            ) : (
+              <span onClick={() => setEditingCell(`cat-${it.id}`)} style={{ cursor: "pointer" }}>
+                <span style={{ fontSize: 12, color: "#B5AFA0" }}>+ kategorija</span>
+              </span>
             )}
 
             <span
@@ -986,16 +1060,6 @@ function SmartShoppingList() {
               )}
             </span>
 
-            <span style={{ flex: 1 }} />
-
-            <button
-              type="button"
-              onClick={() => deleteItem(it.id)}
-              aria-label="Obriši stavku"
-              style={{ background: "none", border: "none", color: "#B5AFA0", cursor: "pointer", padding: 4, display: "inline-flex" }}
-            >
-              <IconTrash />
-            </button>
           </div>
 
           {(it.note || editingCell === `note-${it.id}`) && (
@@ -1098,21 +1162,6 @@ function SmartShoppingList() {
 
         <div
           style={{
-            background: "#DCEFE3",
-            border: "1px solid #B7DEC4",
-            borderRadius: 8,
-            padding: "14px 16px",
-            marginBottom: 20,
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: "#1F7A52",
-          }}
-        >
-          📌 <strong>Smart Shopping List</strong> – Organize items by category, store, quantity, and price. Check items off as you buy them; totals over {fmtEUR(HIGH_COST_THRESHOLD)} are highlighted for quick spotting.
-        </div>
-
-        <div
-          style={{
             display: "flex",
             flexWrap: "wrap",
             gap: 10,
@@ -1124,7 +1173,7 @@ function SmartShoppingList() {
             padding: "10px 14px",
           }}
         >
-          <span style={{ fontSize: 13, color: "#8A8578" }}>💰 Budžet:</span>
+          <span style={{ fontSize: 13, color: "#8A8578", display: "inline-flex", alignItems: "center", gap: 6 }}><IconWallet /> Budžet:</span>
           <input
             type="number"
             min="0"
@@ -1157,6 +1206,54 @@ function SmartShoppingList() {
               </span>
             </>
           )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 16,
+            background: "#FFFFFF",
+            border: "1px solid #E6E1D8",
+            borderRadius: 10,
+            padding: isMobile ? "8px 8px 8px 14px" : "6px 6px 6px 14px",
+          }}
+        >
+          <AutocompleteInput
+            value={newName}
+            options={knownItemNames}
+            onChange={setNewName}
+            onKeyDown={(e) => e.key === "Enter" && addItem()}
+            placeholder="+ Nova stavka"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#0F222B",
+              fontSize: 15,
+              outline: "none",
+              flex: 1,
+            }}
+          />
+          <button
+            onClick={() => addItem()}
+            style={{
+              background: "#007991",
+              border: "none",
+              color: "#fff",
+              borderRadius: 8,
+              padding: isMobile ? "9px 16px" : "7px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            <IconPlus /> {isMobile ? "Dodaj stavku" : "Add"}
+          </button>
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, alignItems: "center" }}>
@@ -1199,9 +1296,12 @@ function SmartShoppingList() {
               padding: "6px 12px",
               fontSize: 13,
               cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
             }}
           >
-            🧹 Očisti kupljeno
+            <IconBroom /> Očisti kupljeno
           </button>
 
           <button
@@ -1214,9 +1314,12 @@ function SmartShoppingList() {
               padding: "6px 12px",
               fontSize: 13,
               cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
             }}
           >
-            📤 Export
+            <IconExport /> Export
           </button>
         </div>
 
@@ -1276,7 +1379,7 @@ function SmartShoppingList() {
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 13, color: "#8A8578", marginRight: 4 }}>⭐ Favoriti:</span>
+          <span style={{ fontSize: 13, color: "#8A8578", marginRight: 4, display: "inline-flex", alignItems: "center", gap: 6 }}><IconPin /> Favoriti:</span>
           {favorites.map((f) => (
             <button
               key={f}
@@ -1424,43 +1527,6 @@ function SmartShoppingList() {
               );
             })}
 
-          <div style={{ display: "flex", alignItems: "center", padding: isMobile ? "12px 4px 4px" : "8px 12px", borderTop: isMobile ? "none" : "1px solid #EAE6DC", minWidth: isMobile ? 0 : ROW_MIN_WIDTH, boxSizing: "border-box", gap: 8 }}>
-            <AutocompleteInput
-              value={newName}
-              options={knownItemNames}
-              onChange={setNewName}
-              onKeyDown={(e) => e.key === "Enter" && addItem()}
-              placeholder="+ New item"
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#0F222B",
-                fontSize: 14,
-                outline: "none",
-                flex: 1,
-              }}
-            />
-            <button
-              onClick={() => addItem()}
-              style={{
-                background: "#007991",
-                border: "none",
-                color: "#fff",
-                borderRadius: isMobile ? 10 : 6,
-                padding: isMobile ? "9px 16px" : "5px 12px",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                flexShrink: 0,
-              }}
-            >
-              <IconPlus /> {isMobile ? "Dodaj stavku" : "Add"}
-            </button>
-          </div>
-
           <div
             style={{
               display: "flex",
@@ -1495,8 +1561,8 @@ function SmartShoppingList() {
               background: "#FFFFFF",
             }}
           >
-            <div style={{ fontSize: 13, color: "#8A8578", marginBottom: 8, fontWeight: 500 }}>
-              💵 Trošak po prodavnici
+            <div style={{ fontSize: 13, color: "#8A8578", marginBottom: 8, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+              <IconReceipt /> Trošak po prodavnici
             </div>
             {Object.entries(storeTotals)
               .sort((a, b) => b[1] - a[1])
