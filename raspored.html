@@ -134,7 +134,7 @@
   .detail-field-row input.detail-date-input:focus { border-color: #007991; }
 
   .predmet-manage-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
-  .add-row .manage-link {
+  .add-row .manage-link, .manage-link {
     background: none !important; border: none; color: #007991 !important; font-size: 12.5px; font-weight: 700; cursor: pointer;
     font-family: inherit; text-decoration: underline; padding: 4px 0 !important; white-space: nowrap;
   }
@@ -156,6 +156,28 @@
   .add-row .pm-icon-btn:hover { color: #007991 !important; }
   .add-row .pm-icon-btn.pm-delete:hover { color: #B0524A !important; }
   .predmeti-empty { color: #8A8578; font-size: 13px; padding: 4px 0; }
+
+  .week-grid-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .week-grid-card-header .section-title { margin-bottom: 0; }
+  .daycolors-manage-panel {
+    background: #FAF8F4; border: 1px solid #E6E1D8; border-radius: 10px; padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+  .daycolor-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #F0EDE5; position: relative; }
+  .daycolor-row:last-child { border-bottom: none; }
+  .daycolor-name { flex: 1; font-size: 13.5px; color: #0F222B; font-weight: 600; }
+  .daycolor-dot {
+    width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12);
+    padding: 0; cursor: pointer; flex: 0 0 auto;
+  }
+  .daycolor-palette {
+    position: absolute; top: 32px; right: 0; z-index: 30; background: #fff; border: 1px solid #E6E1D8;
+    border-radius: 10px; padding: 8px; box-shadow: 0 8px 20px -8px rgba(27,58,74,0.3);
+    display: grid; grid-template-columns: repeat(6, 20px); gap: 8px;
+  }
+  .daycolor-palette button {
+    width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.13); padding: 0; cursor: pointer;
+  }
 
   .card {
     background: #fff; border-radius: 14px; padding: 16px; margin-top: 12px;
@@ -238,7 +260,11 @@
     <div class="tabs-scroll" id="smjenaTabs" style="display:none;"></div>
 
     <div class="card week-grid-card">
-      <div class="section-title">Sedmični pregled</div>
+      <div class="week-grid-card-header">
+        <div class="section-title">Sedmični pregled</div>
+        <button type="button" class="manage-link" id="dayColorsToggle" style="display:none;"></button>
+      </div>
+      <div id="dayColorsPanelWrap"></div>
       <div class="week-grid" id="weekGrid"></div>
     </div>
 
@@ -329,6 +355,23 @@ const SMJENE = [
   { key: "druga", label: "Druga smjena" },
 ];
 
+// Ista paleta boja kao u shopping-list.html ("Oznake i boje"), da izbor boje bude vizuelno
+// dosljedan kroz cijelu aplikaciju.
+const PICKER_COLORS = [
+  { bg: "#CFE2FF", text: "#123B73" },
+  { bg: "#C7EEF7", text: "#07546B" },
+  { bg: "#E0D2FF", text: "#48208A" },
+  { bg: "#CBEED3", text: "#155C32" },
+  { bg: "#FFD1E0", text: "#7D163F" },
+  { bg: "#FFD0C8", text: "#7F241C" },
+  { bg: "#FFE0B0", text: "#6D3B00" },
+  { bg: "#FFEC9E", text: "#5C4800" },
+  { bg: "#C8E8E0", text: "#0F5148" },
+  { bg: "#D5DDF8", text: "#273D83" },
+  { bg: "#E4DAC9", text: "#4F3E28" },
+  { bg: "#E8CDEB", text: "#652568" },
+];
+
 let role = null; // "parent" | "child"
 let myChildId = null;
 let selectedChildId = CHILDREN[0].id;
@@ -343,6 +386,9 @@ let predmetiList = []; // zapamćeni nazivi predmeta (zajednički za svu djecu),
 let unsubscribePredmeti = null;
 let predmetiPanelOpen = false; // da li je otvoren panel za uređivanje liste predmeta
 let editingPredmet = null; // naziv predmeta koji se trenutno uređuje (preimenovanje) u panelu
+let dayColorsPanelOpen = false; // da li je otvoren panel za uređivanje boja dana
+let dayColorPickerFor = null; // ključ dana čija je paleta trenutno otvorena (npr. "pon"), ili null
+let unsubscribeDayColors = null;
 
 function hexToRgba(hex, alpha) {
   const h = (hex || "#8A8578").replace("#", "");
@@ -427,6 +473,7 @@ function initUI() {
   renderChildLabel();
   renderDaySelectors();
   subscribeToChild(selectedChildId);
+  subscribeDayColors();
   if (role === "parent") subscribePredmeti();
 }
 
@@ -469,6 +516,93 @@ function deletePredmetFromList(naziv) {
   predmetiList = predmetiList.filter((p) => p !== naziv);
   refreshPredmetSelectAndPanel("casoviAddRow");
   overwritePredmetiList(predmetiList);
+}
+
+// Boje dana su zajedničke za sedmični pregled časova i obaveza (isti DAYS objekti se koriste na
+// oba mjesta) - čuvaju se u posebnom dokumentu, isto kao i _predmeti, pa ih odmah vide svi
+// (roditelji i djeca), a mijenjati ih može samo roditelj.
+function subscribeDayColors() {
+  if (unsubscribeDayColors) unsubscribeDayColors();
+  unsubscribeDayColors = db.collection("raspored").doc("_dayColors").onSnapshot(
+    (snap) => {
+      const saved = snap.exists ? snap.data() : {};
+      DAYS.forEach((d) => {
+        if (saved && typeof saved[d.key] === "string") d.color = saved[d.key];
+      });
+      renderWeekGrid();
+      renderObavezeWeekGrid();
+      renderDayColorsPanel();
+    },
+    () => {}
+  );
+}
+
+function setDayColor(dayKey, hex) {
+  const d = DAYS.find((x) => x.key === dayKey);
+  if (d) d.color = hex;
+  dayColorPickerFor = null;
+  renderWeekGrid();
+  renderObavezeWeekGrid();
+  renderDayColorsPanel();
+  const payload = {};
+  payload[dayKey] = hex;
+  db.collection("raspored").doc("_dayColors").set(payload, { merge: true });
+}
+
+function renderDayColorsPanel() {
+  const toggleBtn = document.getElementById("dayColorsToggle");
+  if (!toggleBtn) return;
+  toggleBtn.style.display = role === "parent" ? "inline" : "none";
+  toggleBtn.textContent = dayColorsPanelOpen ? "Zatvori boje" : "Boje dana";
+  if (toggleBtn.dataset.bound !== "1") {
+    toggleBtn.addEventListener("click", () => {
+      dayColorsPanelOpen = !dayColorsPanelOpen;
+      dayColorPickerFor = null;
+      renderDayColorsPanel();
+    });
+    toggleBtn.dataset.bound = "1";
+  }
+
+  const wrap = document.getElementById("dayColorsPanelWrap");
+  if (!wrap) return;
+  if (!dayColorsPanelOpen || role !== "parent") {
+    wrap.innerHTML = "";
+    return;
+  }
+
+  wrap.innerHTML =
+    '<div class="daycolors-manage-panel">' +
+      DAYS.map((d) => {
+        const open = dayColorPickerFor === d.key;
+        return (
+          '<div class="daycolor-row">' +
+            '<span class="daycolor-name">' + escapeHtml(d.label) + '</span>' +
+            '<button type="button" class="daycolor-dot" style="background:' + d.color + ';" data-day="' + d.key + '" aria-label="Promijeni boju za ' + escapeHtml(d.label) + '"></button>' +
+            (open
+              ? '<div class="daycolor-palette">' +
+                  PICKER_COLORS.map((c) =>
+                    '<button type="button" data-day="' + d.key + '" data-hex="' + c.text + '" style="background:' + c.text + ';" title="' + c.text + '"></button>'
+                  ).join("") +
+                '</div>'
+              : "") +
+          '</div>'
+        );
+      }).join("")
+    + '</div>';
+
+  wrap.querySelectorAll(".daycolor-dot").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dayColorPickerFor = dayColorPickerFor === btn.dataset.day ? null : btn.dataset.day;
+      renderDayColorsPanel();
+    });
+  });
+  wrap.querySelectorAll(".daycolor-palette button").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setDayColor(btn.dataset.day, btn.dataset.hex);
+    });
+  });
 }
 
 function renamePredmetInList(oldNaziv, newNaziv) {
@@ -660,6 +794,7 @@ let obavezeAddRowContext = null;
 function renderLists() {
   renderWeekGrid();
   renderObavezeWeekGrid();
+  renderDayColorsPanel();
 
   const addCard = document.getElementById("casoviAddCard");
   if (addCard) addCard.style.display = role === "parent" ? "block" : "none";
