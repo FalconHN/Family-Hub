@@ -338,13 +338,13 @@ const CHILDREN = [
   { id: "relja", name: "Relja" },
 ];
 const DAYS = [
-  { key: "pon", label: "Ponedjeljak", short: "Pon", color: "#0A3A6B" },
-  { key: "uto", label: "Utorak", short: "Uto", color: "#33076B" },
-  { key: "sre", label: "Srijeda", short: "Sre", color: "#5C0A52" },
-  { key: "cet", label: "Četvrtak", short: "Čet", color: "#6B0808" },
-  { key: "pet", label: "Petak", short: "Pet", color: "#5C4700" },
-  { key: "sub", label: "Subota", short: "Sub", color: "#0B4A12" },
-  { key: "ned", label: "Nedjelja", short: "Ned", color: "#024A4A" },
+  { key: "pon", label: "Ponedjeljak", short: "Pon", color: "#5CB0FF", textColor: "#0A3A6B" },
+  { key: "uto", label: "Utorak", short: "Uto", color: "#B478FF", textColor: "#33076B" },
+  { key: "sre", label: "Srijeda", short: "Sre", color: "#F16FE0", textColor: "#5C0A52" },
+  { key: "cet", label: "Četvrtak", short: "Čet", color: "#FF5C5C", textColor: "#6B0808" },
+  { key: "pet", label: "Petak", short: "Pet", color: "#F5D642", textColor: "#5C4700" },
+  { key: "sub", label: "Subota", short: "Sub", color: "#4FCB5C", textColor: "#0B4A12" },
+  { key: "ned", label: "Nedjelja", short: "Ned", color: "#4BE0E0", textColor: "#024A4A" },
 ];
 // Raspored časova (škola) se ne dešava nedjeljom, pa nedjelja tu uopšte nije ponuđena - subota
 // jeste ponuđena (za rijetke slučajeve), ali se u sedmičnom pregledu prikazuje samo ako za nju
@@ -520,14 +520,23 @@ function deletePredmetFromList(naziv) {
 
 // Boje dana su zajedničke za sedmični pregled časova i obaveza (isti DAYS objekti se koriste na
 // oba mjesta) - čuvaju se u posebnom dokumentu, isto kao i _predmeti, pa ih odmah vide svi
-// (roditelji i djeca), a mijenjati ih može samo roditelj.
+// (roditelji i djeca), a mijenjati ih može samo roditelj. Svaka boja se čuva kao par: c (živa
+// boja iz palete - tačkice/ivice kartica) i t (njena tamnija verzija - čitljiv tekst na bijeloj
+// pozadini), da paleta ostane vidno ista kao u pickeru, a vrijeme časa/obaveze ostane čitljivo.
 function subscribeDayColors() {
   if (unsubscribeDayColors) unsubscribeDayColors();
   unsubscribeDayColors = db.collection("raspored").doc("_dayColors").onSnapshot(
     (snap) => {
       const saved = snap.exists ? snap.data() : {};
       DAYS.forEach((d) => {
-        if (saved && typeof saved[d.key] === "string") d.color = saved[d.key];
+        const entry = saved && saved[d.key];
+        if (entry && typeof entry === "object" && entry.c) {
+          d.color = entry.c;
+          d.textColor = entry.t || entry.c;
+        } else if (typeof entry === "string") {
+          d.color = entry;
+          d.textColor = entry;
+        }
       });
       renderWeekGrid();
       renderObavezeWeekGrid();
@@ -537,15 +546,18 @@ function subscribeDayColors() {
   );
 }
 
-function setDayColor(dayKey, hex) {
+function setDayColor(dayKey, hex, textHex) {
   const d = DAYS.find((x) => x.key === dayKey);
-  if (d) d.color = hex;
+  if (d) {
+    d.color = hex;
+    d.textColor = textHex || hex;
+  }
   dayColorPickerFor = null;
   renderWeekGrid();
   renderObavezeWeekGrid();
   renderDayColorsPanel();
   const payload = {};
-  payload[dayKey] = hex;
+  payload[dayKey] = { c: hex, t: textHex || hex };
   db.collection("raspored").doc("_dayColors").set(payload, { merge: true });
 }
 
@@ -581,7 +593,7 @@ function renderDayColorsPanel() {
             (open
               ? '<div class="daycolor-palette">' +
                   PICKER_COLORS.map((c) =>
-                    '<button type="button" data-day="' + d.key + '" data-hex="' + c.text + '" style="background:' + c.text + ';" title="' + c.text + '"></button>'
+                    '<button type="button" data-day="' + d.key + '" data-hex="' + c.bg + '" data-text="' + c.text + '" style="background:' + c.bg + ';" title="' + c.bg + '"></button>'
                   ).join("") +
                 '</div>'
               : "") +
@@ -600,7 +612,7 @@ function renderDayColorsPanel() {
   wrap.querySelectorAll(".daycolor-palette button").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      setDayColor(btn.dataset.day, btn.dataset.hex);
+      setDayColor(btn.dataset.day, btn.dataset.hex, btn.dataset.text);
     });
   });
 }
@@ -898,7 +910,7 @@ function renderWeekGrid() {
             const timeLine = [brojPart, timePart].filter(Boolean).join(" · ");
             return (
               '<div class="week-cas-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
-                (timeLine ? '<div class="week-cas-time" style="color:' + d.color + ';">' + escapeHtml(timeLine) + '</div>' : "") +
+                (timeLine ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(timeLine) + '</div>' : "") +
                 '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
                 (e.ucionica ? '<div class="week-cas-room">' + escapeHtml(e.ucionica) + '</div>' : "") +
                 (e.napomena ? '<div class="week-cas-note">' + escapeHtml(e.napomena) + '</div>' : "") +
@@ -940,7 +952,7 @@ function renderObavezeWeekGrid() {
         : indexed.map(({ e, i }) => {
             return (
               '<div class="week-cas-card week-obaveza-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
-                (e.vrijeme ? '<div class="week-cas-time" style="color:' + d.color + ';">' + escapeHtml(e.vrijeme) + '</div>' : "") +
+                (e.vrijeme ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(e.vrijeme) + '</div>' : "") +
                 '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
               '</div>'
             );
