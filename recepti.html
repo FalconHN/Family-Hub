@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Recepti</title>
 <meta name="theme-color" content="#F5F3EE" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -38,7 +41,7 @@
   // Auth guard: bounce to login page if not signed in.
   firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
-      window.location.href = "index.html";
+      window.location.href = "index.html?v=20260817";
       return;
     }
     // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo (isto kao
@@ -46,7 +49,7 @@
     firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
       const role = (snap.exists && snap.data().role) || 'parent';
       if (role === 'child') {
-        window.location.href = "raspored.html";
+        window.location.href = "raspored.html?v=20260817";
         return;
       }
       if (typeof window.fhApplyRole === 'function') window.fhApplyRole(role);
@@ -55,7 +58,7 @@
   // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
   window.fhLogout = function () {
     firebase.auth().signOut().catch(() => {}).finally(() => {
-      window.location.href = "index.html";
+      window.location.href = "index.html?v=20260817";
     });
   };
 </script>
@@ -1038,6 +1041,6 @@ root.render(<RecipeApp />);
   __script.textContent = __out;
   document.body.appendChild(__script);
 </script>
-<script src="nav-bar.js"></script>
+<script src="nav-bar.js?v=20260817"></script>
 </body>
 </html>

@@ -1,9 +1,13 @@
 // Family Hub - zajednicka navigacija za prelazak izmedju aplikacija.
-// Ubaci <script src="nav-bar.js"></script> pred kraj <body> u svaku app stranicu.
+// Ubaci <script src="nav-bar.js?v=20260817"></script> pred kraj <body> u svaku app stranicu.
 // Na telefonu (uzi ekran): traka na dnu. Na kompjuteru (siri ekran, >=768px): bocna traka sa leve strane.
 // Boje se automatski prilagodjavaju pozadini stranice (tamna ili svijetla tema).
 // Kad se doda nova aplikacija: izmeni APPS niz ispod (jedno mesto za sve stranice).
+// NAV_VER: podigni ovaj broj/datum pri svakom deployu. Dodaje se kao ?v= na linkove
+// izmedju stranica, sto tjera browser da uvijek povuce svjezu verziju umjesto stare
+// keširane (npr. Opera je znala da posluzi zastarjelu stranicu bez ovoga).
 (function () {
+  var NAV_VER = "20260817";
   var ICONS = {
     droplets:
       '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/>' +
@@ -28,10 +32,10 @@
       'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' + pathData + '</svg>';
   }
   var APPS = [
-    { label: "Kupovina", icon: svgIcon(ICONS.cart),     href: "shopping-list.html",  enabled: true },
-    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  href: "recepti.html",        enabled: true },
-    { label: "Raspored", icon: svgIcon(ICONS.calendar), href: "raspored.html",       enabled: true },
-    { label: "Voda",     icon: svgIcon(ICONS.droplets), href: "potrosnja-vode.html", enabled: true }
+    { label: "Kupovina", icon: svgIcon(ICONS.cart),     file: "shopping-list.html",  enabled: true },
+    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  file: "recepti.html",        enabled: true },
+    { label: "Raspored", icon: svgIcon(ICONS.calendar), file: "raspored.html",       enabled: true },
+    { label: "Voda",     icon: svgIcon(ICONS.droplets), file: "potrosnja-vode.html", enabled: true }
   ];
 
   var currentFile = (location.pathname.split("/").pop() || "index.html");
@@ -62,9 +66,9 @@
     // mode: "bottom" (icon over label, stacked) or "side" (icon beside label, row)
     list = list || APPS;
     return list.map(function (app) {
-      var active = app.enabled && app.href === currentFile;
+      var active = app.enabled && app.file === currentFile;
       var cls = "fh-tab fh-tab-" + mode + (active ? " active" : "") + (app.enabled ? "" : " disabled");
-      var href = app.enabled ? app.href : "javascript:void(0)";
+      var href = app.enabled ? (app.file + "?v=" + NAV_VER) : "javascript:void(0)";
       var extraAttrs = app.enabled ? "" : ' aria-disabled="true" tabindex="-1"';
       return (
         '<a class="' + cls + '" href="' + href + '"' + extraAttrs + '>' +
@@ -88,7 +92,7 @@
   try { cachedRole = localStorage.getItem("fhRole"); } catch (e) {}
   function appsForRole(role) {
     return role === "child"
-      ? APPS.filter(function (app) { return app.href === "raspored.html"; })
+      ? APPS.filter(function (app) { return app.file === "raspored.html"; })
       : APPS;
   }
 

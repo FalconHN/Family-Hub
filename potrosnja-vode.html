@@ -254,14 +254,14 @@ const authGate = getAuth(authGateApp);
 const authGateDb = getFirestore(authGateApp);
 onAuthStateChanged(authGate, (user) => {
   if (!user) {
-    window.location.href = "index.html";
+    window.location.href = "index.html?v=20260817";
     return;
   }
   // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo.
   getDoc(doc(authGateDb, "users", user.uid)).then((snap) => {
     const role = (snap.exists() && snap.data().role) || "parent";
     if (role === "child") {
-      window.location.href = "raspored.html";
+      window.location.href = "raspored.html?v=20260817";
       return;
     }
     if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
@@ -801,14 +801,14 @@ function doLogin() {
 document.getElementById("loginBtn").addEventListener("click", doLogin);
 document.getElementById("loginPassword").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(authGate).catch(() => {}).finally(() => { window.location.href = "index.html"; });
+  signOut(authGate).catch(() => {}).finally(() => { window.location.href = "index.html?v=20260817"; });
 });
 if (!AUTH_ENABLED) document.getElementById("logoutBtn").style.display = "none";
 
 // Odjava - poziva se iz zajednicke nav trake (nav-bar.js). Odjavljuje zajednicku (shared) sesiju.
 window.fhLogout = function () {
   signOut(authGate).catch(() => {}).finally(() => {
-    window.location.href = "index.html";
+    window.location.href = "index.html?v=20260817";
   });
 };
 
@@ -823,6 +823,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 </script>
-<script src="nav-bar.js"></script>
+<script src="nav-bar.js?v=20260817"></script>
 </body>
 </html>
