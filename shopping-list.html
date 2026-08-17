@@ -21,6 +21,7 @@
   html, body { margin:0; padding:0; background:#F5F3EE; height:100%; }
   #root { min-height:100%; }
   * { -webkit-tap-highlight-color: transparent; }
+  @keyframes fhspin { to { transform: rotate(360deg); } }
   input.no-spin-input::-webkit-outer-spin-button,
   input.no-spin-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -1274,6 +1275,17 @@ function SmartShoppingList() {
 
   const budgetPct = budget && budget > 0 ? Math.min(100, (remainingTotal / budget) * 100) : 0;
   const budgetOver = budget !== null && remainingTotal > budget;
+
+  // Isti "pun ekran" indikator učitavanja kao na ostalim stranicama (raspored.html),
+  // da iskustvo bude jednoliko dok se ne poveže sa bazom.
+  if (!loaded) {
+    return (
+      <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, background: "#F5F3EE", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div style={{ width: 34, height: 34, border: "3px solid #DDE7E4", borderTopColor: "#007991", borderRadius: "50%", animation: "fhspin 0.8s linear infinite" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "#5B6B70" }}>Učitavanje…</div>
+      </div>
+    );
+  }
 
   return (
     <div

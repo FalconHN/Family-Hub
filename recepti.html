@@ -21,6 +21,7 @@
   html, body { margin:0; padding:0; background:#F5F3EE; height:100%; overflow-x: hidden; }
   #root { min-height:100%; overflow-x: hidden; }
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  @keyframes fhspin { to { transform: rotate(360deg); } }
 </style>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -472,6 +473,17 @@ function RecipeApp() {
     toastTimer.current = setTimeout(() => setToast(null), t === "error" ? 6000 : 3000);
   }
 
+  // Isti "pun ekran" indikator učitavanja kao na ostalim stranicama (raspored.html),
+  // da iskustvo bude jednoliko dok se ne poveže sa bazom.
+  if (!loaded) {
+    return (
+      <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, background: "#F5F3EE", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div style={{ width: 34, height: 34, border: "3px solid #DDE7E4", borderTopColor: "#007991", borderRadius: "50%", animation: "fhspin 0.8s linear infinite" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "#5B6B70" }}>Učitavanje…</div>
+      </div>
+    );
+  }
+
   const knownCategories = Array.from(
     new Set([...DEFAULT_CATEGORIES, ...recipes.map((r) => r.kategorija).filter(Boolean)])
   ).sort((a, b) => a.localeCompare(b, "sr"));
@@ -619,9 +631,7 @@ function RecipeApp() {
           />
         </div>
 
-        {!loaded ? (
-          <div style={{ color: "#8A8578", fontSize: 14, padding: "20px 4px" }}>Učitavanje...</div>
-        ) : visibleRecipes.length === 0 ? (
+        {visibleRecipes.length === 0 ? (
           <div style={{ color: "#8A8578", fontSize: 14, padding: "30px 4px", textAlign: "center" }}>
             {recipes.length === 0 ? "Još nema dodanih recepata." : "Nema recepata koji odgovaraju pretrazi."}
           </div>
