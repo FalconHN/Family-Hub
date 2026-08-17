@@ -188,7 +188,7 @@
   }
 
   function doLogout() {
-    try { localStorage.removeItem("fhRole"); localStorage.removeItem("fhChildId"); } catch (e) {}
+    try { localStorage.removeItem("fhRole"); } catch (e) {}
     if (typeof window.fhLogout === "function") {
       window.fhLogout();
     }
