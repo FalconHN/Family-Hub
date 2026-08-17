@@ -1184,66 +1184,66 @@ function SmartShoppingList() {
                 <>{it.quantity || 1} kom{hasPrice ? ` · ×${fmtEUR(Number(it.price) || 0)}` : ""}</>
               )}
             </span>
+          </div>
 
-            <span style={{ flex: 1 }} />
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginTop: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {(it.note || editingCell === `note-${it.id}`) && (
+                <div
+                  onClick={() => setEditingCell(`note-${it.id}`)}
+                  style={{
+                    background: "#F5F3EE",
+                    border: "1px solid #EBE6DB",
+                    borderRadius: 10,
+                    padding: "8px 10px",
+                    fontSize: 13,
+                    color: "#6B6559",
+                    cursor: "text",
+                  }}
+                >
+                  {editingCell === `note-${it.id}` ? (
+                    <input
+                      autoFocus
+                      value={it.note || ""}
+                      placeholder="napomena..."
+                      onChange={(e) => updateItem(it.id, { note: e.target.value })}
+                      onBlur={() => setEditingCell(null)}
+                      onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                      style={{ ...inputStyle, color: "#6B6559", fontSize: 13 }}
+                    />
+                  ) : (
+                    it.note
+                  )}
+                </div>
+              )}
+
+              {!it.note && editingCell !== `note-${it.id}` && (
+                <button
+                  type="button"
+                  onClick={() => setEditingCell(`note-${it.id}`)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#B5AFA0",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  + napomena
+                </button>
+              )}
+            </div>
 
             <button
               type="button"
               onClick={() => deleteItem(it.id)}
               aria-label="Obriši stavku"
-              style={{ background: "none", border: "none", color: "#B5AFA0", cursor: "pointer", padding: 4, display: "inline-flex" }}
+              style={{ background: "none", border: "none", color: "#B5AFA0", cursor: "pointer", padding: 4, display: "inline-flex", flexShrink: 0 }}
             >
               <IconTrash />
             </button>
           </div>
-
-          {(it.note || editingCell === `note-${it.id}`) && (
-            <div
-              onClick={() => setEditingCell(`note-${it.id}`)}
-              style={{
-                marginTop: 10,
-                background: "#F5F3EE",
-                border: "1px solid #EBE6DB",
-                borderRadius: 10,
-                padding: "8px 10px",
-                fontSize: 13,
-                color: "#6B6559",
-                cursor: "text",
-              }}
-            >
-              {editingCell === `note-${it.id}` ? (
-                <input
-                  autoFocus
-                  value={it.note || ""}
-                  placeholder="napomena..."
-                  onChange={(e) => updateItem(it.id, { note: e.target.value })}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
-                  style={{ ...inputStyle, color: "#6B6559", fontSize: 13 }}
-                />
-              ) : (
-                it.note
-              )}
-            </div>
-          )}
-
-          {!it.note && editingCell !== `note-${it.id}` && (
-            <button
-              type="button"
-              onClick={() => setEditingCell(`note-${it.id}`)}
-              style={{
-                marginTop: 8,
-                background: "none",
-                border: "none",
-                color: "#B5AFA0",
-                fontSize: 12,
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              + napomena
-            </button>
-          )}
         </div>
       </div>
     );
