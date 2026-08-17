@@ -389,6 +389,9 @@ function SmartShoppingList() {
   const [hiddenCategories, setHiddenCategories] = useState([]);
   const [newStore, setNewStore] = useState("");
   const [newCategory, setNewCategory] = useState("");
+  const [newQuantity, setNewQuantity] = useState("1");
+  const [newPrice, setNewPrice] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showManageLabels, setShowManageLabels] = useState(false);
   // null = no red per-item price alert. If set, only then expensive items are highlighted.
   const [priceAlertThreshold, setPriceAlertThreshold] = useState(null);
@@ -632,20 +635,30 @@ function SmartShoppingList() {
     setColorPickerFor(null);
   }
 
+  function openAddModal() {
+    const trimmed = (newName || "").trim();
+    if (!trimmed) return;
+    setNewQuantity("1");
+    setNewPrice("");
+    setShowAddModal(true);
+  }
+
   function addItem(name) {
     const finalName = (name !== undefined ? name : newName).trim();
     if (!finalName) return;
     const selectedStore = name === undefined ? (newStore || "").trim() : "";
     const selectedCategory = name === undefined ? (newCategory || "").trim() : "";
+    const qtyNum = name === undefined ? Number(newQuantity) : 1;
+    const priceNum = name === undefined ? Number(newPrice) : 0;
     if (selectedStore) addCustomStore(selectedStore);
     if (selectedCategory) addCustomCategory(selectedCategory);
     const id = Date.now().toString() + Math.random().toString(36).slice(2, 6);
     const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
     setItems((prev) => [
       ...prev,
-      { id, name: finalName, quantity: 1, store: selectedStore, category: selectedCategory, price: 0, note: "", purchased: false, order: maxOrder + 1 },
+      { id, name: finalName, quantity: Number.isFinite(qtyNum) && qtyNum > 0 ? qtyNum : 1, store: selectedStore, category: selectedCategory, price: Number.isFinite(priceNum) && priceNum > 0 ? priceNum : 0, note: "", purchased: false, order: maxOrder + 1 },
     ]);
-    if (name === undefined) { setNewName(""); setNewStore(""); setNewCategory(""); }
+    if (name === undefined) { setNewName(""); setNewStore(""); setNewCategory(""); setNewQuantity("1"); setNewPrice(""); setShowAddModal(false); }
   }
 
   function clearPurchased() {
@@ -1296,6 +1309,17 @@ function SmartShoppingList() {
         .detail-field{background:#f8faf9;border:1px solid #e0e8e5;border-radius:11px;padding:8px 9px;min-width:0;display:flex;align-items:center;gap:7px;}
         .detail-field input{border:0!important;background:transparent!important;padding:2px 0!important;min-width:0!important;}
         .field-action{border:0;background:transparent;color:#176b76;font-size:11px;font-weight:750;white-space:nowrap;padding:4px;cursor:pointer;}
+        .add-modal-overlay{position:fixed;inset:0;background:rgba(15,34,43,0.42);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;}
+        .add-modal{background:#fff;border-radius:18px;padding:18px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(15,34,43,0.25);box-sizing:border-box;}
+        .add-modal-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+        .add-modal-title{font-family:var(--app-display-font);font-size:18px;font-weight:700;color:#17252b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .add-modal-close{border:0;background:#f0f4f2;color:#657278;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;flex:0 0 auto;}
+        .add-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .add-modal-field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#657278;font-weight:650;}
+        .add-modal-field input{border:1px solid #e0e8e5;background:#f8faf9;border-radius:11px;padding:9px 10px;font-size:14px;color:#17252b;box-sizing:border-box;}
+        .add-modal-btn-row{display:flex;gap:8px;margin-top:16px;}
+        .add-modal-btn-row .primary{flex:1;justify-content:center;}
+        .add-modal-cancel{border:1px solid #dce6e2;background:#fff;color:#52666c;border-radius:11px;padding:10px 14px;font-weight:650;cursor:pointer;}
         .action-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;}
         .action-btn{min-height:56px;border:1px solid #dce6e2!important;background:#fff!important;color:#52666c!important;border-radius:14px!important;padding:7px 6px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;font-size:11px!important;font-weight:650!important;}
         .action-btn svg{width:18px;height:18px;stroke-width:1.6;}
@@ -1405,13 +1429,8 @@ function SmartShoppingList() {
         <div className="composer">
           <div className="search-add">
             <span style={{fontSize:18,color:'#839095',marginRight:7}}>＋</span>
-            <AutocompleteInput value={newName} options={knownItemNames} onChange={setNewName} onKeyDown={(e)=>e.key==='Enter'&&addItem()} placeholder="Dodaj proizvod…" style={{background:'transparent',border:'none',color:'#17252b',fontSize:15,outline:'none',flex:1}} />
-            <button onClick={()=>addItem()} className="primary"><IconPlus/> Dodaj</button>
-          </div>
-
-          <div className="detail-row">
-            <div className="detail-field"><IconStore/><AutocompleteInput value={newStore} options={knownStores} onChange={setNewStore} placeholder="Prodavnica" style={{background:'transparent',border:'none',fontSize:12,color:'#344b52',flex:1}} /><button className="field-action" onClick={()=>{const v=prompt('Naziv nove prodavnice'); if(v) addCustomStore(v)}}>+ Nova</button></div>
-            <div className="detail-field"><IconTag/><AutocompleteInput value={newCategory} options={knownCategories} onChange={setNewCategory} placeholder="Kategorija" style={{background:'transparent',border:'none',fontSize:12,color:'#344b52',flex:1}} /><button className="field-action" onClick={()=>{const v=prompt('Naziv nove kategorije'); if(v) addCustomCategory(v)}}>+ Nova</button></div>
+            <AutocompleteInput value={newName} options={knownItemNames} onChange={setNewName} onKeyDown={(e)=>e.key==='Enter'&&openAddModal()} placeholder="Dodaj proizvod…" style={{background:'transparent',border:'none',color:'#17252b',fontSize:15,outline:'none',flex:1}} />
+            <button onClick={openAddModal} className="primary"><IconPlus/> Dodaj</button>
           </div>
 
           <div className="action-row">
@@ -1421,6 +1440,33 @@ function SmartShoppingList() {
             <button className="action-btn" onClick={()=>setShowManageLabels(s=>!s)}><IconPin/><span>Oznake i boje</span></button>
           </div>
         </div>
+
+        {showAddModal&&<div className="add-modal-overlay" onClick={()=>setShowAddModal(false)}>
+          <div className="add-modal" onClick={(e)=>e.stopPropagation()}>
+            <div className="add-modal-header">
+              <span className="add-modal-title">Dodaj: {newName}</span>
+              <button type="button" className="add-modal-close" onClick={()=>setShowAddModal(false)} aria-label="Zatvori">✕</button>
+            </div>
+            <div className="add-modal-grid">
+              <label className="add-modal-field">
+                <span>Količina</span>
+                <input type="number" min="0" step="1" value={newQuantity} onChange={(e)=>setNewQuantity(e.target.value)} />
+              </label>
+              <label className="add-modal-field">
+                <span>Cijena (€)</span>
+                <input type="number" min="0" step="0.01" value={newPrice} placeholder="0" onChange={(e)=>setNewPrice(e.target.value)} />
+              </label>
+            </div>
+            <div className="detail-row" style={{marginTop:10}}>
+              <div className="detail-field"><IconStore/><AutocompleteInput value={newStore} options={knownStores} onChange={setNewStore} placeholder="Prodavnica" style={{background:'transparent',border:'none',fontSize:12,color:'#344b52',flex:1}} /><button className="field-action" onClick={()=>{const v=prompt('Naziv nove prodavnice'); if(v) addCustomStore(v)}}>+ Nova</button></div>
+              <div className="detail-field"><IconTag/><AutocompleteInput value={newCategory} options={knownCategories} onChange={setNewCategory} placeholder="Kategorija" style={{background:'transparent',border:'none',fontSize:12,color:'#344b52',flex:1}} /><button className="field-action" onClick={()=>{const v=prompt('Naziv nove kategorije'); if(v) addCustomCategory(v)}}>+ Nova</button></div>
+            </div>
+            <div className="add-modal-btn-row">
+              <button type="button" className="primary" onClick={()=>addItem()}><IconPlus/> Dodaj u listu</button>
+              <button type="button" className="add-modal-cancel" onClick={()=>setShowAddModal(false)}>Otkaži</button>
+            </div>
+          </div>
+        </div>}
 
         {showManageLabels&&<div className="manage-panel">
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
