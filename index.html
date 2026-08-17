@@ -4,169 +4,192 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Family Hub</title>
+<meta name="theme-color" content="#F5F3EE" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Family Hub" />
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=7" />
 <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=7" />
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png?v=7" />
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#F5F3EE" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-title" content="Family Hub" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; background:#F5F3EE; min-height:100%; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color:#0F222B; }
-  h1, .brand-title { font-family: 'Fraunces', Georgia, serif; }
-  #app { max-width: 420px; margin: 0 auto; padding: 60px 20px; }
-  h1 { font-size: 26px; margin-bottom: 6px; }
-  p.sub { color: #8A8578; margin-top:0; margin-bottom: 28px; font-size: 14px; }
-
-  .login-wrap { padding-top: 24px; text-align: center; max-width: 380px; margin: 0 auto; }
-  .brand-badge {
-    width: 220px; height: 220px; border-radius: 34px;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 18px; box-shadow: 0 10px 26px rgba(0,121,145,0.18);
-    overflow: hidden;
+  :root {
+    --bg: #F5F3EE; --card: #FFFFFF; --ink: #0F222B; --muted: #8A8578;
+    --line: #E6E1D8; --teal: #007991; --soft: #E5F0ED;
+    --app-font: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --app-display-font: 'Fraunces', Georgia, serif;
   }
-  .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .login-wrap .sub { text-align: center; margin-bottom: 26px; margin-top: 4px; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; background:var(--bg); min-height:100%; color:var(--ink); font-family:var(--app-font); }
+  button, input { font: inherit; }
+  .hidden { display:none !important; }
+
+  /* ---------- Login ---------- */
+  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
   .login-card {
-    background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 14px;
-    padding: 24px; text-align: left; box-shadow: 0 8px 24px rgba(15,34,43,0.06);
+    width:min(400px,100%); background:var(--card); border:1px solid var(--line);
+    border-radius:20px; padding:30px; box-shadow:0 12px 40px rgba(15,34,43,0.07); text-align:left;
   }
+  .brand-badge {
+    width:220px; height:220px; border-radius:34px;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 18px;
+    box-shadow:0 10px 26px rgba(0,121,145,0.18); overflow:hidden;
+  }
+  .brand-badge img { width:100%; height:100%; object-fit:contain; display:block; }
+  .login-card h1 { font-family:var(--app-display-font); font-size:28px; font-weight:700; margin:0 0 6px; text-align:center; }
+  .login-card .sub { color:var(--muted); font-size:14px; margin:0 0 24px; text-align:center; }
+  .field { display:grid; gap:7px; margin:12px 0; }
+  .field label { font-size:13px; font-weight:700; }
+  .field input { border:1px solid var(--line); border-radius:12px; padding:12px; background:#FAF8F4; outline:none; }
+  .field input:focus { border-color:var(--teal); }
+  .primary {
+    width:100%; border:0; background:var(--teal); color:#fff; border-radius:12px;
+    padding:13px 16px; font-weight:700; cursor:pointer; margin-top:10px;
+  }
+  .primary:active { transform:translateY(1px); }
+  .error { color:#B0524A; font-size:13px; min-height:18px; margin-top:10px; text-align:center; }
 
-  input {
-    width: 100%; padding: 10px 12px; margin-bottom: 12px; border-radius: 6px;
-    border: 1px solid #E6E1D8; background: #F5F3EE; color: #0F222B; font-size: 14px;
-  }
-  input::placeholder { color: #8A8578; }
-  button.primary {
-    width: 100%; padding: 10px 12px; border-radius: 6px; border: none;
-    background: #007991; color: #fff; font-size: 14px; cursor: pointer; font-weight: 500;
-  }
-  button.primary:hover { background: #00636F; }
-  .error { color: #B0524A; font-size: 13px; margin-bottom: 12px; min-height: 16px; }
+  /* ---------- Dashboard ---------- */
+  .wrap { max-width:1180px; margin:0 auto; padding:32px 20px 110px; }
+  .hero { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:24px; }
+  .eyebrow { color:var(--teal); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.09em; }
+  .hero h1 { font-family:var(--app-display-font); font-size:clamp(30px,5vw,44px); font-weight:700; margin:6px 0 4px; letter-spacing:-0.02em; }
+  .hero p { margin:0; color:var(--muted); font-size:14px; }
+  .logout { border:1px solid var(--line); background:#fff; border-radius:12px; padding:10px 16px; cursor:pointer; white-space:nowrap; }
+
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
   .card {
-    border: 1px solid #E6E1D8; border-radius: 10px; padding: 20px; margin-bottom: 14px;
-    background: #FFFFFF; cursor: pointer; display:flex; align-items:center; gap:14px;
-    text-decoration: none; color: #0F222B; transition: border-color 0.15s, box-shadow 0.15s;
-    box-shadow: 0 2px 8px rgba(15,34,43,0.04);
+    background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px;
+    text-decoration:none; color:inherit; min-height:150px; display:flex; flex-direction:column;
+    transition:transform .16s ease, box-shadow .16s ease; position:relative; overflow:hidden;
   }
-  .card:hover { border-color: #007991; box-shadow: 0 4px 14px rgba(15,34,43,0.08); }
-  .card.disabled { cursor: default; }
-  .card.disabled:hover { border-color: #E6E1D8; box-shadow: 0 2px 8px rgba(15,34,43,0.04); }
-  .card.disabled .title, .card.disabled .desc { color: #B7B2A4; }
-  .card-icon {
-    width: 44px; height: 44px; min-width: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    background: #DEE9E3; color: #007991;
+  a.card:hover { transform:translateY(-2px); box-shadow:0 12px 30px rgba(15,34,43,0.08); }
+  .card .icon {
+    width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:22px;
   }
-  .card.disabled .card-icon { background: #F0EDE5; color: #C9C3B5; }
-  .card-icon svg { display: block; }
-  .card .title { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
-  .card .desc { font-size: 13px; color: #8A8578; }
-  .soon-badge {
-    display: inline-block; margin-left: 8px; font-size: 9px; font-weight: 700;
-    background: #D6D1C6; color: #fff; padding: 2px 6px; border-radius: 6px; vertical-align: middle;
-  }
-  .topbar { display:flex; justify-content: space-between; align-items:center; margin-bottom: 24px; }
-  .logout-btn {
-    display: flex; align-items: center; justify-content: center;
-    width: 42px; height: 42px; border-radius: 10px;
-    border: 1px solid #E6E1D8; background: #FFFFFF; color: #8A8578; cursor: pointer;
-  }
-  .logout-btn:hover { color: #B0524A; border-color: #E7C9C4; background: #FBF3F2; }
-  .logout-btn svg { display: block; }
-  .hidden { display: none; }
+  .card h2 { font-family:var(--app-display-font); font-size:18px; font-weight:700; margin:14px 0 5px; }
+  .card p { font-size:13px; color:var(--muted); margin:0; }
+  .metric { font-size:24px; font-weight:700; margin-top:auto; padding-top:12px; letter-spacing:-0.01em; }
+  .metric small { font-size:13px; font-weight:600; color:var(--muted); }
+  .wide { grid-column:span 2; }
 
-  /* --- Desktop optimizacija (siri ekrani), isto kao i ostale stranice --- */
-  @media (min-width: 900px) {
-    #app { max-width: 1120px; }
-    h1 { font-size: 30px; }
-    .cards-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: repeat(2, auto);
-      grid-auto-flow: column;
-      gap: 16px;
-    }
-    .cards-grid .card { margin-bottom: 0; }
+  .section { margin-top:22px; }
+  .section h2 { font-family:var(--app-display-font); font-size:20px; font-weight:700; margin:0 0 12px; }
+  .today { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .person { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .person strong { display:block; font-size:15px; }
+  .person span { font-size:13px; color:var(--muted); }
+  .person .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+
+  .event-list { display:grid; gap:8px; }
+  .event { display:flex; gap:14px; align-items:center; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .event time { font-weight:700; color:var(--teal); min-width:52px; }
+  .event .ev-title { font-weight:600; font-size:14px; }
+  .event .ev-sub { font-size:12px; color:var(--muted); }
+
+  .quick { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .quick a { background:var(--soft); color:var(--teal); padding:9px 13px; border-radius:11px; text-decoration:none; font-weight:700; font-size:13px; }
+
+  @media (max-width:860px) { .grid { grid-template-columns:repeat(2,1fr); } .today { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px) {
+    .wrap { padding:22px 14px 110px; }
+    .hero { align-items:flex-start; }
+    .grid { grid-template-columns:1fr; } .wide { grid-column:span 1; }
+    .today { grid-template-columns:1fr 1fr; }
+    .login-card { padding:24px; }
   }
 </style>
 </head>
 <body>
-<div id="app">
 
-  <div id="login-screen">
-    <div class="login-wrap">
-      <div class="brand-badge"><img src="icons/login-badge.png" alt="Family Hub" /></div>
-      <p class="sub">Uloguj se da pristupiš aplikacijama</p>
-      <div class="login-card">
-        <div class="error" id="login-error"></div>
-        <input type="email" id="email" placeholder="Email" autocomplete="username" />
-        <input type="password" id="password" placeholder="Lozinka" autocomplete="current-password" />
-        <button class="primary" onclick="doLogin()">Prijava</button>
-      </div>
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <div class="brand-badge">
+      <img src="icons/login-badge.png" alt="Family Hub" />
     </div>
+    <h1>Family Hub</h1>
+    <p class="sub">Jedno mjesto za porodicu — raspored, kupovina, recepti i voda.</p>
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label for="password">Lozinka</label>
+      <input id="password" type="password" autocomplete="current-password" />
+    </div>
+    <button class="primary" id="loginBtn">Prijavi se</button>
+    <div id="login-error" class="error"></div>
   </div>
-
-  <div id="menu-screen" class="hidden">
-    <div class="topbar">
-      <div>
-        <h1 style="margin-bottom:2px;">Family Hub</h1>
-        <p class="sub" id="welcome-text" style="margin-bottom:0;"></p>
-      </div>
-      <button class="logout-btn" onclick="doLogout()" aria-label="Odjava" title="Odjava">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      </button>
-    </div>
-
-    <div class="cards-grid">
-    <a class="card" href="shopping-list.html">
-      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></span>
-      <div>
-        <div class="title">Trgovina</div>
-        <div class="desc">Zajednička lista za kupovinu</div>
-      </div>
-    </a>
-
-    <a class="card" href="recepti.html">
-      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
-      <div>
-        <div class="title">Recepti</div>
-        <div class="desc">Moja kuvarska knjiga</div>
-      </div>
-    </a>
-
-    <a class="card" href="raspored.html" id="cardRaspored">
-      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg></span>
-      <div>
-        <div class="title">Raspored časova</div>
-        <div class="desc">Raspored i obaveze</div>
-      </div>
-    </a>
-
-    <a class="card" href="potrosnja-vode.html">
-      <span class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></span>
-      <div>
-        <div class="title">Potrošnja vode</div>
-        <div class="desc">Praćenje potrošnje vode - Igalo</div>
-      </div>
-    </a>
-
-    <!-- Nove aplikacije se dodaju ovdje kao novi .card linkovi (postavi enabled ako je gotova) -->
-    </div>
-
-  </div>
-
 </div>
 
+<!-- ===================== DASHBOARD ===================== -->
+<div id="menu-screen" class="hidden">
+  <main class="wrap">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Porodični centar</div>
+        <h1 id="hello">Dobrodošli</h1>
+        <p id="dateLine"></p>
+      </div>
+      <button class="logout" id="logoutBtn">Odjava</button>
+    </header>
+
+    <section class="grid">
+      <a class="card" href="potrosnja-vode.html">
+        <div class="icon" style="background:#D8ECFF;color:#0A3A6B;">💧</div>
+        <h2>Voda</h2><p>Potrošnja za ovaj mjesec</p>
+        <div class="metric" id="waterMetric">—</div>
+      </a>
+      <a class="card" href="shopping-list.html">
+        <div class="icon" style="background:#D6F3DB;color:#0B4A12;">🛒</div>
+        <h2>Kupovina</h2><p>Zajednička lista</p>
+        <div class="metric" id="shoppingMetric">—</div>
+      </a>
+      <a class="card" href="raspored.html">
+        <div class="icon" style="background:#EBD9FF;color:#33076B;">📚</div>
+        <h2>Djeca</h2><p>Škola, časovi i obaveze</p>
+        <div class="metric" id="schoolMetric">—</div>
+      </a>
+      <a class="card" href="recepti.html">
+        <div class="icon" style="background:#FFE4CC;color:#6B2E00;">🍳</div>
+        <h2>Recepti</h2><p>Kuvarska knjiga i favoriti</p>
+        <div class="metric" id="recipeMetric">—</div>
+      </a>
+      <div class="card wide">
+        <div class="icon" style="background:#FDEEC0;color:#5C4700;">⚡</div>
+        <h2>Brze akcije</h2><p>Najčešće korištene stvari</p>
+        <div class="quick">
+          <a href="shopping-list.html">+ Kupovina</a>
+          <a href="recepti.html">+ Recept</a>
+          <a href="potrosnja-vode.html">Unesi vodu</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="todaySection">
+      <h2>Danas</h2>
+      <div class="today" id="todayPeople"></div>
+    </section>
+  </main>
+</div>
+
+<script src="nav-bar.js"></script>
 <script>
-// ==== PASTE YOUR FIREBASE CONFIG HERE ====
+/* ======================================================================
+   FAMILY HUB — Dashboard
+   Login je identičan ostalim stranicama (projekat family-hub-m). Ako profil
+   users/{uid} ne postoji ili se ne može pročitati, podrazumijeva se "parent"
+   (isto kao i druge aplikacije) da se ne zaključa postojeći nalog.
+   ====================================================================== */
+
+// ---- Glavni projekat (auth + shopping/recepti/raspored/users) ----
 const firebaseConfig = {
   apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
   authDomain: "family-hub-m.firebaseapp.com",
@@ -176,58 +199,241 @@ const firebaseConfig = {
   appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
 };
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-const loginScreen = document.getElementById('login-screen');
-const menuScreen = document.getElementById('menu-screen');
-const errorBox = document.getElementById('login-error');
-const welcomeText = document.getElementById('welcome-text');
+// ---- Voda je na ODVOJENOM projektu (potrosnja-vode). Isti pristup kao u
+//      potrosnja-vode.html: zaseban imenovani app, čita doc water/data.
+//      (Voda trenutno radi bez prijave, pa je čitanje ovdje moguće.) ----
+const waterConfig = {
+  apiKey: "AIzaSyDMn31Q4PmzwuTTZQE4BufSlxfvz85G8qs",
+  authDomain: "potrosnja-vode.firebaseapp.com",
+  projectId: "potrosnja-vode",
+  storageBucket: "potrosnja-vode.firebasestorage.app",
+  messagingSenderId: "1633026712",
+  appId: "1:1633026712:web:529f17a237845bf106c6ed"
+};
+let waterDb = null;
+try { waterDb = firebase.initializeApp(waterConfig, "waterApp").firestore(); } catch (e) { waterDb = null; }
+
+const CHILDREN = [
+  { id: "filip",  name: "Filip",  color: "#5CB0FF" },
+  { id: "jaksa",  name: "Jakša",  color: "#B478FF" },
+  { id: "miljan", name: "Miljan", color: "#FF8F42" },
+  { id: "relja",  name: "Relja",  color: "#4FCB5C" },
+];
+// getDay(): 0=nedjelja .. 6=subota  ->  ključevi rasporeda
+const DAY_KEYS = ["ned", "pon", "uto", "sre", "cet", "pet", "sub"];
+const DAY_LIST = ["pon", "uto", "sre", "cet", "pet", "sub", "ned"];
+
+function esc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function srDate(d) {
+  return d.toLocaleDateString("sr-RS", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+/* ---------- LOGIN ---------- */
+const loginScreen = document.getElementById("login-screen");
+const menuScreen  = document.getElementById("menu-screen");
+const errorBox    = document.getElementById("login-error");
 
 function doLogin() {
   errorBox.textContent = "";
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  if (!email || !password) {
-    errorBox.textContent = "Unesi email i lozinku.";
-    return;
-  }
-  firebase.auth().signInWithEmailAndPassword(email, password)
-    .catch((err) => {
-      errorBox.textContent = "Pogrešan email ili lozinka.";
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if (!email || !password) { errorBox.textContent = "Unesi email i lozinku."; return; }
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(() => { errorBox.textContent = "Pogrešan email ili lozinka."; });
+}
+function doLogout() { auth.signOut(); }
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("logoutBtn").addEventListener("click", doLogout);
+document.getElementById("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+
+document.getElementById("dateLine").textContent = srDate(new Date());
+
+/* ---------- KUPOVINA: shopping-list/shared, polje items = JSON string ---------- */
+function loadShopping() {
+  db.collection("shopping-list").doc("shared").onSnapshot((s) => {
+    const el = document.getElementById("shoppingMetric");
+    try {
+      const arr = JSON.parse((s.data() && s.data().items) || "[]");
+      const left = arr.filter((x) => !x.purchased).length;
+      const bought = arr.length - left;
+      el.innerHTML = left + ' <small>za kupovinu · ' + bought + ' kupljeno</small>';
+    } catch (e) { el.textContent = "—"; }
+  }, () => { document.getElementById("shoppingMetric").textContent = "—"; });
+}
+
+/* ---------- RECEPTI: recepti/shared, polje recepti = JSON string ---------- */
+function loadRecipes() {
+  db.collection("recepti").doc("shared").onSnapshot((s) => {
+    const el = document.getElementById("recipeMetric");
+    try {
+      const arr = JSON.parse((s.data() && s.data().recepti) || "[]");
+      const fav = arr.filter((r) => r && r.omiljen).length;
+      el.innerHTML = arr.length + ' <small>recepata' + (fav ? " · " + fav + " omiljenih" : "") + '</small>';
+    } catch (e) { el.textContent = "—"; }
+  }, () => { document.getElementById("recipeMetric").textContent = "—"; });
+}
+
+/* ---------- VODA: potrosnja-vode projekat, doc water/data ----------
+   Vjeran obračun kao u potrosnja-vode.html: pocetno se prenosi iz prethodnog
+   mjeseca (buildEffectiveMonths), potrošnja = krajnje - pocetno za glavni mjerač. */
+const WATER_MONTHS = ["Januar","Februar","Mart","April","Maj","Jun","Jul","Avgust","Septembar","Oktobar","Novembar","Decembar"];
+const WATER_START_YEAR = 2026;
+function wnum(v) { if (typeof v === "string") v = v.replace(",", "."); const x = parseFloat(v); return isNaN(x) ? 0 : x; }
+function waterPeriodInfo(i) {
+  const year = WATER_START_YEAR + Math.floor(i / 12);
+  const month = WATER_MONTHS[((i % 12) + 12) % 12];
+  return { year, month, key: year + "-" + month };
+}
+function waterBuildEffective(months, meters, count) {
+  const eff = {}; const last = {};
+  meters.forEach((m) => (last[m.key] = 0));
+  for (let i = 0; i < count; i++) {
+    const info = waterPeriodInfo(i); const raw = months[info.key] || {}; const me = {};
+    meters.forEach((m) => {
+      const rp = raw[m.key] && raw[m.key].pocetno, rk = raw[m.key] && raw[m.key].krajnje;
+      const hp = rp !== undefined && rp !== "", hk = rk !== undefined && rk !== "";
+      const ep = hp ? wnum(rp) : last[m.key];
+      const ek = hk ? wnum(rk) : ep;
+      me[m.key] = { pocetno: ep, krajnje: ek }; last[m.key] = ek;
     });
+    eff[info.key] = me;
+  }
+  return eff;
+}
+function loadWater() {
+  const el = document.getElementById("waterMetric");
+  if (!waterDb) { el.textContent = "—"; return; }
+  waterDb.collection("water").doc("data").get().then((snap) => {
+    const st = snap.exists ? snap.data() : null;
+    if (!st) { el.textContent = "Nema unosa"; return; }
+    const meters = (st.meters && st.meters.length) ? st.meters : [{ key: "glavni", isMain: true }];
+    const main = meters.find((m) => m.isMain) || meters[0];
+    const now = new Date();
+    const idx = (now.getFullYear() - WATER_START_YEAR) * 12 + now.getMonth();
+    if (idx < 0) { el.textContent = "Nema unosa"; return; }
+    const key = waterPeriodInfo(idx).key;
+    const rawMonth = (st.months || {})[key];
+    if (!rawMonth) { el.textContent = "Nema unosa za " + WATER_MONTHS[now.getMonth()]; return; }
+    const eff = waterBuildEffective(st.months || {}, meters, idx + 1);
+    const m = eff[key][main.key] || { pocetno: 0, krajnje: 0 };
+    const consumption = m.krajnje - m.pocetno;
+    el.innerHTML = consumption.toLocaleString("sr-RS", { maximumFractionDigits: 2 }) + ' <small>m³ · ' + WATER_MONTHS[now.getMonth()] + '</small>';
+  }).catch(() => { el.textContent = "—"; });
 }
 
-function doLogout() {
-  firebase.auth().signOut();
+/* ---------- RASPORED: raspored/{childId}. Stari podaci drže obaveze unutar
+   smjena — normalizeObaveze ih spaja (isto kao raspored.html). ---------- */
+function normalizeObaveze(raw) {
+  if (raw && raw.obaveze) return raw.obaveze;
+  const prva  = (raw && raw.smjene && raw.smjene.prva  && raw.smjene.prva.obaveze)  || {};
+  const druga = (raw && raw.smjene && raw.smjene.druga && raw.smjene.druga.obaveze) || {};
+  const merged = {};
+  DAY_LIST.forEach((k) => {
+    const seen = {}; const out = [];
+    (prva[k] || []).concat(druga[k] || []).forEach((e) => {
+      const id = (e.vrijeme || "") + "|" + (e.naziv || "");
+      if (seen[id]) return; seen[id] = true; out.push(e);
+    });
+    if (out.length) merged[k] = out;
+  });
+  return merged;
+}
+function casoviForDay(raw, dayKey) {
+  const prva  = (raw && raw.smjene && raw.smjene.prva  && raw.smjene.prva.casovi  && raw.smjene.prva.casovi[dayKey])  || [];
+  const druga = (raw && raw.smjene && raw.smjene.druga && raw.smjene.druga.casovi && raw.smjene.druga.casovi[dayKey]) || [];
+  return prva.length + druga.length;
+}
+function casaLabel(n) { return n === 1 ? "1 čas" : n + " časova"; }
+function obavezaLabel(n) { return n === 1 ? "1 obaveza" : n + " obaveza"; }
+
+function loadSchedule() {
+  const dayKey = DAY_KEYS[new Date().getDay()];
+  const people = document.getElementById("todayPeople");
+  const jobs = CHILDREN.map((c) =>
+    db.collection("raspored").doc(c.id).get()
+      .then((s) => ({ c, d: s.exists ? s.data() : {} }))
+      .catch(() => ({ c, d: {} }))
+  );
+  Promise.all(jobs).then((rows) => {
+    let total = 0;
+    people.innerHTML = rows.map(({ c, d }) => {
+      const nc = casoviForDay(d, dayKey);
+      const no = (normalizeObaveze(d)[dayKey] || []).length;
+      total += nc + no;
+      const parts = [];
+      if (nc) parts.push(casaLabel(nc));
+      if (no) parts.push(obavezaLabel(no));
+      const line = parts.length ? parts.join(" · ") : "Nema danas";
+      return '<div class="person"><strong><span class="dot" style="background:' + c.color + '"></span>' +
+             esc(c.name) + '</strong><span>' + line + '</span></div>';
+    }).join("");
+    document.getElementById("schoolMetric").innerHTML = total + ' <small>stavki danas</small>';
+  });
 }
 
-document.getElementById('password').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') doLogin();
-});
-
-function applyRoleToMenu(role) {
-  if (role !== "child") return; // roditelji (ili nalozi bez profila) vide sve kartice
-  document.querySelectorAll('#menu-screen .card').forEach((card) => {
-    if (card.getAttribute('href') !== 'raspored.html') {
-      card.style.display = 'none';
+/* ---------- Prikaz za dijete: samo svoj raspored ---------- */
+function childView(childId) {
+  document.getElementById("todaySection").querySelector("h2").textContent = "Tvoj dan";
+  const people = document.getElementById("todayPeople");
+  const dayKey = DAY_KEYS[new Date().getDay()];
+  db.collection("raspored").doc(childId).get().then((s) => {
+    const d = s.exists ? s.data() : {};
+    const nc = casoviForDay(d, dayKey);
+    const no = (normalizeObaveze(d)[dayKey] || []).length;
+    people.innerHTML = '<div class="person"><strong>Danas</strong><span>' +
+      casaLabel(nc) + " · " + obavezaLabel(no) + '</span></div>';
+    document.getElementById("schoolMetric").innerHTML = (nc + no) + ' <small>stavki danas</small>';
+  }).catch(() => {});
+  // Sakrij kartice koje dijete ne koristi (ostaje samo Raspored).
+  document.querySelectorAll("#menu-screen .card").forEach((card) => {
+    const href = card.getAttribute("href") || "";
+    if (href.indexOf("raspored") === -1) {
+      card.style.display = "none";
     }
   });
 }
 
-firebase.auth().onAuthStateChanged((user) => {
-  if (user) {
-    loginScreen.classList.add('hidden');
-    menuScreen.classList.remove('hidden');
-    welcomeText.textContent = "Ulogovan/a kao " + user.email;
-    firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
-      // Ako profil (users/{uid}) ne postoji, podrazumijevamo "roditelj" da se ne bi
-      // slucajno zakljucao postojeci nalog dok se ne doda profil za njega.
-      const role = (snap.exists && snap.data().role) || 'parent';
-      applyRoleToMenu(role);
-    }).catch(() => { /* ako upit ne uspije, ostaje podrazumijevani prikaz (sve kartice) */ });
-  } else {
-    loginScreen.classList.remove('hidden');
-    menuScreen.classList.add('hidden');
+/* ---------- Auth ---------- */
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    loginScreen.classList.remove("hidden");
+    menuScreen.classList.add("hidden");
+    return;
   }
+  loginScreen.classList.add("hidden");
+  menuScreen.classList.remove("hidden");
+
+  db.collection("users").doc(user.uid).get().then((snap) => {
+    // Ako profil ne postoji ili se ne može pročitati -> "parent" (kao i ostale aplikacije).
+    const role = (snap.exists && snap.data().role) || "parent";
+    const childId = snap.exists && snap.data().childId;
+    const hello = document.getElementById("hello");
+
+    if (role === "child") {
+      hello.textContent = "Zdravo!";
+      if (childId) childView(childId);
+    } else {
+      hello.textContent = "Zdravo, " + (user.displayName || (user.email || "").split("@")[0]);
+      loadShopping();
+      loadRecipes();
+      loadWater();
+      loadSchedule();
+    }
+  }).catch(() => {
+    // Upit nije uspio -> tretiraj kao roditelja, prikaži sve.
+    document.getElementById("hello").textContent = "Zdravo, " + ((user.email || "").split("@")[0]);
+    loadShopping(); loadRecipes(); loadWater(); loadSchedule();
+  });
 });
 </script>
 </body>
