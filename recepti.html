@@ -2,1600 +2,1042 @@
 <html lang="sr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
-<title>Raspored časova</title>
-<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADvUlEQVR4nO2Wv28cRRTHP29mz/bZ5ztHYMAm6O7WB0q8Cs01RBRX0NFCiCiCaeAPQJGQkKgokOipAxQkyKFAQggJURwRBRIULmwCOLaDCSL8cHJnJ9i5nXkUe/b51/1ygRQpX2m1u+9939vvmzc7M/AA9yHkiL77FwJYwFIup3L5/Bhg4IzdsSfPJpfPj1Eup1r27iNievAr4ACXW9ucwWYWAA+zbtvefPbYzEJubXOmZUe7fSPo4BPAj06eeIjh1JPivFPR0yJ2Iheeek7VrauqAIiIithRhAnFnc4Wozm1xnK38cv671f/aebSdh9pV7nPFaMXMPKhGDMCgPeoei8mMAciFdTHXsQYTFK0en8HrzO15flPt3P2IkAAjoVh1pO+gci89/qOGI3VyytG5GVUX1TDBmgzXlQ8GUQue9WLYvQj9RIYI2+jGhn+ffzW0lK9JbWFw1oggG+49GSQsiPq3Hvry/OfA2TDkwXFPF9PKjqAbBjVROSb+rX5LwFyxWhQrL3caKQngRqtOdVRwLYOBdQjaUqlQe7kbGBqH6sf+ILp6QHu3ds7egMDajf1aTFbt5koDzNSc95J2oI2cx2KTpOwORpaY3FxC2AtsdXbkW/Br3sMxahGl1+xrYBU4KxXEPTNXBidRTEIiiLIwckEsJ+jqgVVTypwtm8BqErSLjmF6lPJYCitO7uK2/W+hyODyV3bjkJbAQ0XxEHKoOper11b+CRJ0r6X+9QLiGanorMi9lKjIXE7ZreVEFSbnJe6c3fQ5O7EtkevSQVm/WghOpcNp+fI54cAyRajC9lidAEQ8vmhbDg9N1qIzsGsp8edsVcBCmDFr4B8TaEQJzb9PrnQxCZfJZxWTDd0+w13oWJvL1evAFdYSiz15YX3d9zValyH801uANW2fd+NPvr6iE5MlIePTUVPbFsypdJ4plQab74KlUrQX86+yLNuI735mld+Pn78mTSAcYOXjBu8mPjPGKrVmEM2nE7o1oKkj5VKQPWGNS7+TAP702+PNmKmKoFe//OtHf/GkpCpJBOvSkClAqt/tXL0K0BEFKSZsBoDce06K8DKNmcdvgNg5cf94TFVIJxOMkl/e4ECktkaWL1rNm+KmHfHwpPjXsUBgkHweBBF1TbVutZCpQKIETUq5g318c3M1tDqeptDSccDSSaMnrXIB2KkhHZgH1oCqNdFh766sTT/LX0cSHb7FJCHT5Qf8y7ub3bbwP999Yc/WnJ6WxcO5DlKUD85ehlU6ZF3GJQjVv4A/xv+A5WNeHLizB58AAAAAElFTkSuQmCC">
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAS20lEQVR4nO2de3gUVZbAz7lV1Y88O0mnuxN8jyCKOu7nY3cB/UQeigOIiqAGRmeBZWR3/FyXbwSZDxCZGVxdZ9cdh53F1yAgQhBFZ2B5JQrI+px1Z3yMqIAIpJNuMEG6O11d9+wflcTO44aQ0FVdnfv7A7529+lTj9+9VXXr9C0kIpBIuoLZvQCS7EXKIREi5ZAIkXJIhEg5JEKkHBIhUg6JECmHRIiUQyJEyiERIuWQCJFySIRIOSRCpBwSIVIOiRAph0SIlEMiRMohESLlkAiRckiESDkkQqQcEiFSDokQKYdEiJRDIkTKIREi5ZAIkXJIhEg5JEKkHBIhqt0LcGYgIs5525+MMUTsJ9kzB+bA/BxE1HlndPli7mXPKI7vOczdoOupldUbane9DQDXDx869Y5bNVW1YA+1ZE+lVq7bULt7DxCNuHZo1SSLsmcccjKcc4Pzhmh0xMQp4KvE8nOw/FzwVY6YOKUhGuWcc84tzH4ulp8Dvsobbr2zPhI1MpzdApx9QkpEDPGhxUtrttcGQsESn6/EVxwIBWu2185dvBQxswdNM/vc77IXl/h8gVBwx7aaOQuXsAxntwAHrwDnnDF26EjdFSPGJnW9bWeYTmia+lHtf1eGgpyIZaB7N7/2cF34+9ffqOspTMvOidwu1//WbKoMBTknxpx6cHF2zwEA4YaGWCyW3kyJCBHj8cSRcL35d0YSEwHA4XA4Fktg++wM8cTJk3VmdnBq24MckIMIeFe73zxqZj47dbn7rcideRwvhyRzSDkkQrJ0nKP1mNBd32wOSqYPTXb+gMkZX7wzmh0RITtHRLJLDk7EOWeIjJlXGN1tMsYYAOTleUUfyPN6GWPmx844Ldm94ux5p5HdHBJhraudJWSLHETEOVcUhSkKADQ3J8MNDcdPnNR1XdR7EHFFUT75y94umx0i/t8nnxrcMAwD8cz7YWb/82efC7N//GkqleomOwJomlZYkB8sL3e7XeaHDMPInlszWTHOYRiGoigAcPDQkU3ba7a9tevTz/eG6yPx5mbiXV8OmJgb0Yzt8muh5YIiI/Q5OyJDr9sdDPgvGTRo5HXDxo4acXZlBaRtEHuxXw5zQzREokufWvbiulcaIhFE5na7NFVrbULCZtSThc9cK+xzdiICzklP6c3NSSIe8PunTb7toftnl5eVZoMfNsthGFxR2Gubtjzws0f27/+6sKjQpWkEQJxTJht99oCICICMIUIyqR9vOn7eeef825KFt4wdY24cO5fNxh1gNo4nly3/6SO/cLtceV5vyjD6gxAiEFFVlJPxeDKZ/JeFDz9430x7+w/b5DBX+xe/+vX8xb8s8ZcCYIauOR0HYwyAjkWO/nzhvIcf+Ecb/bBHDnOFV1ZvmDbr/tLSEm7JULeDQESGePTYsVW//fXdt99ilx82yME5R8Qv9h34m5sm6HpKVZTON0fMK/4eSiP6jGWVYL3ObkrA21cZmjDElGFomvY/m1+78PxziShDAzbdLZ4tcjDGJk+fXb3x96WlvlTKaLdAAExRjp84oSd1zaWdssUgokvTunxL1/Uu78mdQRiiJsie1PVTblvDMMzVLCwoMC9901FVNXr02ORbxr38zNPmRjszC91jrJbD4Fxh7L0/fnTd+Eler7dDizHvfTcdPzHsr6+aNP7mSwdfVFxUKGqC5vb6bO8XMx+c63a50lcEEXVd/88nfnnxoAsztFnNr/3k8733zXlY07QO2ZuTyeVPLh08sLvsRNTYdPzPn/2l+vU/7H7n/aLCgs7VSYyxeDyx843qq6643Nx0Z3xFusHyEVICAHhhzbpEc3N+Xl66GohARIlE868eXfCTmff2cI96PZ4u/Saiv7psyJDBg87IUotwu13i7JdectHAU37DyOuG/WTGvU8tf37uo0s9bjdiu/oThphIJF5Ys+6qKy63vjLEUjmISFFYPJGo3b3H6/EaHbsNdvzE8acfWzLrnirOeSplIHZ34DYb5clYTPSBk7GYeesrcz1HH7MTARExhg/Mmu71eP7hoZ8VFRYSfbdZDM69Xk/Nrj2J5maP203WFi1b2k2ZjeyLffsPHjridrXrihVFaWxqun3czbPuqUqlUoioqoqisJ4gStej4D7Tl+yKwlRVQcRUKjXrnqrbfjC2qakp/TSLiFwu18FDh7/Ytx8sHxW0QY6vDnx9IhZj7c80iUhh7Mc/mmo2jiy582QN5voS0Y9/NJUxpYMBiqKcjMW+OnAQclwOAABoiETJ4Ok73zx/DAbKLx18ESJ20xxzFcYYIl46+KJAuV/X9fS2gQCc84ZIBCyvR7VhNyQSzZ1X0+C8ID+/m/IIEeZQQZevW9D9iLL0riwjP89bmJ9ndB4pJojHE734wj7i6DaKABAo93u9XiJq2x0IQEQejycUKAcAyJAiiABQEQh6PB4iwrSXiSjP623J3m29kuhrO2HP8LGD5WAMOednVYTGjRnZGIm6NJeiKIqiuFyuxkh0/JiRAypCnHPRGSVD5JwPqAj9wAx3tYZrrsZIdNzoGypDwW7C+wPOvloBQCJ6YtH8L/ft37VrD7pcAEDJ5LXXDXt80cNEp5ruFpGIHl80/6v9B3bufLt9+Hwi6s/dBjhdDvPHSP6y0q3rV6+qfnX3O+8BwvBrrr570kTzYNHNdSy0lo+Xl5VuqV61qvrV3e++DwDDrrmqqi1cyuFozHNJj9s9vWrK9Kopba+fVoVwr8NzG8fLAZ1KfAngtG6O9DE8h8kFOeBMFBjnZIVwH3Hw1Yok00g5JEKkHBIhNsihqmrn4QdETCb1VCpl/fJkD6mUkUwmuzoXRlWz4ezQBjmKiwoBMf2OBRFpqho9eqyuvp6InD5bUi8w1/pIuD5y9Jg52dx3bwEAoq+oCCx/gJWlcpjrNqAiZJbSpL+lKkpjU+MbW3aY815YuVTZgDmTxxtbtjc1NXWuSXO5tAEVIeuXylI5zEeXDbzg/NJSXyqVSu8/Dc7z8/P/fflzdeEGTVX1VKqf9B9EpKdSmqoeCdc/tfy5/PyC9LZhzmNZVuK78ILzoXUDWoalRzJzuKkiGLj84ot37NpdVFBgpN0od7tddXXhyTNnr3/+t+VlpQDAeY5XUyACY0xT1YZIdMqM2XXhhsLCfMNI+70/YiKRGHb1lRWBcusHba0+zTE4VxXltvE3bdlRi4xBWisxDF5YWLjn3Q+uv2XyIz/9p5tH35Dn9Vq8eNYTi8d/v3XHosee/PzLfUVFhR2eK4sMU0n9tnFjoXXTWblsVs+VaaZrbGq6ctS4unCD26V16BwURYnF4noqNXjg97533jlFhYW5Oo5NAE3Hj3+5/+vP9n6paWqe19vBDIbYnNQrQoEPtr1RVFgIlk8/Z8NEqoZhKIryzMo1M++f4w/4db3j5at5ZI0nErqu5/bJqcKYS9M8Hg8A8E5rqmlqpD7yzH/86/SqKeZGs3jxbJCDADjnCDDxhzNf37yl3O9P6nrnjzFEZJjrzx8m4tTliZVLUxsi0Qljx2z43XIyZwuyfOHsmYK57TcBo2+/++PP95b6fHpXfvRbNE07euzbIRcN3PbKS+VlpQRgS2WJPcPnZpVNsNy/cdVzQwYNjESjmqbKu+QAgIiapkai0SGDB72++vmAv8zGmiPb7q0wxgzOzzv7rK3rV48dOSJSH0kZhqqqdnSfWQFjqKpqyjAi4cjNo27Ytn7VuWcNMDi38bn2Ns/sb05uT0RPPP1fTy5bXhcOe7xej9utKAzIydOG9xgEAATD4Inm5kQ8HgoFH7xv5pzZf2/Osm2jGWC7HJBWkHfw0OHlL7706qYte7/an4jHAAAwx4s4iQCIA4DH6x14wfkTx46ZOe2uswdUmlf8th9n7ZfDpO1SLanrf/zTxx9+9KeDh480RKInTp60e9EySEF+frm/7OzKiiu/f9kVlw1xaRqkbQrbyRY5oPUxelmyXWzBMIysmuA2i+QwISJORJwAc3yIw4QAgAAZMsTs0cIk6+SQZA+yTFAiRMohESLlkAiRckiESDkkQqQcEiFSDokQKYdEiJRDIkTKIREi5ZAIkXJIhEg5JEKkHBIhUg6JECmHRIiUQyJEyiERIuWQCJFySIRIOSRCpBwSIVIOiRAph0SIlEMiRMohESLlkAiRckiESDkkQqQcEiH/D5hsrrJWlPaUAAAAAElFTkSuQmCC">
-<meta name="theme-color" content="#0F222B">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Raspored časova">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Recepti</title>
+<meta name="theme-color" content="#F5F3EE" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Recepti" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=7" />
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=7" />
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png?v=7" />
+<link rel="manifest" href="manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#F5F3EE; height:100%; overflow-x: hidden; }
+  #root { min-height:100%; overflow-x: hidden; }
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Public Sans', sans-serif;
-    background: #F5F3EE;
-    color: #26313A;
-    min-height: 100vh;
-    padding: 28px 14px 60px;
-  }
-  .wrap { width: 100%; max-width: 480px; margin: 0 auto; }
-  @media (min-width: 900px) {
-    .wrap { max-width: 1120px; }
-    h1 { font-size: 30px; }
-    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-    .cards-row .card { margin-top: 0 !important; }
-  }
-  h1 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-weight: 700; color: #0F222B; letter-spacing: -0.02em; }
-  .sub { color: #8A8578; font-size: 13.5px; margin-top: 2px; }
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .header-left { display: flex; align-items: center; gap: 10px; }
-
-  .tabs-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
-  .tab-pill {
-    flex: 0 0 auto; padding: 8px 16px; border-radius: 999px; border: 1px solid #E6E1D8;
-    background: #fff; color: #8A8578; font-weight: 600; font-size: 13.5px; cursor: pointer;
-    font-family: inherit; white-space: nowrap;
-  }
-  .tab-pill.active { background: #007991; border-color: #007991; color: #fff; }
-
-  .day-select-row { display: flex; align-items: center; gap: 8px; margin-top: 0; margin-bottom: 12px; }
-  .day-select-row .day-select-label { font-size: 12.5px; font-weight: 700; color: #8A8578; white-space: nowrap; }
-  .day-select-row select.day-select {
-    flex: 0 0 auto; min-width: 150px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
-    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B; font-weight: 600;
-  }
-  .day-select-row select.day-select:focus { border-color: #007991; }
-
-  .casovi-col { display: flex; flex-direction: column; gap: 12px; }
-
-  .week-grid-card { padding: 16px 12px 14px; }
-  .week-grid { display: flex; gap: 10px; overflow-x: auto; padding: 2px 4px 8px; scroll-snap-type: x proximity; }
-  .week-day-col { flex: 0 0 128px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; }
-  .week-day-header { display: flex; align-items: center; gap: 6px; padding: 2px 2px 6px; border-bottom: 2px solid #F0EDE5; margin-bottom: 2px; }
-  .week-day-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-  .week-day-name { font-weight: 700; font-size: 12.5px; color: #0F222B; white-space: nowrap; }
-  .week-day-empty { color: #8A8578; font-size: 12px; padding: 6px 2px; }
-  .week-cas-card {
-    border-radius: 10px; padding: 9px 10px; cursor: pointer; border-left: 3px solid transparent;
-    transition: transform 0.08s ease;
-  }
-  .week-cas-card:hover { transform: translateY(-1px); }
-  .week-cas-card:active { transform: scale(0.97); }
-  .week-cas-time { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
-  .week-cas-name { font-size: 13px; font-weight: 600; color: #0F222B; line-height: 1.25; }
-  .week-cas-room { font-size: 11px; color: #8A8578; margin-top: 3px; }
-  .week-cas-note {
-    font-size: 11px; color: #8A8578; font-style: italic; margin-top: 3px; line-height: 1.25;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .week-cas-note-date { display: flex; align-items: center; gap: 3px; font-size: 10.5px; color: #8A8578; margin-top: 3px; font-weight: 600; }
-  .week-cas-note-date svg { flex: 0 0 auto; }
-  @media (min-width: 900px) {
-    .week-day-col { flex: 1 1 0; min-width: 0; }
-  }
-
-  .detail-overlay {
-    position: fixed; inset: 0; background: rgba(15,34,43,0.45); display: flex;
-    align-items: center; justify-content: center; padding: 20px; z-index: 50;
-  }
-  .detail-modal {
-    background: #fff; border-radius: 16px; padding: 22px; width: 100%; max-width: 360px;
-    box-shadow: 0 20px 50px -18px rgba(27,58,74,0.35);
-  }
-  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-  .detail-title { font-family: 'Fraunces', Georgia, serif; font-size: 19px; font-weight: 700; color: #0F222B; }
-  .detail-close { background: none; border: none; cursor: pointer; color: #8A8578; padding: 4px; flex: 0 0 auto; }
-  .detail-close:hover { color: #0F222B; }
-  .detail-prop { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #F0EDE5; font-size: 14px; }
-  .detail-prop:last-of-type { border-bottom: none; }
-  .detail-prop-label { color: #8A8578; font-weight: 600; }
-  .detail-prop-value { color: #0F222B; font-weight: 600; text-align: right; }
-  .detail-note-title { font-size: 12px; font-weight: 700; color: #8A8578; text-transform: uppercase; letter-spacing: 0.03em; margin: 14px 0 6px; }
-  .detail-note-body { font-size: 14px; color: #0F222B; background: #FAF8F4; border-radius: 10px; padding: 10px 12px; min-height: 20px; line-height: 1.4; }
-  .detail-note-expiry { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #8A8578; margin-top: 6px; font-weight: 600; }
-  .detail-btn-row { display: flex; gap: 10px; margin-top: 16px; }
-  .detail-edit-btn, .detail-save-btn {
-    flex: 1; background: #007991; color: #fff; border: none; border-radius: 10px; padding: 10px;
-    font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
-  }
-  .detail-edit-btn:hover, .detail-save-btn:hover { background: #00636F; }
-  .detail-delete-btn {
-    flex: 1; background: #fff; border: 1px solid #B0524A; color: #B0524A;
-    border-radius: 10px; padding: 10px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
-  }
-  .detail-delete-btn:hover { background: #FBEEEC; }
-  .detail-cancel-btn {
-    flex: 0 0 auto; background: none; border: 1px solid #E6E1D8; color: #8A8578; border-radius: 10px;
-    padding: 10px 16px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
-  }
-  .detail-cancel-btn:hover { border-color: #C9C3B6; color: #0F222B; }
-  .detail-edit-row { display: flex; gap: 8px; margin-bottom: 10px; }
-  .detail-edit-row input, .detail-field {
-    border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px; font-size: 14px;
-    font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
-  }
-  .detail-edit-row input { flex: 1; min-width: 0; }
-  .detail-field { width: 100%; display: block; margin-top: 8px; }
-  .detail-edit-row input:focus, .detail-field:focus { border-color: #007991; }
-  .detail-field-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .detail-field-row .detail-field-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
-  .detail-field-row input.detail-date-input {
-    flex: 0 0 auto; width: 150px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
-    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
-  }
-  .detail-field-row input.detail-date-input:focus { border-color: #007991; }
-
-  .predmet-manage-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
-  .add-row .manage-link, .manage-link {
-    background: none !important; border: none; color: #007991 !important; font-size: 12.5px; font-weight: 700; cursor: pointer;
-    font-family: inherit; text-decoration: underline; padding: 4px 0 !important; white-space: nowrap;
-  }
-  .predmeti-manage-panel {
-    background: #FAF8F4; border: 1px solid #E6E1D8; border-radius: 10px; padding: 8px 12px;
-    margin-bottom: 12px; flex-basis: 100%; width: 100%;
-  }
-  .predmeti-manage-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #F0EDE5; }
-  .predmeti-manage-row:last-child { border-bottom: none; }
-  .predmeti-manage-row .pm-name { flex: 1; font-size: 13.5px; color: #0F222B; }
-  .predmeti-manage-row input.pm-edit-input {
-    flex: 1; border: 1px solid #007991; border-radius: 7px; padding: 5px 8px; font-size: 13.5px;
-    font-family: inherit; outline: none;
-  }
-  .add-row .pm-icon-btn {
-    background: none !important; border: none; cursor: pointer; padding: 4px !important; display: flex;
-    align-items: center; color: #8A8578 !important; flex: 0 0 auto;
-  }
-  .add-row .pm-icon-btn:hover { color: #007991 !important; }
-  .add-row .pm-icon-btn.pm-delete:hover { color: #B0524A !important; }
-  .predmeti-empty { color: #8A8578; font-size: 13px; padding: 4px 0; }
-
-  .week-grid-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-  .week-grid-card-header .section-title { margin-bottom: 0; }
-  .daycolors-manage-panel {
-    background: #FAF8F4; border: 1px solid #E6E1D8; border-radius: 10px; padding: 8px 12px;
-    margin-bottom: 12px;
-  }
-  .daycolor-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #F0EDE5; position: relative; }
-  .daycolor-row:last-child { border-bottom: none; }
-  .daycolor-name { flex: 1; font-size: 13.5px; color: #0F222B; font-weight: 600; }
-  .daycolor-dot {
-    width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12);
-    padding: 0; cursor: pointer; flex: 0 0 auto;
-  }
-  .daycolor-palette {
-    position: absolute; top: 32px; right: 0; z-index: 30; background: #fff; border: 1px solid #E6E1D8;
-    border-radius: 10px; padding: 8px; box-shadow: 0 8px 20px -8px rgba(27,58,74,0.3);
-    display: grid; grid-template-columns: repeat(6, 20px); gap: 8px;
-  }
-  .daycolor-palette button {
-    width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.13); padding: 0; cursor: pointer;
-  }
-
-  .card {
-    background: #fff; border-radius: 14px; padding: 16px; margin-top: 12px;
-    box-shadow: 0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1);
-  }
-  .card:first-child { margin-top: 0; }
-  .section-title { font-family: 'Fraunces', Georgia, serif; font-size: 17px; font-weight: 700; color: #0F222B; margin-bottom: 10px; }
-
-  .cards-row { margin-top: 12px; }
-
-  .entry-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #F0EDE5; }
-  .entry-row:last-child { border-bottom: none; }
-  .entry-time { display: flex; flex-direction: column; font-weight: 700; color: #007991; font-size: 13.5px; min-width: 92px; }
-  .entry-time .cas-broj { font-weight: 700; color: #007991; font-size: 13px; }
-  .entry-time .cas-time { font-weight: 500; color: #8A8578; font-size: 12px; margin-top: 1px; }
-  .entry-name { flex: 1; color: #0F222B; font-size: 14.5px; }
-  .entry-name .entry-sub { display: block; color: #8A8578; font-size: 12px; margin-top: 2px; }
-  .entry-name .entry-sub.entry-note { font-style: italic; }
-  .entry-del { background: none; border: none; color: #B0524A; cursor: pointer; padding: 4px; display: flex; align-items: center; }
-  .entry-empty { color: #8A8578; font-size: 13.5px; padding: 6px 0; }
-
-  .add-row { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #E6E1D8; flex-wrap: wrap; }
-  .add-row input, .add-row select {
-    border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px; font-size: 14px;
-    font-family: inherit; background: #FAF8F4; outline: none;
-  }
-  .add-row input:focus, .add-row select:focus { border-color: #007991; }
-  .add-row input.time-input { width: 120px; flex: 0 0 auto; }
-  .add-row input.broj-input { width: 60px; flex: 0 0 auto; text-align: center; }
-  .add-row input.od-do-input { width: 92px; flex: 0 0 auto; }
-  .add-row input.room-input { width: 100px; flex: 0 0 auto; }
-  .add-row input.name-input { flex: 1; min-width: 120px; }
-  .add-row input.note-input { flex: 1; min-width: 160px; }
-  .napomena-datum-row { display: flex; align-items: center; gap: 8px; flex-basis: 100%; width: 100%; margin-top: -2px; }
-  .napomena-datum-row .napomena-datum-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
-  .add-row input.napomena-datum-input { width: 150px; flex: 0 0 auto; }
-  .add-row button {
-    background: #007991; color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
-    font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
-  }
-  .add-row button:hover { background: #00636F; }
-
-  .add-row .autocomplete-wrap { position: relative; flex: 1; min-width: 120px; }
-  .add-row .autocomplete-wrap input.name-input { width: 100%; box-sizing: border-box; }
-  .autocomplete-dropdown {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
-    background: #fff; border: 1px solid #E6E1D8; border-radius: 8px; margin-top: 3px;
-    max-height: 190px; overflow-y: auto; box-shadow: 0 8px 20px -8px rgba(27,58,74,0.3);
-    display: none;
-  }
-  .autocomplete-dropdown.open { display: block; }
-  .autocomplete-option { padding: 8px 10px; font-size: 13.5px; color: #0F222B; cursor: pointer; }
-  .autocomplete-option:hover, .autocomplete-option.active { background: #FAF8F4; }
-
-  .status { font-size: 13px; color: #8A8578; margin-bottom: 10px; }
-  .status.err { color: #B0524A; }
-</style>
-</head>
-<body>
-
-<div id="appRoot" style="display:block;">
-  <div class="wrap">
-    <div class="header">
-      <div class="header-left">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
-        <div>
-          <h1>Raspored časova</h1>
-          <div class="sub" id="childLabel"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tabs-scroll" id="childTabs" style="display:none;"></div>
-    <div class="week-grid-card-header" style="padding:0 2px 8px;">
-      <span></span>
-      <button type="button" class="manage-link" id="childColorsToggle" style="display:none;"></button>
-    </div>
-    <div id="childColorsPanelWrap"></div>
-    <div class="tabs-scroll" id="smjenaTabs" style="display:none;"></div>
-
-    <div class="card week-grid-card">
-      <div class="week-grid-card-header">
-        <div class="section-title">Sedmični pregled</div>
-        <button type="button" class="manage-link" id="dayColorsToggle" style="display:none;"></button>
-      </div>
-      <div id="dayColorsPanelWrap"></div>
-      <div class="week-grid" id="weekGrid"></div>
-    </div>
-
-    <div class="card week-grid-card">
-      <div class="section-title">Obaveze</div>
-      <div class="week-grid" id="obavezeWeekGrid"></div>
-    </div>
-
-    <div class="cards-row">
-      <div class="casovi-col">
-        <div class="card" id="casoviAddCard" style="display:none;">
-          <div class="section-title">Dodaj čas</div>
-          <div class="day-select-row">
-            <span class="day-select-label">Dan</span>
-            <select class="day-select" id="daySelectCasovi"></select>
-          </div>
-          <div id="casoviAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
-        </div>
-      </div>
-
-      <div class="card" id="obavezeAddCard" style="display:none;">
-        <div class="section-title">Dodaj obavezu</div>
-        <div class="day-select-row">
-          <span class="day-select-label">Dan</span>
-          <select class="day-select" id="daySelectObaveze"></select>
-        </div>
-        <div id="obavezeAddRow" class="add-row" style="margin-top:0; padding-top:0; border-top:none;"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="detail-overlay" id="detailOverlay" style="display:none;">
-  <div class="detail-modal" id="detailModal"></div>
-</div>
-
-<div id="blockedRoot" style="display:none; padding: 60px 20px; text-align:center; font-family:'Public Sans',sans-serif; color:#B0524A;">
-  Nalog nije povezan ni sa jednim djetetom. Obratite se roditelju.
-</div>
-
-<script src="nav-bar.js"></script>
 <script>
-// ==== Centralni login (isti nalog kao za sve ostale aplikacije, projekat family-hub-m) ====
-const firebaseConfig = {
-  apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
-  authDomain: "family-hub-m.firebaseapp.com",
-  projectId: "family-hub-m",
-  storageBucket: "family-hub-m.firebasestorage.app",
-  messagingSenderId: "267839729754",
-  appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-// Lokalni kes (IndexedDB): pri sljedecem otvaranju raspored iskoci odmah iz memorije,
-// a svjeza verzija se povuce u pozadini. Ako kes nije dostupan (npr. incognito ili vise
-// otvorenih tabova), samo se preskoci i sve radi kao i do sad.
-db.enablePersistence({ synchronizeTabs: true }).catch(function () {});
-
-// Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
-window.fhLogout = function () {
-  auth.signOut().catch(() => {}).finally(() => {
-    window.location.href = "index.html";
-  });
-};
-
-const CHILDREN = [
-  { id: "filip", name: "Filip", color: "#5CB0FF", textColor: "#0A3A6B" },
-  { id: "jaksa", name: "Jakša", color: "#B478FF", textColor: "#33076B" },
-  { id: "miljan", name: "Miljan", color: "#FF8F42", textColor: "#6B2E00" },
-  { id: "relja", name: "Relja", color: "#4FCB5C", textColor: "#0B4A12" },
-];
-const DAYS = [
-  { key: "pon", label: "Ponedjeljak", short: "Pon", color: "#5CB0FF", textColor: "#0A3A6B" },
-  { key: "uto", label: "Utorak", short: "Uto", color: "#B478FF", textColor: "#33076B" },
-  { key: "sre", label: "Srijeda", short: "Sri", color: "#F16FE0", textColor: "#5C0A52" },
-  { key: "cet", label: "Četvrtak", short: "Čet", color: "#FF5C5C", textColor: "#6B0808" },
-  { key: "pet", label: "Petak", short: "Pet", color: "#F5D642", textColor: "#5C4700" },
-  { key: "sub", label: "Subota", short: "Sub", color: "#4FCB5C", textColor: "#0B4A12" },
-  { key: "ned", label: "Nedjelja", short: "Ned", color: "#4BE0E0", textColor: "#024A4A" },
-];
-// Raspored časova (škola) se ne dešava nedjeljom, pa nedjelja tu uopšte nije ponuđena - subota
-// jeste ponuđena (za rijetke slučajeve), ali se u sedmičnom pregledu prikazuje samo ako za nju
-// stvarno ima unešenih časova (vidi renderWeekGrid). Obaveze i dalje koriste puni DAYS (sve dane).
-const CASOVI_DAYS = DAYS.filter((d) => d.key !== "ned");
-const SMJENE = [
-  { key: "prva", label: "Prva smjena" },
-  { key: "druga", label: "Druga smjena" },
-];
-
-// Ista paleta boja kao u shopping-list.html ("Oznake i boje"), da izbor boje bude vizuelno
-// dosljedan kroz cijelu aplikaciju.
-const PICKER_COLORS = [
-  { bg: "#5CB0FF", text: "#0A3A6B" },
-  { bg: "#7C86FF", text: "#12146B" },
-  { bg: "#B478FF", text: "#33076B" },
-  { bg: "#F16FE0", text: "#5C0A52" },
-  { bg: "#FF6FA0", text: "#6B0A38" },
-  { bg: "#FF5C5C", text: "#6B0808" },
-  { bg: "#FF8F42", text: "#6B2E00" },
-  { bg: "#F5D642", text: "#5C4700" },
-  { bg: "#A8D643", text: "#3A4A0A" },
-  { bg: "#4FCB5C", text: "#0B4A12" },
-  { bg: "#3ED9A0", text: "#06503A" },
-  { bg: "#4BE0E0", text: "#024A4A" },
-];
-
-let role = null; // "parent" | "child"
-let myChildId = null;
-let selectedChildId = CHILDREN[0].id;
-// "Dodaj čas" i "Dodaj obavezu" imaju odvojen izabrani dan (časovi ne nude nedjelju, obaveze nude
-// sve dane) - zato više ne dijele zajednički selectedDay kao ranije.
-let selectedDayCasovi = "pon";
-let selectedDayObaveze = "pon";
-let selectedSmjena = "prva"; // koja smjena se trenutno gleda - slobodno se bira klikom, bez "aktivacije"
-let scheduleData = null;
-let unsubscribeSnapshot = null;
-let predmetiList = []; // zapamćeni nazivi predmeta (zajednički za svu djecu), za brzo dodavanje bez kucanja
-let unsubscribePredmeti = null;
-let predmetiPanelOpen = false; // da li je otvoren panel za uređivanje liste predmeta
-let editingPredmet = null; // naziv predmeta koji se trenutno uređuje (preimenovanje) u panelu
-let dayColorsPanelOpen = false; // da li je otvoren panel za uređivanje boja dana
-let dayColorPickerFor = null; // ključ dana čija je paleta trenutno otvorena (npr. "pon"), ili null
-let unsubscribeDayColors = null;
-
-function hexToRgba(hex, alpha) {
-  const h = (hex || "#8A8578").replace("#", "");
-  const r = parseInt(h.substring(0, 2), 16);
-  const g = parseInt(h.substring(2, 4), 16);
-  const b = parseInt(h.substring(4, 6), 16);
-  return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
-}
-function escapeHtml(str) {
-  return String(str == null ? "" : str).replace(/[&<>"']/g, function (c) {
-    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-  });
-}
-function trashIcon() {
-  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
-}
-function pencilIcon() {
-  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
-}
-function checkIcon() {
-  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-}
-function xIcon() {
-  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-}
-function clockIcon() {
-  return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>';
-}
-
-// Datumi za "napomena važi do" - čuvamo kao "YYYY-MM-DD" (isti format kao <input type="date">),
-// pa poređenje niski (string) radi ispravno bez parsiranja.
-function todayISO() {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return d.getFullYear() + "-" + mm + "-" + dd;
-}
-function formatDatumSrShort(dateStr) {
-  const parts = (dateStr || "").split("-");
-  if (parts.length !== 3) return dateStr || "";
-  return parts[2] + "." + parts[1] + ".";
-}
-function formatDatumSrFull(dateStr) {
-  const parts = (dateStr || "").split("-");
-  if (parts.length !== 3) return dateStr || "";
-  return parts[2] + "." + parts[1] + "." + parts[0] + ".";
-}
-
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  var cachedRole = null, cachedChildId = null;
-  try {
-    cachedRole = localStorage.getItem("fhRole");
-    cachedChildId = localStorage.getItem("fhChildId");
-  } catch (e) {}
-
-  function applyRoleAndStart(resolvedRole, resolvedChildId) {
-    role = resolvedRole;
-    if (role === "child") {
-      myChildId = resolvedChildId;
-      if (!myChildId || !CHILDREN.some((c) => c.id === myChildId)) {
-        document.getElementById("appRoot").style.display = "none";
-        document.getElementById("blockedRoot").style.display = "block";
+  const firebaseConfig = {
+    apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
+    authDomain: "family-hub-m.firebaseapp.com",
+    projectId: "family-hub-m",
+    storageBucket: "family-hub-m.firebasestorage.app",
+    messagingSenderId: "267839729754",
+    appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
+  };
+  firebase.initializeApp(firebaseConfig);
+  // Auth guard: bounce to login page if not signed in.
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo (isto kao
+    // shopping-list.html - Recepti su za sada samo za roditelje).
+    firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
+      const role = (snap.exists && snap.data().role) || 'parent';
+      if (role === 'child') {
+        window.location.href = "raspored.html";
         return;
       }
-      selectedChildId = myChildId;
-    }
-    if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
-    initUI();
-  }
-
-  // Ako imamo keširanu ulogu (isti "fhRole" ključ koji koristi i nav-bar.js) - odmah prikaži
-  // pravi sadržaj bez čekanja na mrežni upit. Stvarna uloga se ipak uvijek provjerava u
-  // pozadini i ispravlja prikaz ako se u međuvremenu promijenila.
-  if (cachedRole) applyRoleAndStart(cachedRole, cachedChildId);
-
-  db.collection("users").doc(user.uid).get().then((snap) => {
-    const data = snap.exists ? snap.data() : null;
-    // Ako profil (users/{uid}) ne postoji, podrazumijevamo "roditelj" - da ne bismo
-    // slucajno zakljucali postojece naloge dok se ne doda profil za njih.
-    const freshRole = (data && data.role) || "parent";
-    const freshChildId = data && data.childId;
-    try {
-      localStorage.setItem("fhRole", freshRole);
-      if (freshChildId) localStorage.setItem("fhChildId", freshChildId);
-    } catch (e) {}
-    if (!cachedRole || freshRole !== cachedRole || (freshRole === "child" && freshChildId !== cachedChildId)) {
-      applyRoleAndStart(freshRole, freshChildId);
-    }
-  }).catch(() => {
-    if (!cachedRole) { role = "parent"; initUI(); }
+      if (typeof window.fhApplyRole === 'function') window.fhApplyRole(role);
+    }).catch(() => { /* ako upit ne uspije, ne blokiramo postojeci pristup */ });
   });
-});
-
-function initUI() {
-  document.getElementById("appRoot").style.display = "block";
-  renderChildTabs();
-  renderChildLabel();
-  renderDaySelectors();
-  subscribeToChild(selectedChildId);
-  subscribeDayColors();
-  subscribeChildColors();
-  if (role === "parent") subscribePredmeti();
-}
-
-// Zajednička (za svu djecu) zapamćena lista predmeta - da se jednom unešen predmet ne kuca ponovo.
-function subscribePredmeti() {
-  if (unsubscribePredmeti) unsubscribePredmeti();
-  unsubscribePredmeti = db.collection("raspored").doc("_predmeti").onSnapshot(
-    (snap) => {
-      const lista = snap.exists && Array.isArray(snap.data().lista) ? snap.data().lista : [];
-      predmetiList = lista.slice().sort((a, b) => a.localeCompare(b, "sr"));
-      // Samo osvježi listu/panel predmeta - ne diraj ostatak forme koju roditelj možda kuca.
-      refreshPredmetSelectAndPanel("casoviAddRow");
-    },
-    () => {
-      predmetiList = [];
-    }
-  );
-}
-
-function rememberPredmet(naziv) {
-  if (!naziv) return;
-  db.collection("raspored").doc("_predmeti").set(
-    { lista: firebase.firestore.FieldValue.arrayUnion(naziv) },
-    { merge: true }
-  );
-}
-
-// Lista zapamćenih predmeta je samo pomoć za brže dodavanje - uređivanje ove liste
-// (brisanje/preimenovanje) NE dira već unešene časove, samo mijenja ponuđene stavke ubuduće.
-function overwritePredmetiList(newList) {
-  const deduped = [];
-  newList.forEach((p) => {
-    const t = (p || "").trim();
-    if (t && deduped.indexOf(t) === -1) deduped.push(t);
-  });
-  db.collection("raspored").doc("_predmeti").set({ lista: deduped }, { merge: true });
-}
-
-function deletePredmetFromList(naziv) {
-  predmetiList = predmetiList.filter((p) => p !== naziv);
-  refreshPredmetSelectAndPanel("casoviAddRow");
-  overwritePredmetiList(predmetiList);
-}
-
-// Boje dana su zajedničke za sedmični pregled časova i obaveza (isti DAYS objekti se koriste na
-// oba mjesta) - čuvaju se u posebnom dokumentu, isto kao i _predmeti, pa ih odmah vide svi
-// (roditelji i djeca), a mijenjati ih može samo roditelj. Svaka boja se čuva kao par: c (živa
-// boja iz palete - tačkice/ivice kartica) i t (njena tamnija verzija - čitljiv tekst na bijeloj
-// pozadini), da paleta ostane vidno ista kao u pickeru, a vrijeme časa/obaveze ostane čitljivo.
-function subscribeDayColors() {
-  if (unsubscribeDayColors) unsubscribeDayColors();
-  unsubscribeDayColors = db.collection("raspored").doc("_dayColors").onSnapshot(
-    (snap) => {
-      const saved = snap.exists ? snap.data() : {};
-      DAYS.forEach((d) => {
-        const entry = saved && saved[d.key];
-        if (entry && typeof entry === "object" && entry.c) {
-          d.color = entry.c;
-          d.textColor = entry.t || entry.c;
-        } else if (typeof entry === "string") {
-          d.color = entry;
-          d.textColor = entry;
-        }
-      });
-      renderWeekGrid();
-      renderObavezeWeekGrid();
-      renderDayColorsPanel();
-    },
-    () => {}
-  );
-}
-
-function setDayColor(dayKey, hex, textHex) {
-  const d = DAYS.find((x) => x.key === dayKey);
-  if (d) {
-    d.color = hex;
-    d.textColor = textHex || hex;
-  }
-  dayColorPickerFor = null;
-  renderWeekGrid();
-  renderObavezeWeekGrid();
-  renderDayColorsPanel();
-  const payload = {};
-  payload[dayKey] = { c: hex, t: textHex || hex };
-  db.collection("raspored").doc("_dayColors").set(payload, { merge: true });
-}
-
-function renderDayColorsPanel() {
-  const toggleBtn = document.getElementById("dayColorsToggle");
-  if (!toggleBtn) return;
-  toggleBtn.style.display = role === "parent" ? "inline" : "none";
-  toggleBtn.textContent = dayColorsPanelOpen ? "Zatvori boje" : "Boje dana";
-  if (toggleBtn.dataset.bound !== "1") {
-    toggleBtn.addEventListener("click", () => {
-      dayColorsPanelOpen = !dayColorsPanelOpen;
-      dayColorPickerFor = null;
-      renderDayColorsPanel();
+  // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
+  window.fhLogout = function () {
+    firebase.auth().signOut().catch(() => {}).finally(() => {
+      window.location.href = "index.html";
     });
-    toggleBtn.dataset.bound = "1";
-  }
+  };
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/plain" id="app-source-code">
+const { useState, useEffect, useRef } = React;
 
-  const wrap = document.getElementById("dayColorsPanelWrap");
-  if (!wrap) return;
-  if (!dayColorsPanelOpen || role !== "parent") {
-    wrap.innerHTML = "";
-    return;
-  }
+// Firestore is used directly below for shared, real-time sync (isti obrazac kao shopping-list.html:
+// jedan zajednicki dokument, polje sa nizom snimljeno kao JSON string).
+const db = firebase.firestore();
+const sharedDocRef = db.collection('recepti').doc('shared');
 
-  wrap.innerHTML =
-    '<div class="daycolors-manage-panel">' +
-      DAYS.map((d) => {
-        const open = dayColorPickerFor === d.key;
-        return (
-          '<div class="daycolor-row">' +
-            '<span class="daycolor-name">' + escapeHtml(d.label) + '</span>' +
-            '<button type="button" class="daycolor-dot" style="background:' + d.color + ';" data-day="' + d.key + '" aria-label="Promijeni boju za ' + escapeHtml(d.label) + '"></button>' +
-            (open
-              ? '<div class="daycolor-palette">' +
-                  PICKER_COLORS.map((c) =>
-                    '<button type="button" data-day="' + d.key + '" data-hex="' + c.bg + '" data-text="' + c.text + '" style="background:' + c.bg + ';" title="' + c.bg + '"></button>'
-                  ).join("") +
-                '</div>'
-              : "") +
-          '</div>'
-        );
-      }).join("")
-    + '</div>';
+const DEFAULT_CATEGORIES = ["Doručak", "Ručak", "Večera", "Dezert", "Užina"];
 
-  wrap.querySelectorAll(".daycolor-dot").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      dayColorPickerFor = dayColorPickerFor === btn.dataset.day ? null : btn.dataset.day;
-      renderDayColorsPanel();
-    });
+// Cloudinary - besplatan servis za čuvanje slika koje korisnici otpremaju sa telefona/računara
+// (bez kartice/naplate, sam po sebi CDN-uje i optimizuje slike). "Unsigned" upload preset znači
+// da se otpremanje radi direktno iz browsera bez tajnog ključa.
+const CLOUDINARY_CLOUD_NAME = "family-hub";
+const CLOUDINARY_UPLOAD_PRESET = "recepti";
+
+async function uploadImageToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD_NAME + "/image/upload", {
+    method: "POST",
+    body: formData,
   });
-  wrap.querySelectorAll(".daycolor-palette button").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setDayColor(btn.dataset.day, btn.dataset.hex, btn.dataset.text);
-    });
-  });
+  if (!res.ok) throw new Error("Cloudinary upload failed with status " + res.status);
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("Cloudinary upload response missing secure_url");
+  return data.secure_url;
 }
 
-// Boje djece - isti obrazac kao boje dana: čuvaju se u posebnom dokumentu (raspored/_childColors),
-// vidljive svima, mijenjati ih može samo roditelj. Boja se koristi na tabu djeteta i na dashboard-u.
-let childColorsPanelOpen = false;
-let childColorPickerFor = null;
-let unsubscribeChildColors = null;
+// "Skeniraj recept": šalje fotografiju Cloudflare Worker-u (koji drži Gemini ključ)
+// i dobija nazad strukturisan recept. VAŽNO: zamijeni URL ispod svojim Worker URL-om
+// nakon što ga deployuješ (vidi recept-ocr-worker.js).
+const RECIPE_OCR_WORKER_URL = "https://recept-ocr.ivanmitrovic82usa-503.workers.dev";
 
-function subscribeChildColors() {
-  if (unsubscribeChildColors) unsubscribeChildColors();
-  unsubscribeChildColors = db.collection("raspored").doc("_childColors").onSnapshot(
-    (snap) => {
-      const saved = snap.exists ? snap.data() : {};
-      CHILDREN.forEach((c) => {
-        const entry = saved && saved[c.id];
-        if (entry && typeof entry === "object" && entry.c) {
-          c.color = entry.c;
-          c.textColor = entry.t || entry.c;
-        }
-      });
-      renderChildTabs();
-      renderChildColorsPanel();
-    },
-    () => {}
-  );
-}
-
-function setChildColor(childId, hex, textHex) {
-  const c = CHILDREN.find((x) => x.id === childId);
-  if (c) {
-    c.color = hex;
-    c.textColor = textHex || hex;
-  }
-  childColorPickerFor = null;
-  renderChildTabs();
-  renderChildColorsPanel();
-  const payload = {};
-  payload[childId] = { c: hex, t: textHex || hex };
-  db.collection("raspored").doc("_childColors").set(payload, { merge: true });
-}
-
-function renderChildColorsPanel() {
-  const toggleBtn = document.getElementById("childColorsToggle");
-  if (!toggleBtn) return;
-  toggleBtn.style.display = role === "parent" ? "inline" : "none";
-  toggleBtn.textContent = childColorsPanelOpen ? "Zatvori boje" : "Boje djece";
-  if (toggleBtn.dataset.bound !== "1") {
-    toggleBtn.addEventListener("click", () => {
-      childColorsPanelOpen = !childColorsPanelOpen;
-      childColorPickerFor = null;
-      renderChildColorsPanel();
-    });
-    toggleBtn.dataset.bound = "1";
-  }
-
-  const wrap = document.getElementById("childColorsPanelWrap");
-  if (!wrap) return;
-  if (!childColorsPanelOpen || role !== "parent") {
-    wrap.innerHTML = "";
-    return;
-  }
-
-  wrap.innerHTML =
-    '<div class="daycolors-manage-panel">' +
-      CHILDREN.map((c) => {
-        const open = childColorPickerFor === c.id;
-        return (
-          '<div class="daycolor-row">' +
-            '<span class="daycolor-name">' + escapeHtml(c.name) + '</span>' +
-            '<button type="button" class="daycolor-dot" style="background:' + c.color + ';" data-child="' + c.id + '" aria-label="Promijeni boju za ' + escapeHtml(c.name) + '"></button>' +
-            (open
-              ? '<div class="daycolor-palette">' +
-                  PICKER_COLORS.map((pc) =>
-                    '<button type="button" data-child="' + c.id + '" data-hex="' + pc.bg + '" data-text="' + pc.text + '" style="background:' + pc.bg + ';" title="' + pc.bg + '"></button>'
-                  ).join("") +
-                '</div>'
-              : "") +
-          '</div>'
-        );
-      }).join("")
-    + '</div>';
-
-  wrap.querySelectorAll(".daycolor-dot").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      childColorPickerFor = childColorPickerFor === btn.dataset.child ? null : btn.dataset.child;
-      renderChildColorsPanel();
-    });
-  });
-  wrap.querySelectorAll(".daycolor-palette button").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setChildColor(btn.dataset.child, btn.dataset.hex, btn.dataset.text);
-    });
-  });
-}
-
-function renamePredmetInList(oldNaziv, newNaziv) {
-  const trimmed = (newNaziv || "").trim();
-  editingPredmet = null;
-  if (!trimmed || trimmed === oldNaziv) {
-    refreshPredmetSelectAndPanel("casoviAddRow");
-    return;
-  }
-  predmetiList = predmetiList.map((p) => (p === oldNaziv ? trimmed : p));
-  refreshPredmetSelectAndPanel("casoviAddRow");
-  overwritePredmetiList(predmetiList);
-}
-
-function renderChildTabs() {
-  const wrap = document.getElementById("childTabs");
-  if (role !== "parent") {
-    wrap.style.display = "none";
-    return;
-  }
-  wrap.style.display = "flex";
-  wrap.innerHTML = CHILDREN.map((c) => {
-    const active = c.id === selectedChildId;
-    const style = active ? ' style="background:' + c.color + ';color:#fff;border-color:' + c.color + ';"' : "";
-    return '<button type="button" class="tab-pill' + (active ? " active" : "") + '" data-child="' + c.id + '"' + style + '>' + escapeHtml(c.name) + '</button>';
-  }).join("");
-  wrap.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      selectedChildId = btn.dataset.child;
-      renderChildTabs();
-      renderChildLabel();
-      subscribeToChild(selectedChildId);
-    });
-  });
-}
-
-function renderChildLabel() {
-  const child = CHILDREN.find((c) => c.id === selectedChildId);
-  document.getElementById("childLabel").textContent = child ? child.name : "";
-}
-
-// Dani se biraju padajućom listom na dva mjesta (u kartici "Dodaj čas" i u kartici "Dodaj obavezu") -
-// svako polje ima SVOJ izabrani dan (časovi ne nude nedjelju, obaveze nude sve dane), pa se više ne
-// sinhronizuju međusobno. Opcije i change listener se grade samo jednom po elementu, poslije se samo
-// sinhronizuje izabrana vrijednost.
-const DAY_SELECT_CONFIG = [
-  { elId: "daySelectCasovi", days: CASOVI_DAYS, get: function () { return selectedDayCasovi; }, set: function (v) { selectedDayCasovi = v; } },
-  { elId: "daySelectObaveze", days: DAYS, get: function () { return selectedDayObaveze; }, set: function (v) { selectedDayObaveze = v; } },
-];
-
-function renderDaySelectors() {
-  DAY_SELECT_CONFIG.forEach((cfg) => {
-    const selectEl = document.getElementById(cfg.elId);
-    if (!selectEl) return;
-    if (selectEl.dataset.built !== "1") {
-      selectEl.innerHTML = cfg.days.map((d) => '<option value="' + d.key + '">' + escapeHtml(d.label) + '</option>').join("");
-      selectEl.addEventListener("change", () => {
-        cfg.set(selectEl.value);
-        renderDaySelectors();
-        renderLists();
-      });
-      selectEl.dataset.built = "1";
-    }
-    selectEl.value = cfg.get();
-  });
-}
-
-// Obaveze su ranije bile vezane za smjenu (smjene.prva.obaveze / smjene.druga.obaveze), ali to je
-// bilo zbunjujuće - iste obaveze (npr. trening, časovi stranog jezika) važe bez obzira koja je
-// smjena trenutno izabrana. Sad su obaveze jedinstvene, van smjena (top-level "obaveze" polje).
-// Za stare podatke (koji tu strukturu još nemaju) spajamo obje smjene u jednu listu po danu, bez
-// dupliranja identičnih stavki - jednom kad se bilo šta izmijeni, snima se već u novom obliku.
-function normalizeObaveze(raw) {
-  if (raw && raw.obaveze) return raw.obaveze;
-  const prvaObaveze = (raw && raw.smjene && raw.smjene.prva && raw.smjene.prva.obaveze) || {};
-  const drugaObaveze = (raw && raw.smjene && raw.smjene.druga && raw.smjene.druga.obaveze) || {};
-  const merged = {};
-  DAYS.forEach((d) => {
-    const seen = {};
-    const combined = [];
-    (prvaObaveze[d.key] || []).concat(drugaObaveze[d.key] || []).forEach((e) => {
-      const key = (e.vrijeme || "") + "|" + (e.naziv || "");
-      if (seen[key]) return;
-      seen[key] = true;
-      combined.push(e);
-    });
-    if (combined.length) merged[d.key] = combined;
-  });
-  return merged;
-}
-
-function normalizeScheduleData(raw) {
-  const obaveze = normalizeObaveze(raw);
-  if (raw && raw.smjene) {
-    return {
-      smjene: {
-        prva: { casovi: (raw.smjene.prva && raw.smjene.prva.casovi) || {} },
-        druga: { casovi: (raw.smjene.druga && raw.smjene.druga.casovi) || {} },
-      },
-      obaveze: obaveze,
+// Smanjuje sliku (radi brzine i limita) i vraća base64 (bez "data:" prefiksa).
+function fileToDownscaledBase64(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = () => reject(new Error("Ne mogu da učitam sliku."));
+      img.src = reader.result;
     };
+    reader.onerror = () => reject(new Error("Ne mogu da pročitam fajl."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function scanRecipeFromImage(file) {
+  if (!RECIPE_OCR_WORKER_URL || RECIPE_OCR_WORKER_URL.indexOf("REPLACE-WITH") !== -1) {
+    throw new Error("Skener još nije podešen (Worker URL nije unešen u recepti.html).");
   }
-  // Stara struktura (prije uvodjenja smjena), ili nema podataka - prebaci u "prva smjena".
+  const { base64, mimeType } = await fileToDownscaledBase64(file, 1600);
+  const res = await fetch(RECIPE_OCR_WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: base64, mimeType }),
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    throw new Error((data && data.error) || ("Greška servera (" + res.status + ")."));
+  }
+  return data || {};
+}
+
+function uid() {
+  return Date.now().toString() + Math.random().toString(36).slice(2, 8);
+}
+
+// Propušta samo http(s) linkove. Sprječava npr. "javascript:..." u polju slike/videa
+// da se iskoristi kao klik-XSS. Prazno polje ostaje prazno.
+function safeUrl(u) {
+  const s = (u || "").trim();
+  if (!s) return "";
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+
+// Slika recepta sa sigurnim fallback-om: ako nema URL-a ili se slika ne učita
+// (npr. slomljen link), prikazuje ikonicu kuvarske kape umjesto praznog sivog kvadrata.
+function RecipeImage({ url, alt, iconSize }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [url]); // reset kad se recept izmijeni
+  if (!url || broken) return chefHatIcon(iconSize);
+  return (
+    <img
+      src={url}
+      alt={alt || ""}
+      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+function emptyRecipeForm() {
   return {
-    smjene: {
-      prva: { casovi: (raw && raw.casovi) || {} },
-      druga: { casovi: {} },
-    },
-    obaveze: obaveze,
+    id: null,
+    naziv: "",
+    kategorija: "",
+    slikaUrl: "",
+    videoUrl: "",
+    sastojci: [""],
+    priprema: "",
   };
 }
 
-function subscribeToChild(childId) {
-  if (unsubscribeSnapshot) unsubscribeSnapshot();
-  scheduleData = null;
-  selectedSmjena = "prva"; // svako dijete se otvara na prvoj smjeni, roditelj/dijete slobodno prebacuje klikom
-  renderSmjenaTabs();
-  renderLists();
-  unsubscribeSnapshot = db.collection("raspored").doc(childId).onSnapshot(
-    (snap) => {
-      scheduleData = normalizeScheduleData(snap.exists ? snap.data() : null);
-      sweepExpiredNapomene();
-      sweepExpiredObaveze();
-      renderSmjenaTabs();
-      renderLists();
-    },
-    () => {
-      scheduleData = normalizeScheduleData(null);
-      renderSmjenaTabs();
-      renderLists();
-    }
+const CATEGORY_COLORS = [
+  { bg: "#DCEFE3", text: "#1F7A52" },
+  { bg: "#E3ECF5", text: "#2F6690" },
+  { bg: "#F3E8D9", text: "#B8895E" },
+  { bg: "#EEE3F0", text: "#8E6C9E" },
+  { bg: "#F5E1DC", text: "#C97B63" },
+  { bg: "#E6F1F2", text: "#007991" },
+];
+function colorForCategory(name) {
+  if (!name) return { bg: "#EAE6DC", text: "#8A8578" };
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
+}
+
+function CategoryTag({ label }) {
+  if (!label) return null;
+  const c = colorForCategory(label);
+  return (
+    <span style={{ background: c.bg, color: c.text, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+      {label}
+    </span>
   );
 }
 
-// Napomena vezana za datum (npr. "kontrolni 15.09.") se automatski uklanja čim taj datum prođe -
-// čas, vrijeme, predmet i učionica ostaju netaknuti, jer se čas i dalje ponavlja svake sedmice.
-// Nema pozadinskog servera, pa se ovo dešava čim neko (roditelj ili dijete) sledeći put otvori
-// aplikaciju poslije tog datuma: lokalno se odmah sakriva za sve, a u bazu upisuje samo roditelj.
-function sweepExpiredNapomene() {
-  if (!scheduleData) return;
-  const today = todayISO();
-  let changed = false;
-  const writePayload = { smjene: {} };
+// Prilagođena (custom) padajuća lista - zamjena za ugrađeni <datalist>, koji na iPhone/Safari-ju
+// ne prikazuje ponuđene opcije (kucanje inače radi normalno). Isti obrazac kao u ostalim
+// aplikacijama (raspored.html, shopping-list.html).
+function AutocompleteInput({ value, onChange, options, placeholder, style, onKeyDown, onBlur, autoFocus }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
 
-  ["prva", "druga"].forEach((smjenaKey) => {
-    const smjenaData = scheduleData.smjene[smjenaKey];
-    if (!smjenaData || !smjenaData.casovi) return;
-    Object.keys(smjenaData.casovi).forEach((day) => {
-      const entries = smjenaData.casovi[day] || [];
-      let dayChanged = false;
-      const updated = entries.map((e) => {
-        if (e && e.napomenaDatum && e.napomenaDatum < today) {
-          dayChanged = true;
-          return Object.assign({}, e, { napomena: "", napomenaDatum: "" });
-        }
-        return e;
-      });
-      if (dayChanged) {
-        changed = true;
-        smjenaData.casovi[day] = updated; // primijeni odmah lokalno, da se istekla napomena ne "sevne" prije potvrde sa servera
-        if (!writePayload.smjene[smjenaKey]) writePayload.smjene[smjenaKey] = { casovi: {} };
-        writePayload.smjene[smjenaKey].casovi[day] = updated;
-      }
-    });
-  });
-
-  if (changed && role === "parent") {
-    db.collection("raspored").doc(selectedChildId).set(writePayload, { merge: true });
-  }
-}
-
-// Jednokratne obaveze (imaju datum) same nestaju kad taj datum prođe - trajne (bez datuma) ostaju
-// zauvijek, isto kao dosad. Sakriva se odmah lokalno za sve, a u bazu upisuje samo roditelj.
-function sweepExpiredObaveze() {
-  if (!scheduleData || !scheduleData.obaveze) return;
-  const today = todayISO();
-  let changed = false;
-  const writePayload = { obaveze: {} };
-
-  Object.keys(scheduleData.obaveze).forEach((day) => {
-    const entries = scheduleData.obaveze[day] || [];
-    const updated = entries.filter((e) => !(e && e.datum && e.datum < today));
-    if (updated.length !== entries.length) {
-      changed = true;
-      scheduleData.obaveze[day] = updated;
-      writePayload.obaveze[day] = updated;
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
     }
-  });
-
-  if (changed && role === "parent") {
-    db.collection("raspored").doc(selectedChildId).set(writePayload, { merge: true });
-  }
-}
-
-// Nema više "aktivacije" smjene - i roditelj i dijete slobodno biraju klikom na dugme koju smjenu
-// gledaju, bez potrebe da neko drugi to prethodno "aktivira". Izbor je samo lokalni prikaz.
-function renderSmjenaTabs() {
-  const wrap = document.getElementById("smjenaTabs");
-  wrap.style.display = "flex";
-  wrap.innerHTML = SMJENE.map((s) =>
-    '<button type="button" class="tab-pill' + (s.key === selectedSmjena ? " active" : "") + '" data-smjena="' + s.key + '">' + s.label + '</button>'
-  ).join("");
-  wrap.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      selectedSmjena = btn.dataset.smjena;
-      renderSmjenaTabs();
-      renderLists();
-    });
-  });
-}
-
-let casoviAddRowContext = null; // "childId|smjena|dan" za koji je forma "Dodaj čas" trenutno izgrađena
-let obavezeAddRowContext = null;
-
-function renderLists() {
-  renderWeekGrid();
-  renderObavezeWeekGrid();
-  renderDayColorsPanel();
-
-  const addCard = document.getElementById("casoviAddCard");
-  if (addCard) addCard.style.display = role === "parent" ? "block" : "none";
-  const obavezeAddCard = document.getElementById("obavezeAddCard");
-  if (obavezeAddCard) obavezeAddCard.style.display = role === "parent" ? "block" : "none";
-
-  const casoviAddRowEl = document.getElementById("casoviAddRow");
-  const obavezeAddRowEl = document.getElementById("obavezeAddRow");
-
-  if (!scheduleData || role !== "parent") {
-    if (casoviAddRowEl) casoviAddRowEl.innerHTML = "";
-    if (obavezeAddRowEl) obavezeAddRowEl.innerHTML = "";
-    casoviAddRowContext = null;
-    obavezeAddRowContext = null;
-    return;
-  }
-
-  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {} };
-  const casoviEntries = (smjenaData.casovi && smjenaData.casovi[selectedDayCasovi]) || [];
-
-  // Forma za dodavanje se NE gradi iznova na svaku sitnicu (npr. promjenu liste predmeta u pozadini) -
-  // samo kad se stvarno promijeni dijete/smjena/dan. Time se ne briše ono što roditelj trenutno kuca.
-  ensureCasoviAddRowSkeleton(casoviAddRowEl, "casoviAddRow", casoviEntries);
-  ensureObavezeAddRowSkeleton(obavezeAddRowEl, "obavezeAddRow", "Vrijeme (npr. 17:00)", "Naziv obaveze");
-}
-
-function formatCasTime(e) {
-  if (e.od || e.do) {
-    return (e.od || "?") + "–" + (e.do || "?");
-  }
-  return e.vrijeme || ""; // fallback za stavke unešene prije uvodjenja Od/Do polja
-}
-
-function nextCasBroj(entries) {
-  let max = 0;
-  entries.forEach((e) => {
-    const n = parseInt(e.broj, 10);
-    if (!isNaN(n) && n > max) max = n;
-  });
-  return String(max + 1);
-}
-
-function sortedCasoviIndexed(entries) {
-  const indexed = entries.map((e, i) => ({ e: e, i: i }));
-  indexed.sort((a, b) => {
-    const brA = a.e.broj !== undefined && a.e.broj !== "" && !isNaN(parseFloat(a.e.broj)) ? parseFloat(a.e.broj) : Infinity;
-    const brB = b.e.broj !== undefined && b.e.broj !== "" && !isNaN(parseFloat(b.e.broj)) ? parseFloat(b.e.broj) : Infinity;
-    if (brA !== brB) return brA - brB;
-    return a.i - b.i;
-  });
-  return indexed;
-}
-
-// Vrijeme obaveze je slobodan tekst (npr. "17:00", ali i "poslije škole") - pokušavamo da
-// prepoznamo HH:MM na početku radi sortiranja; ono što ne liči na vrijeme ide na kraj dana.
-function obavezaSortMinutes(vrijeme) {
-  const m = /^\s*(\d{1,2}):(\d{2})/.exec(vrijeme || "");
-  if (!m) return Infinity;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-}
-function sortedObavezeIndexed(entries) {
-  const indexed = entries.map((e, i) => ({ e: e, i: i }));
-  indexed.sort((a, b) => {
-    const vA = obavezaSortMinutes(a.e.vrijeme);
-    const vB = obavezaSortMinutes(b.e.vrijeme);
-    if (vA !== vB) return vA - vB;
-    return a.i - b.i;
-  });
-  return indexed;
-}
-
-// Sedmični pregled - stubovi po danu (kao sto je uradjeno sa bojama mjerila u potrosnja-vode.html),
-// svaki dan ima svoju boju koja se koristi za akcenat kartice i naslov kolone.
-function renderWeekGrid() {
-  const wrap = document.getElementById("weekGrid");
-  if (!wrap) return;
-  if (!scheduleData) {
-    wrap.innerHTML = '<div class="week-day-empty">Učitavanje...</div>';
-    return;
-  }
-
-  const smjenaData = scheduleData.smjene[selectedSmjena] || { casovi: {} };
-
-  // Nedjelja se uopšte ne prikazuje (nema škole), a subota se prikazuje SAMO ako za nju stvarno
-  // ima unešenih časova - inače nepotrebno zauzima prostor u pregledu praznim danom.
-  const casoviGridDays = CASOVI_DAYS.filter((d) => {
-    if (d.key !== "sub") return true;
-    const subEntries = (smjenaData.casovi && smjenaData.casovi.sub) || [];
-    return subEntries.length > 0;
-  });
-
-  wrap.innerHTML = casoviGridDays.map((d) => {
-    const entries = (smjenaData.casovi && smjenaData.casovi[d.key]) || [];
-    const indexed = sortedCasoviIndexed(entries);
-    const cardsHtml =
-      indexed.length === 0
-        ? '<div class="week-day-empty">Nema časova.</div>'
-        : indexed.map(({ e, i }) => {
-            const brojPart = e.broj ? e.broj + ". čas" : "";
-            const timePart = formatCasTime(e);
-            const timeLine = [brojPart, timePart].filter(Boolean).join(" · ");
-            return (
-              '<div class="week-cas-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
-                (timeLine ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(timeLine) + '</div>' : "") +
-                '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
-                (e.ucionica ? '<div class="week-cas-room">' + escapeHtml(e.ucionica) + '</div>' : "") +
-                (e.napomena ? '<div class="week-cas-note">' + escapeHtml(e.napomena) + '</div>' : "") +
-                (e.napomenaDatum ? '<div class="week-cas-note-date">' + clockIcon() + '<span>' + escapeHtml(formatDatumSrShort(e.napomenaDatum)) + '</span></div>' : "") +
-              '</div>'
-            );
-          }).join("");
-    return (
-      '<div class="week-day-col">' +
-        '<div class="week-day-header"><span class="week-day-dot" style="background:' + d.color + ';"></span><span class="week-day-name">' + d.short + '</span></div>' +
-        cardsHtml +
-      '</div>'
-    );
-  }).join("");
-
-  wrap.querySelectorAll(".week-cas-card").forEach((card) => {
-    card.addEventListener("click", () => openCasDetail(card.dataset.day, parseInt(card.dataset.index, 10)));
-  });
-}
-
-// Isti "sedmični pregled" raspored kao za časove, samo za obaveze (koje imaju samo vrijeme i
-// naziv - bez broja/učionice/napomene). Kartica za dodavanje ("Dodaj obavezu") je odvojena od
-// ovog pregleda, isto kao što je urađeno i za časove.
-function renderObavezeWeekGrid() {
-  const wrap = document.getElementById("obavezeWeekGrid");
-  if (!wrap) return;
-  if (!scheduleData) {
-    wrap.innerHTML = '<div class="week-day-empty">Učitavanje...</div>';
-    return;
-  }
-
-  // Obaveze su van smjena - isti su bez obzira koja je smjena trenutno izabrana.
-  wrap.innerHTML = DAYS.map((d) => {
-    const entries = (scheduleData.obaveze && scheduleData.obaveze[d.key]) || [];
-    const indexed = sortedObavezeIndexed(entries);
-    const cardsHtml =
-      indexed.length === 0
-        ? '<div class="week-day-empty">Nema obaveza.</div>'
-        : indexed.map(({ e, i }) => {
-            return (
-              '<div class="week-cas-card week-obaveza-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
-                (e.vrijeme ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(e.vrijeme) + '</div>' : "") +
-                '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
-                (e.datum ? '<div class="week-cas-note-date">' + clockIcon() + '<span>' + escapeHtml(formatDatumSrShort(e.datum)) + '</span></div>' : "") +
-              '</div>'
-            );
-          }).join("");
-    return (
-      '<div class="week-day-col">' +
-        '<div class="week-day-header"><span class="week-day-dot" style="background:' + d.color + ';"></span><span class="week-day-name">' + d.short + '</span></div>' +
-        cardsHtml +
-      '</div>'
-    );
-  }).join("");
-
-  wrap.querySelectorAll(".week-obaveza-card").forEach((card) => {
-    card.addEventListener("click", () => openObavezaDetail(card.dataset.day, parseInt(card.dataset.index, 10)));
-  });
-}
-
-function openObavezaDetail(dayKey, idx) {
-  renderObavezaDetailModal(dayKey, idx, "view");
-  document.getElementById("detailOverlay").style.display = "flex";
-}
-
-function renderObavezaDetailModal(dayKey, idx, mode) {
-  const entries = (scheduleData && scheduleData.obaveze && scheduleData.obaveze[dayKey]) || [];
-  const e = entries[idx];
-  const modal = document.getElementById("detailModal");
-  if (!e) {
-    modal.innerHTML = "";
-    return;
-  }
-  const day = DAYS.find((d) => d.key === dayKey);
-
-  if (mode === "edit" && role === "parent") {
-    modal.innerHTML =
-      '<div class="detail-header">' +
-        '<span class="detail-title">Izmijeni obavezu</span>' +
-        '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
-      '</div>' +
-      '<input type="text" class="detail-field" placeholder="Vrijeme (npr. 17:00)" value="' + escapeHtml(e.vrijeme || "") + '" id="detailEdit_obVrijeme" />' +
-      '<input type="text" class="detail-field" placeholder="Naziv obaveze" value="' + escapeHtml(e.naziv || "") + '" id="detailEdit_obNaziv" />' +
-      '<label style="font-size:12px;color:#748187;display:block;margin:8px 2px 4px;">Vrijedi do (opciono - ako se ostavi prazno, obaveza je trajna)</label>' +
-      '<input type="date" class="detail-date-input" value="' + escapeHtml(e.datum || "") + '" id="detailEdit_obDatum" />' +
-      '<div class="detail-btn-row">' +
-        '<button type="button" class="detail-save-btn" id="detailSaveBtn">Sačuvaj</button>' +
-        '<button type="button" class="detail-cancel-btn" id="detailCancelBtn">Otkaži</button>' +
-      '</div>';
-
-    document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
-    document.getElementById("detailCancelBtn").addEventListener("click", () => renderObavezaDetailModal(dayKey, idx, "view"));
-    document.getElementById("detailSaveBtn").addEventListener("click", () => {
-      const naziv = document.getElementById("detailEdit_obNaziv").value.trim();
-      if (!naziv) return;
-      const updatedEntry = {
-        vrijeme: document.getElementById("detailEdit_obVrijeme").value.trim(),
-        naziv: naziv,
-        datum: document.getElementById("detailEdit_obDatum").value,
-      };
-      updateObavezaForDay(dayKey, idx, updatedEntry);
-      closeCasDetail();
-    });
-    return;
-  }
-
-  modal.innerHTML =
-    '<div class="detail-header">' +
-      '<span class="detail-title">' + escapeHtml(e.naziv) + '</span>' +
-      '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
-    '</div>' +
-    '<div class="detail-prop"><span class="detail-prop-label">Dan</span><span class="detail-prop-value">' + escapeHtml(day ? day.label : "") + '</span></div>' +
-    '<div class="detail-prop"><span class="detail-prop-label">Vrijeme</span><span class="detail-prop-value">' + (e.vrijeme ? escapeHtml(e.vrijeme) : "–") + '</span></div>' +
-    (e.datum
-      ? '<div class="detail-note-expiry">' + clockIcon() + '<span>Jednokratna obaveza, važi do ' + escapeHtml(formatDatumSrFull(e.datum)) + '</span></div>'
-      : "") +
-    (role === "parent"
-      ? '<div class="detail-btn-row">' +
-          '<button type="button" class="detail-edit-btn" id="detailEditBtn">Izmijeni</button>' +
-          '<button type="button" class="detail-delete-btn" id="detailDeleteBtn">Obriši</button>' +
-        '</div>'
-      : "");
-
-  document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
-  if (role === "parent") {
-    document.getElementById("detailEditBtn").addEventListener("click", () => renderObavezaDetailModal(dayKey, idx, "edit"));
-    document.getElementById("detailDeleteBtn").addEventListener("click", () => {
-      deleteObavezaForDay(dayKey, idx);
-      closeCasDetail();
-    });
-  }
-}
-
-function deleteObavezaForDay(dayKey, index) {
-  const current = (scheduleData && scheduleData.obaveze && scheduleData.obaveze[dayKey]) || [];
-  const updated = current.slice();
-  updated.splice(index, 1);
-  const payload = { obaveze: {} };
-  payload.obaveze[dayKey] = updated;
-  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
-}
-
-function updateObavezaForDay(dayKey, index, updatedEntry) {
-  const current = (scheduleData && scheduleData.obaveze && scheduleData.obaveze[dayKey]) || [];
-  const updated = current.slice();
-  updated[index] = updatedEntry;
-  const payload = { obaveze: {} };
-  payload.obaveze[dayKey] = updated;
-  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
-}
-
-function openCasDetail(dayKey, idx) {
-  renderDetailModal(dayKey, idx, "view");
-  document.getElementById("detailOverlay").style.display = "flex";
-}
-
-function renderDetailModal(dayKey, idx, mode) {
-  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
-  const entries = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
-  const e = entries[idx];
-  const modal = document.getElementById("detailModal");
-  if (!e) {
-    modal.innerHTML = "";
-    return;
-  }
-  const day = DAYS.find((d) => d.key === dayKey);
-
-  if (mode === "edit" && role === "parent") {
-    modal.innerHTML =
-      '<div class="detail-header">' +
-        '<span class="detail-title">Izmijeni čas</span>' +
-        '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
-      '</div>' +
-      '<div class="detail-edit-row">' +
-        '<input type="number" min="1" placeholder="Čas" title="Broj časa" value="' + escapeHtml(e.broj || "") + '" id="detailEdit_broj" />' +
-        '<input type="time" title="Od" value="' + escapeHtml(e.od || "") + '" id="detailEdit_od" />' +
-        '<input type="time" title="Do" value="' + escapeHtml(e.do || "") + '" id="detailEdit_do" />' +
-      '</div>' +
-      '<input type="text" class="detail-field" placeholder="Predmet" value="' + escapeHtml(e.naziv || "") + '" id="detailEdit_naziv" />' +
-      '<input type="text" class="detail-field" placeholder="Učionica (opciono)" value="' + escapeHtml(e.ucionica || "") + '" id="detailEdit_ucionica" />' +
-      '<input type="text" class="detail-field" placeholder="Napomena (opciono)" value="' + escapeHtml(e.napomena || "") + '" id="detailEdit_napomena" />' +
-      '<div class="detail-field-row">' +
-        '<span class="detail-field-label">Napomena važi do</span>' +
-        '<input type="date" class="detail-date-input" value="' + escapeHtml(e.napomenaDatum || "") + '" id="detailEdit_napomenaDatum" />' +
-      '</div>' +
-      '<div class="detail-btn-row">' +
-        '<button type="button" class="detail-save-btn" id="detailSaveBtn">Sačuvaj</button>' +
-        '<button type="button" class="detail-cancel-btn" id="detailCancelBtn">Otkaži</button>' +
-      '</div>';
-
-    document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
-    document.getElementById("detailCancelBtn").addEventListener("click", () => renderDetailModal(dayKey, idx, "view"));
-    document.getElementById("detailSaveBtn").addEventListener("click", () => {
-      const naziv = document.getElementById("detailEdit_naziv").value.trim();
-      if (!naziv) return;
-      const updatedEntry = {
-        broj: document.getElementById("detailEdit_broj").value.trim(),
-        od: document.getElementById("detailEdit_od").value,
-        do: document.getElementById("detailEdit_do").value,
-        naziv: naziv,
-        ucionica: document.getElementById("detailEdit_ucionica").value.trim(),
-        napomena: document.getElementById("detailEdit_napomena").value.trim(),
-        napomenaDatum: document.getElementById("detailEdit_napomenaDatum").value,
-      };
-      rememberPredmet(naziv);
-      updateEntryForDay(dayKey, idx, updatedEntry);
-      closeCasDetail();
-    });
-    return;
-  }
-
-  const brojPart = e.broj ? e.broj + ". čas" : "";
-  const timePart = formatCasTime(e);
-  const timeLine = [brojPart, timePart].filter(Boolean).join(" · ") || "–";
-
-  modal.innerHTML =
-    '<div class="detail-header">' +
-      '<span class="detail-title">' + escapeHtml(e.naziv) + '</span>' +
-      '<button type="button" class="detail-close" id="detailCloseBtn" aria-label="Zatvori">' + xIcon() + '</button>' +
-    '</div>' +
-    '<div class="detail-prop"><span class="detail-prop-label">Dan</span><span class="detail-prop-value">' + escapeHtml(day ? day.label : "") + '</span></div>' +
-    '<div class="detail-prop"><span class="detail-prop-label">Vrijeme</span><span class="detail-prop-value">' + escapeHtml(timeLine) + '</span></div>' +
-    '<div class="detail-prop"><span class="detail-prop-label">Učionica</span><span class="detail-prop-value">' + (e.ucionica ? escapeHtml(e.ucionica) : "–") + '</span></div>' +
-    '<div class="detail-note-title">Napomena</div>' +
-    '<div class="detail-note-body">' + (e.napomena ? escapeHtml(e.napomena) : '<span style="color:#8A8578;">Nema napomene.</span>') + '</div>' +
-    (e.napomenaDatum
-      ? '<div class="detail-note-expiry">' + clockIcon() + '<span>Napomena važi do ' + escapeHtml(formatDatumSrFull(e.napomenaDatum)) + '</span></div>'
-      : "") +
-    (role === "parent"
-      ? '<div class="detail-btn-row">' +
-          '<button type="button" class="detail-edit-btn" id="detailEditBtn">Izmijeni</button>' +
-          '<button type="button" class="detail-delete-btn" id="detailDeleteBtn">Obriši</button>' +
-        '</div>'
-      : "");
-
-  document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
-  if (role === "parent") {
-    document.getElementById("detailEditBtn").addEventListener("click", () => renderDetailModal(dayKey, idx, "edit"));
-    document.getElementById("detailDeleteBtn").addEventListener("click", () => {
-      deleteEntryForDay(dayKey, idx);
-      closeCasDetail();
-    });
-  }
-}
-
-function closeCasDetail() {
-  document.getElementById("detailOverlay").style.display = "none";
-}
-
-document.getElementById("detailOverlay").addEventListener("click", (e) => {
-  if (e.target.id === "detailOverlay") closeCasDetail();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && document.getElementById("detailOverlay").style.display !== "none") {
-    closeCasDetail();
-  }
-});
-
-function deleteEntryForDay(dayKey, index) {
-  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
-  const current = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
-  const updated = current.slice();
-  updated.splice(index, 1);
-  const payload = { smjene: {} };
-  payload.smjene[selectedSmjena] = {};
-  payload.smjene[selectedSmjena].casovi = {};
-  payload.smjene[selectedSmjena].casovi[dayKey] = updated;
-  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
-}
-
-function updateEntryForDay(dayKey, index, updatedEntry) {
-  const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {}, obaveze: {} };
-  const current = (smjenaData.casovi && smjenaData.casovi[dayKey]) || [];
-  const updated = current.slice();
-  updated[index] = updatedEntry;
-  const payload = { smjene: {} };
-  payload.smjene[selectedSmjena] = {};
-  payload.smjene[selectedSmjena].casovi = {};
-  payload.smjene[selectedSmjena].casovi[dayKey] = updated;
-  db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
-}
-
-// Gradi "kostur" forme za dodavanje časa SAMO kad se promijeni kontekst (dijete/smjena/dan) -
-// da se ne bi brisalo ono što je roditelj već upisao dok se lista predmeta mijenja u pozadini.
-function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
-  const contextKey = selectedChildId + "|" + selectedSmjena + "|" + selectedDayCasovi;
-  if (casoviAddRowContext === contextKey && document.getElementById(addRowElId + "_name")) {
-    return;
-  }
-
-  addRowEl.innerHTML =
-    '<div class="predmet-manage-row">' +
-      '<button type="button" class="manage-link" id="' + addRowElId + '_toggleManage"></button>' +
-    '</div>' +
-    '<div id="' + addRowElId + '_managePanelWrap"></div>' +
-    '<input type="number" min="1" class="broj-input" placeholder="Čas" title="Broj časa" value="' + escapeHtml(nextCasBroj(entries)) + '" id="' + addRowElId + '_broj" />' +
-    '<input type="time" class="od-do-input" title="Od" id="' + addRowElId + '_od" />' +
-    '<input type="time" class="od-do-input" title="Do" id="' + addRowElId + '_do" />' +
-    '<div class="autocomplete-wrap" id="' + addRowElId + '_nameWrap">' +
-      '<input type="text" class="name-input" placeholder="Predmet (upiši ili izaberi)" id="' + addRowElId + '_name" autocomplete="off" />' +
-      '<div class="autocomplete-dropdown" id="' + addRowElId + '_nameDropdown"></div>' +
-    '</div>' +
-    '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
-    '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
-    '<div class="napomena-datum-row">' +
-      '<span class="napomena-datum-label">Napomena važi do</span>' +
-      '<input type="date" class="napomena-datum-input" title="Napomena važi do (opciono - ako se ostavi prazno, napomena ostaje trajno)" id="' + addRowElId + '_napomenaDatum" />' +
-    '</div>' +
-    '<button type="button" class="submit-btn">Dodaj</button>';
-
-  document.getElementById(addRowElId + "_toggleManage").addEventListener("click", () => {
-    predmetiPanelOpen = !predmetiPanelOpen;
-    editingPredmet = null;
-    refreshPredmetSelectAndPanel(addRowElId);
-  });
-
-  addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("casovi", addRowElId));
-  setupPredmetAutocomplete(addRowElId);
-
-  casoviAddRowContext = contextKey;
-  refreshPredmetSelectAndPanel(addRowElId);
-}
-
-// Prilagođena (custom) padajuća lista za polje "Predmet" - zamjena za ugrađeni <datalist>, koji na
-// iPhone/Safari-ju ne prikazuje ponuđene opcije (samo kucanje radi, predlozi se ne pojavljuju).
-// forceOpen=true znači "korisnik je upravo fokusirao/kucao u polje, otvori listu ako ima predloga";
-// bez forceOpen se lista samo osvježava sadržajem ako je već otvorena (ne otvara se sama od sebe).
-function renderPredmetDropdown(addRowElId, opts) {
-  const forceOpen = !!(opts && opts.forceOpen);
-  const input = document.getElementById(addRowElId + "_name");
-  const dropdown = document.getElementById(addRowElId + "_nameDropdown");
-  if (!input || !dropdown) return;
-
-  const wasOpen = dropdown.classList.contains("open");
-  if (!forceOpen && !wasOpen) return;
-
-  const q = (input.value || "").trim().toLowerCase();
-  const filtered = q === "" ? predmetiList : predmetiList.filter((p) => p.toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    dropdown.innerHTML = "";
-    dropdown.classList.remove("open");
-    return;
-  }
-
-  dropdown.innerHTML = filtered.map((p) =>
-    '<div class="autocomplete-option" data-value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</div>'
-  ).join("");
-  dropdown.querySelectorAll(".autocomplete-option").forEach((opt) => {
-    // mousedown (ne click) + preventDefault sprječava da polje izgubi fokus (blur) prije nego
-    // što se klik/tap registruje - bez ovoga bi se lista zatvorila prije nego što se izbor upiše.
-    opt.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      input.value = opt.dataset.value;
-      dropdown.classList.remove("open");
-      dropdown.innerHTML = "";
-    });
-  });
-  dropdown.classList.add("open");
-}
-
-function setupPredmetAutocomplete(addRowElId) {
-  const input = document.getElementById(addRowElId + "_name");
-  const dropdown = document.getElementById(addRowElId + "_nameDropdown");
-  if (!input || !dropdown) return;
-
-  input.addEventListener("focus", () => renderPredmetDropdown(addRowElId, { forceOpen: true }));
-  input.addEventListener("input", () => renderPredmetDropdown(addRowElId, { forceOpen: true }));
-  // I klik (ne samo focus) otvara listu - npr. nakon što je korisnik zatvorio listu tasterom Esc,
-  // a polje je i dalje fokusirano, klik na njega treba ponovo da otvori ponuđene predmete.
-  input.addEventListener("click", () => renderPredmetDropdown(addRowElId, { forceOpen: true }));
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addEntry("casovi", addRowElId);
-    if (e.key === "Escape") {
-      dropdown.classList.remove("open");
-      dropdown.innerHTML = "";
-    }
-  });
-  input.addEventListener("blur", () => {
-    dropdown.classList.remove("open");
-  });
-}
-
-// Osvježava SAMO ponuđene predmete (datalist ispod polja "Predmet") i panel za uređivanje - ne dira
-// broj/od/do/predmet/učionicu/napomenu, pa roditelj ne gubi ono što trenutno kuca kad se lista
-// predmeta promijeni (npr. sa drugog uređaja). Polje "Predmet" je tekstualno polje sa custom
-// (JS) padajućom listom - klik/kucanje nudi zapamćene predmete, ali se slobodno može upisati i
-// potpuno nov naziv. Custom lista se koristi umjesto ugrađenog <datalist> jer na iPhone/Safari-ju
-// <datalist> ne prikazuje ponuđene opcije (kucanje inače radi normalno).
-function refreshPredmetSelectAndPanel(addRowElId) {
-  // Ako je padajuća lista predmeta trenutno otvorena, osvježi je - ali je ne otvaraj sama od sebe
-  // (npr. kad stigne osvježenje sa drugog uređaja dok roditelj ne gleda u to polje).
-  renderPredmetDropdown(addRowElId);
-
-  const toggleBtn = document.getElementById(addRowElId + "_toggleManage");
-  if (toggleBtn) toggleBtn.textContent = predmetiPanelOpen ? "Zatvori uređivanje" : "Uredi listu predmeta";
-
-  const wrap = document.getElementById(addRowElId + "_managePanelWrap");
-  if (!wrap) return;
-  if (!predmetiPanelOpen) {
-    wrap.innerHTML = "";
-    return;
-  }
-
-  wrap.innerHTML =
-    '<div class="predmeti-manage-panel">' +
-      (predmetiList.length === 0
-        ? '<div class="predmeti-empty">Još nema zapamćenih predmeta.</div>'
-        : predmetiList.map((p, idx) => {
-            if (editingPredmet === p) {
-              return (
-                '<div class="predmeti-manage-row">' +
-                  '<input type="text" class="pm-edit-input" value="' + escapeHtml(p) + '" id="' + addRowElId + '_pmEdit_' + idx + '" />' +
-                  '<button type="button" class="pm-icon-btn pm-save" data-old="' + escapeHtml(p) + '" data-input="' + addRowElId + '_pmEdit_' + idx + '" aria-label="Sačuvaj">' + checkIcon() + '</button>' +
-                  '<button type="button" class="pm-icon-btn pm-cancel" aria-label="Otkaži">' + xIcon() + '</button>' +
-                '</div>'
-              );
-            }
-            return (
-              '<div class="predmeti-manage-row">' +
-                '<span class="pm-name">' + escapeHtml(p) + '</span>' +
-                '<button type="button" class="pm-icon-btn pm-edit" data-name="' + escapeHtml(p) + '" aria-label="Izmijeni">' + pencilIcon() + '</button>' +
-                '<button type="button" class="pm-icon-btn pm-delete" data-name="' + escapeHtml(p) + '" aria-label="Obriši">' + trashIcon() + '</button>' +
-              '</div>'
-            );
-          }).join(""))
-    + '</div>';
-
-  wrap.querySelectorAll(".pm-edit").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      editingPredmet = btn.dataset.name;
-      refreshPredmetSelectAndPanel(addRowElId);
-    });
-  });
-  wrap.querySelectorAll(".pm-delete").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      deletePredmetFromList(btn.dataset.name);
-    });
-  });
-  wrap.querySelectorAll(".pm-save").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const inputEl = document.getElementById(btn.dataset.input);
-      renamePredmetInList(btn.dataset.old, inputEl.value);
-    });
-  });
-  wrap.querySelectorAll(".pm-cancel").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      editingPredmet = null;
-      refreshPredmetSelectAndPanel(addRowElId);
-    });
-  });
-  wrap.querySelectorAll(".pm-edit-input").forEach((input) => {
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const row = e.target.closest(".predmeti-manage-row");
-        const saveBtn = row && row.querySelector(".pm-save");
-        if (saveBtn) saveBtn.click();
-      } else if (e.key === "Escape") {
-        editingPredmet = null;
-        refreshPredmetSelectAndPanel(addRowElId);
-      }
-    });
-  });
-}
-
-function ensureObavezeAddRowSkeleton(addRowEl, addRowElId, timePlaceholder, namePlaceholder) {
-  // Obaveze ne zavise od smjene, pa kontekst gradi formu samo na promjenu djeteta/dana.
-  const contextKey = selectedChildId + "|" + selectedDayObaveze;
-  if (obavezeAddRowContext === contextKey && document.getElementById(addRowElId + "_name")) {
-    return;
-  }
-  addRowEl.innerHTML =
-    '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
-    '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
-    '<input type="date" class="napomena-datum-input" title="Vrijedi do (opciono - ako se ostavi prazno, obaveza je trajna i ponavlja se svake sedmice)" id="' + addRowElId + '_datum" />' +
-    '<button type="button" class="submit-btn">Dodaj</button>';
-  addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("obaveze", addRowElId));
-  document.getElementById(addRowElId + "_name").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addEntry("obaveze", addRowElId);
-  });
-  obavezeAddRowContext = contextKey;
-}
-
-// Časovi i obaveze se sad snimaju na potpuno različite putanje (časovi su unutar izabrane smjene,
-// obaveze su van smjena, na top-level "obaveze" polju) - zato su ogranci razdvojeni umjesto da
-// dijele zajedničku saveField() kao ranije.
-function addEntry(field, addRowElId) {
-  const nameEl = document.getElementById(addRowElId + "_name");
-  const naziv = nameEl.value.trim();
-  if (!naziv) return;
-
-  if (field === "casovi") {
-    const brojEl = document.getElementById(addRowElId + "_broj");
-    const odEl = document.getElementById(addRowElId + "_od");
-    const doEl = document.getElementById(addRowElId + "_do");
-    const ucionicaEl = document.getElementById(addRowElId + "_ucionica");
-    const napomenaEl = document.getElementById(addRowElId + "_napomena");
-    const napomenaDatumEl = document.getElementById(addRowElId + "_napomenaDatum");
-    const novaStavka = {
-      broj: brojEl.value.trim(),
-      od: odEl.value,
-      do: doEl.value,
-      naziv: naziv,
-      ucionica: ucionicaEl.value.trim(),
-      napomena: napomenaEl.value.trim(),
-      napomenaDatum: napomenaDatumEl ? napomenaDatumEl.value : "",
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
     };
-    const smjenaData = (scheduleData && scheduleData.smjene[selectedSmjena]) || { casovi: {} };
-    const current = (smjenaData.casovi && smjenaData.casovi[selectedDayCasovi]) || [];
-    const updated = current.concat([novaStavka]);
-    const payload = { smjene: {} };
-    payload.smjene[selectedSmjena] = { casovi: {} };
-    payload.smjene[selectedSmjena].casovi[selectedDayCasovi] = updated;
-    db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
+  }, []);
 
-    // Rucno cistimo polja za sledeci unos (umjesto da se cijela forma ponovo gradi) - tako
-    // upis ne nestaje ako u medjuvremenu stigne osvjezenje liste predmeta iz pozadine.
-    rememberPredmet(naziv);
-    const n = parseInt(brojEl.value, 10);
-    brojEl.value = String((isNaN(n) ? 0 : n) + 1);
-    odEl.value = "";
-    doEl.value = "";
-    ucionicaEl.value = "";
-    napomenaEl.value = "";
-    if (napomenaDatumEl) napomenaDatumEl.value = "";
-    nameEl.value = "";
-    nameEl.focus();
-    renderPredmetDropdown(addRowElId, { forceOpen: true });
-  } else {
-    const timeEl = document.getElementById(addRowElId + "_time");
-    const datumEl = document.getElementById(addRowElId + "_datum");
-    const novaStavka = { vrijeme: timeEl.value.trim(), naziv: naziv, datum: datumEl ? datumEl.value : "" };
-    const current = (scheduleData && scheduleData.obaveze && scheduleData.obaveze[selectedDayObaveze]) || [];
-    const updated = current.concat([novaStavka]);
-    const payload = { obaveze: {} };
-    payload.obaveze[selectedDayObaveze] = updated;
-    db.collection("raspored").doc(selectedChildId).set(payload, { merge: true });
+  const q = (value || "").trim().toLowerCase();
+  const filtered = q === "" ? options : options.filter((o) => o.toLowerCase().includes(q));
 
-    timeEl.value = "";
-    if (datumEl) datumEl.value = "";
-    nameEl.value = "";
-    nameEl.focus();
-  }
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        position: "relative",
+        width: style && style.width ? undefined : "100%",
+        flex: style && style.flex ? style.flex : undefined,
+      }}
+    >
+      <input
+        autoFocus={autoFocus}
+        autoComplete="off"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+          if (onKeyDown) onKeyDown(e);
+        }}
+        onBlur={(e) => { setOpen(false); if (onBlur) onBlur(e); }}
+        style={{ width: "100%", boxSizing: "border-box", ...style }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30, background: "#fff", border: "1px solid #E6E1D8", borderRadius: 8, marginTop: 3, maxHeight: 190, overflowY: "auto", boxShadow: "0 8px 20px -8px rgba(27,58,74,0.3)" }}>
+          {filtered.map((o) => (
+            <div
+              key={o}
+              onMouseDown={(e) => { e.preventDefault(); onChange(o); setOpen(false); }}
+              style={{ padding: "8px 10px", fontSize: 13.5, color: "#0F222B", cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#FAF8F4"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
+
+function chevronDownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  );
+}
+function checkIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
+// Prilagođena padajuća lista za filter kategorija - izgleda kao kartica koja iskače ispod
+// kontrole, sa istaknutom trenutno izabranom kategorijom (pozadina boje breskve + kvačica).
+// Native <select> ne može ovako da se stilizuje, pa je ovo poseban React komponent.
+function CategoryDropdown({ value, onChange, options, wrapperStyle }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  const displayLabel = value === "Sve" ? "Sve kategorije" : value;
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", ...(wrapperStyle || {}) }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9,
+          padding: "0 10px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: "#0F222B", outline: "none",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayLabel}</span>
+        <span style={{ flexShrink: 0, color: "#8A8578", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>{chevronDownIcon()}</span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 210, maxWidth: "min(260px, calc(100vw - 28px))",
+            background: "#fff", borderRadius: 18, boxShadow: "0 12px 30px -8px rgba(15,34,43,0.28)", padding: 8,
+            maxHeight: 320, overflowY: "auto", zIndex: 40,
+          }}
+        >
+          {options.map((c) => {
+            const selected = c === value;
+            const label = c === "Sve" ? "Sve kategorije" : c;
+            return (
+              <div
+                key={c}
+                onMouseDown={(e) => { e.preventDefault(); onChange(c); setOpen(false); }}
+                style={{
+                  padding: "12px 14px", borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  gap: 10, fontSize: 15, color: "#0F222B", background: selected ? "#F5DEC0" : "transparent", fontWeight: selected ? 700 : 500,
+                }}
+              >
+                <span>{label}</span>
+                {selected && <span style={{ flexShrink: 0, color: "#0F222B" }}>{checkIcon()}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function chefHatIcon(size) {
+  const s = size || 40;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#C9C3B5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+      <path d="M6 17h12"/>
+    </svg>
+  );
+}
+function playIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  );
+}
+function cartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+    </svg>
+  );
+}
+function pencilIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
+}
+function trashIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>;
+}
+function xIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}
+function uploadIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  );
+}
+function cameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+    </svg>
+  );
+}
+function heartIcon(filled, size) {
+  const s = size || 18;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  );
+}
+
+function RecipeApp() {
+  const [recipes, setRecipes] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Sve");
+  const [detailId, setDetailId] = useState(null);
+  const [form, setForm] = useState(null); // null = no form open, object = editing/adding
+  const [toast, setToast] = useState(null); // null ili { msg, type: "success" | "error" }
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  const lastSentRecipes = useRef(null);
+  const saveTimer = useRef(null);
+  const toastTimer = useRef(null);
+
+  useEffect(() => {
+    const unsub = sharedDocRef.onSnapshot(
+      (snap) => {
+        if (snap.exists) {
+          const data = snap.data() || {};
+          if (typeof data.recepti === "string" && data.recepti !== lastSentRecipes.current) {
+            try {
+              const parsed = JSON.parse(data.recepti);
+              if (Array.isArray(parsed)) {
+                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, ...r })));
+              }
+            } catch (e) {}
+          }
+        } else {
+          sharedDocRef.set({ recepti: JSON.stringify([]) });
+        }
+        setLoaded(true);
+      },
+      (err) => {
+        console.error("Firestore sync error", err);
+        showToast("Greška pri učitavanju recepata (" + (err && err.code ? err.code : "provjeri internet") + ").", "error");
+        setLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const json = JSON.stringify(recipes);
+      lastSentRecipes.current = json;
+      sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => {
+        console.error("Failed to save recepti", e);
+        lastSentRecipes.current = null; // ne blokiraj ponovni pokušaj kasnije ako se doc ipak promijeni
+        showToast("Snimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + "). Recept NIJE sačuvan trajno — provjeri internet ili se javi.", "error");
+      });
+    }, 400);
+    return () => clearTimeout(saveTimer.current);
+  }, [recipes, loaded]);
+
+  function showToast(msg, type) {
+    const t = type || "success";
+    setToast({ msg, type: t });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), t === "error" ? 6000 : 3000);
+  }
+
+  const knownCategories = Array.from(
+    new Set([...DEFAULT_CATEGORIES, ...recipes.map((r) => r.kategorija).filter(Boolean)])
+  ).sort((a, b) => a.localeCompare(b, "sr"));
+
+  const allCategoriesForFilter = ["Sve", "Omiljeni", ...knownCategories];
+
+  const visibleRecipes = recipes
+    .filter((r) => {
+      if (categoryFilter === "Sve") return true;
+      if (categoryFilter === "Omiljeni") return !!r.omiljen;
+      return r.kategorija === categoryFilter;
+    })
+    .filter((r) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      if (r.naziv.toLowerCase().includes(q)) return true;
+      return (r.sastojci || []).some((s) => (s || "").toLowerCase().includes(q));
+    })
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  function openAddForm() {
+    setForm(emptyRecipeForm());
+  }
+  function openEditForm(recipe) {
+    setForm({ ...recipe, sastojci: recipe.sastojci && recipe.sastojci.length ? recipe.sastojci.slice() : [""] });
+    setDetailId(null);
+  }
+  function closeForm() {
+    setForm(null);
+  }
+  function saveForm() {
+    const naziv = (form.naziv || "").trim();
+    if (!naziv) return;
+    const cleanSastojci = (form.sastojci || []).map((s) => (s || "").trim()).filter(Boolean);
+    const cleaned = {
+      id: form.id || uid(),
+      naziv: naziv,
+      kategorija: (form.kategorija || "").trim(),
+      slikaUrl: safeUrl(form.slikaUrl),
+      videoUrl: safeUrl(form.videoUrl),
+      sastojci: cleanSastojci,
+      priprema: (form.priprema || "").trim(),
+    };
+    setRecipes((prev) => {
+      const existingIdx = prev.findIndex((r) => r.id === cleaned.id);
+      if (existingIdx >= 0) {
+        const next = prev.slice();
+        next[existingIdx] = { ...prev[existingIdx], ...cleaned };
+        return next;
+      }
+      const maxOrder = prev.reduce((m, r) => Math.max(m, r.order || 0), 0);
+      return prev.concat([{ ...cleaned, order: maxOrder + 1 }]);
+    });
+    setForm(null);
+  }
+  function deleteRecipe(id) {
+    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    if (detailId === id) setDetailId(null);
+  }
+  function toggleFavorite(id) {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, omiljen: !r.omiljen } : r)));
+  }
+
+  async function addIngredientsToShoppingList(recipe) {
+    if (!recipe.sastojci || recipe.sastojci.length === 0) {
+      showToast("Ovaj recept nema unešene sastojke.", "error");
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      const shoppingRef = db.collection("shopping-list").doc("shared");
+      // Transakcija: čita i piše atomično, pa se stavke ne izgube ako neko u istom
+      // trenutku mijenja kupovinu na drugom uređaju (sprječava "gaženje" liste).
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(shoppingRef);
+        const data = snap.exists ? snap.data() : {};
+        let items = [];
+        if (typeof data.items === "string") {
+          try {
+            const parsed = JSON.parse(data.items);
+            if (Array.isArray(parsed)) items = parsed;
+          } catch (e) {}
+        }
+        const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
+        const newItems = recipe.sastojci.map((naziv, i) => ({
+          id: uid() + i,
+          name: naziv,
+          quantity: 1,
+          store: "",
+          category: "",
+          price: 0,
+          note: "",
+          purchased: false,
+          order: maxOrder + i + 1,
+        }));
+        const updated = items.concat(newItems);
+        tx.set(shoppingRef, { items: JSON.stringify(updated) }, { merge: true });
+      });
+      showToast("Sastojci (" + recipe.sastojci.length + ") dodati u kupovinu!");
+    } catch (e) {
+      console.error("Failed to add ingredients to shopping list", e);
+      showToast("Nije uspjelo dodavanje u kupovinu. Pokušaj ponovo.", "error");
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  const detailRecipe = detailId ? recipes.find((r) => r.id === detailId) : null;
+
+  return (
+    <div style={{ background: "#F5F3EE", minHeight: "100%", color: "#0F222B", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 1120, margin: "0 auto", padding: "28px 14px 60px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+              <path d="M6 17h12"/>
+            </svg>
+            <div>
+              <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 700, color: "#0F222B", letterSpacing: "-0.02em", margin: 0 }}>Recepti</h1>
+              <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2 }}>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={openAddForm}
+            style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: 160, height: 40, boxSizing: "border-box" }}
+          >
+            + Dodaj recept
+          </button>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pretraži po nazivu ili sastojku..."
+            style={{ flex: "3 1 160px", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "0 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
+          />
+          <CategoryDropdown
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            options={allCategoriesForFilter}
+            wrapperStyle={{ flex: "0 1 160px", minWidth: 100, maxWidth: 160 }}
+          />
+        </div>
+
+        {!loaded ? (
+          <div style={{ color: "#8A8578", fontSize: 14, padding: "20px 4px" }}>Učitavanje...</div>
+        ) : visibleRecipes.length === 0 ? (
+          <div style={{ color: "#8A8578", fontSize: 14, padding: "30px 4px", textAlign: "center" }}>
+            {recipes.length === 0 ? "Još nema dodanih recepata." : "Nema recepata koji odgovaraju pretrazi."}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+            {visibleRecipes.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => setDetailId(r.id)}
+                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)" }}
+              >
+                <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <RecipeImage url={r.slikaUrl} alt={r.naziv} iconSize={36} />
+                  <button
+                    type="button"
+                    aria-label={r.omiljen ? "Ukloni iz omiljenih" : "Dodaj u omiljene"}
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(r.id); }}
+                    style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.9)", color: r.omiljen ? "#E0555A" : "#8A8578", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 4px rgba(15,34,43,0.18)", padding: 0 }}
+                  >
+                    {heartIcon(r.omiljen, 16)}
+                  </button>
+                </div>
+                <div style={{ padding: "10px 12px 12px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                    <CategoryTag label={r.kategorija} />
+                    <span style={{ color: "#8A8578", fontSize: 11.5 }}>{(r.sastojci || []).length} sastojaka</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {toast && (
+        <div
+          style={{
+            position: "fixed", left: "50%", bottom: "calc(90px + env(safe-area-inset-bottom))", transform: "translateX(-50%)",
+            background: toast.type === "error" ? "#B3413E" : "#1F7A52", color: "#fff", padding: "12px 16px", borderRadius: 10,
+            fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, textAlign: "center", boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)",
+            zIndex: 10001, maxWidth: "calc(100vw - 32px)", boxSizing: "border-box",
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
+
+      {detailRecipe && !form && (
+        <RecipeDetailModal
+          recipe={detailRecipe}
+          onClose={() => setDetailId(null)}
+          onEdit={() => openEditForm(detailRecipe)}
+          onDelete={() => deleteRecipe(detailRecipe.id)}
+          onAddToCart={() => addIngredientsToShoppingList(detailRecipe)}
+          onToggleFavorite={() => toggleFavorite(detailRecipe.id)}
+          addingToCart={addingToCart}
+        />
+      )}
+
+      {form && (
+        <RecipeFormModal
+          form={form}
+          setForm={setForm}
+          onSave={saveForm}
+          onCancel={closeForm}
+          knownCategories={knownCategories}
+          isNew={!recipes.some((r) => r.id === form.id)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onToggleFavorite, addingToCart }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)" }}
+      >
+        <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          <RecipeImage url={recipe.slikaUrl} alt={recipe.naziv} iconSize={48} />
+          <button
+            type="button"
+            aria-label={recipe.omiljen ? "Ukloni iz omiljenih" : "Dodaj u omiljene"}
+            onClick={onToggleFavorite}
+            style={{ position: "absolute", top: 12, left: 12, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.92)", color: recipe.omiljen ? "#E0555A" : "#8A8578", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(15,34,43,0.2)", padding: 0 }}
+          >
+            {heartIcon(recipe.omiljen, 19)}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: "50%", background: "rgba(15,34,43,0.55)", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+
+        <div style={{ padding: "18px 20px 24px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 600, color: "#0F222B", lineHeight: 1.25 }}>{recipe.naziv}</div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <CategoryTag label={recipe.kategorija} />
+          </div>
+
+          {recipe.videoUrl && (
+            <a
+              href={recipe.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#0F222B", color: "#fff", textDecoration: "none", padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, marginBottom: 18 }}
+            >
+              {playIcon()} Pogledaj video
+            </a>
+          )}
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: "#0F222B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>Sastojci</div>
+            {(recipe.sastojci || []).length === 0 ? (
+              <div style={{ color: "#8A8578", fontSize: 13.5 }}>Nema unešenih sastojaka.</div>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#3A362E", fontSize: 14, lineHeight: 1.7 }}>
+                {recipe.sastojci.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {recipe.priprema && (
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: "#0F222B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>Priprema</div>
+              <div style={{ color: "#3A362E", fontSize: 14, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{recipe.priprema}</div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={onAddToCart}
+            disabled={addingToCart}
+            style={{ width: "100%", background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 700, fontSize: 14.5, cursor: addingToCart ? "default" : "pointer", opacity: addingToCart ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit", marginBottom: 12 }}
+          >
+            {cartIcon()} {addingToCart ? "Dodavanje..." : "Dodaj sve sastojke u kupovinu"}
+          </button>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              type="button"
+              onClick={onEdit}
+              style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "10px 12px", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" }}
+            >
+              {pencilIcon()} Izmijeni
+            </button>
+            {!confirmDelete ? (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                style={{ flex: 1, background: "#fff", color: "#B3413E", border: "1px solid #E4DFD3", borderRadius: 10, padding: "10px 12px", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" }}
+              >
+                {trashIcon()} Obriši
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onDelete}
+                style={{ flex: 1, background: "#B3413E", color: "#fff", border: "1px solid #B3413E", borderRadius: 10, padding: "10px 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Potvrdi brisanje
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isNew }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const scanInputRef = useRef(null);
+
+  function updateField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleScanSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // dozvoli ponovni odabir iste slike
+    if (!file) return;
+    setScanError("");
+    setScanning(true);
+    try {
+      const r = await scanRecipeFromImage(file);
+      setForm((prev) => {
+        const sastojci = Array.isArray(r.sastojci) && r.sastojci.length
+          ? r.sastojci.map((s) => String(s))
+          : prev.sastojci;
+        return {
+          ...prev,
+          naziv: r.naziv ? String(r.naziv) : prev.naziv,
+          kategorija: r.kategorija ? String(r.kategorija) : prev.kategorija,
+          sastojci: sastojci && sastojci.length ? sastojci : [""],
+          priprema: r.priprema ? String(r.priprema) : prev.priprema,
+        };
+      });
+    } catch (err) {
+      console.error("Scan failed", err);
+      setScanError((err && err.message) || "Skeniranje nije uspjelo. Unesi ručno.");
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // omogući ponovni odabir istog fajla ako upload ne uspije
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      updateField("slikaUrl", url);
+    } catch (err) {
+      console.error("Cloudinary upload failed", err);
+      setUploadError("Otpremanje slike nije uspjelo. Probaj ponovo ili zalijepi link ručno.");
+    } finally {
+      setUploading(false);
+    }
+  }
+  function updateSastojak(idx, value) {
+    setForm((prev) => {
+      const next = prev.sastojci.slice();
+      next[idx] = value;
+      return { ...prev, sastojci: next };
+    });
+  }
+  function removeSastojak(idx) {
+    setForm((prev) => {
+      const next = prev.sastojci.slice();
+      next.splice(idx, 1);
+      if (next.length === 0) next.push("");
+      return { ...prev, sastojci: next };
+    });
+  }
+  function addSastojak() {
+    setForm((prev) => ({ ...prev, sastojci: prev.sastojci.concat([""]) }));
+  }
+
+  const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9, border: "1px solid #E4DFD3", fontSize: 14, fontFamily: "inherit", color: "#0F222B", background: "#fff" };
+  const labelStyle = { fontWeight: 700, fontSize: 12.5, color: "#0F222B", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.3 };
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: "#0F222B" }}>{isNew ? "Dodaj recept" : "Izmijeni recept"}</div>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0EDE4", color: "#0F222B", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 16, padding: "12px 14px", background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 12 }}>
+          {scanning ? (
+            <div style={{ width: "100%", boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, opacity: 0.75, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {uploadIcon()} Čitam recept sa slike...
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              <label style={{ position: "relative", overflow: "hidden", flex: 1, boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 10px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, WebkitTapHighlightColor: "transparent" }}>
+                {cameraIcon()} Slikaj
+                <input type="file" accept="image/*" capture="environment" onChange={handleScanSelected} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, border: 0, padding: 0, margin: 0, cursor: "pointer" }} />
+              </label>
+              <label style={{ position: "relative", overflow: "hidden", flex: 1, boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 10px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, WebkitTapHighlightColor: "transparent" }}>
+                {uploadIcon()} Galerija
+                <input ref={scanInputRef} type="file" accept="image/*" onChange={handleScanSelected} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, border: 0, padding: 0, margin: 0, cursor: "pointer" }} />
+              </label>
+            </div>
+          )}
+          <div style={{ color: "#5A6B6E", fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
+„Slikaj" — fotografiši recept kamerom. „Galerija" — izaberi postojeću sliku ili screenshot. Polja se popune sama; provjeri prije nego sačuvaš.
+          </div>
+          {scanError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 8 }}>{scanError}</div>}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Naziv</label>
+          <input type="text" value={form.naziv} onChange={(e) => updateField("naziv", e.target.value)} placeholder="Naziv recepta" style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Kategorija</label>
+          <AutocompleteInput
+            value={form.kategorija}
+            onChange={(v) => updateField("kategorija", v)}
+            options={knownCategories}
+            placeholder="Kategorija (upiši ili izaberi)"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Slika</label>
+          <input type="text" value={form.slikaUrl} onChange={(e) => updateField("slikaUrl", e.target.value)} placeholder="https://... (ili otpremi ispod)" style={inputStyle} />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} style={{ display: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              disabled={uploading}
+              style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: uploading ? "default" : "pointer", fontFamily: "inherit", opacity: uploading ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 }}
+            >
+              {uploadIcon()} {uploading ? "Otpremanje..." : "Otpremi sliku"}
+            </button>
+            {form.slikaUrl && (
+              <div style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "#F0EDE4", flexShrink: 0 }}>
+                <img src={form.slikaUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
+              </div>
+            )}
+          </div>
+          {uploadError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 6 }}>{uploadError}</div>}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Video (URL)</label>
+          <input type="text" value={form.videoUrl} onChange={(e) => updateField("videoUrl", e.target.value)} placeholder="https://..." style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Sastojci</label>
+          {form.sastojci.map((s, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                type="text"
+                value={s}
+                onChange={(e) => updateSastojak(i, e.target.value)}
+                placeholder={"Sastojak " + (i + 1)}
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={() => removeSastojak(i)}
+                style={{ flexShrink: 0, width: 38, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {xIcon()}
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addSastojak}
+            style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            + Dodaj sastojak
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Priprema</label>
+          <textarea
+            value={form.priprema}
+            onChange={(e) => updateField("priprema", e.target.value)}
+            placeholder="Koraci pripreme..."
+            rows={5}
+            style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "12px 12px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Otkaži
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            style={{ flex: 1, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "12px 12px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Sačuvaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<RecipeApp />);
 </script>
+<script>
+  const __src = document.getElementById('app-source-code').textContent;
+  const __out = Babel.transform(__src, { presets: [["react", { runtime: "classic" }]] }).code;
+  const __script = document.createElement('script');
+  __script.textContent = __out;
+  document.body.appendChild(__script);
+</script>
+<script src="nav-bar.js"></script>
 </body>
 </html>
