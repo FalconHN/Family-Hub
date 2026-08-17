@@ -368,7 +368,7 @@ function useIsMobile(containerRef, breakpoint = CARD_LAYOUT_BREAKPOINT) {
 }
 
 function SmartShoppingList() {
-  const [items, setItems] = useState(SAMPLE_ITEMS);
+  const [items, setItems] = useState([]);
   const [favorites, setFavorites] = useState(DEFAULT_FAVORITES);
   const [budget, setBudget] = useState(null);
   const [budgetInput, setBudgetInput] = useState("");
@@ -1247,6 +1247,7 @@ function SmartShoppingList() {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 2px 10px" }}>
         {label !== "Unassigned" && renderColorControl(pickerKey, meta, apply)}
+        {kind === "cat" && meta?.emoji && <span>{meta.emoji}</span>}
         <Tag label={label === "Unassigned" ? "Bez oznake" : label} color={meta} />
         <span style={{ color: "#A39E90", fontSize: 12 }}>{list.length}</span>
         <span style={{ flex: 1 }} />
@@ -1437,7 +1438,7 @@ function SmartShoppingList() {
                 const meta=resolveCategoryMeta(cat); const open=colorPickerFor===`manage-cat:${cat}`;
                 return <div className="manage-item" key={cat}>
                   <button className="color-dot" title="Promijeni boju" onClick={(e)=>{e.stopPropagation();setColorPickerFor(open?null:`manage-cat:${cat}`)}} style={{background:meta.bg}} />
-                  <span className="manage-name"><Tag label={cat} color={meta}/></span>
+                  <span className="manage-name">{meta.emoji&&<span style={{marginRight:5}}>{meta.emoji}</span>}<Tag label={cat} color={meta}/></span>
                   <div className="manage-actions">
                     <button type="button" className="manage-icon" title="Uredi kategoriju" aria-label="Uredi kategoriju" onClick={()=>renameCategory(cat)}>✎</button>
                     <button type="button" className="manage-icon danger" title="Izbriši kategoriju" aria-label="Izbriši kategoriju" onClick={()=>deleteCategory(cat)}>×</button>
@@ -1501,7 +1502,7 @@ function SmartShoppingList() {
           </div>
         </div>
 
-        {Object.keys(storeTotals).length>1&&<div className="panel secondary-panel"><div className="section-title" style={{display:'flex',alignItems:'center',gap:7}}><IconWallet/> <span>Trošak po prodavnici</span></div>{Object.entries(storeTotals).sort((a,b)=>b[1]-a[1]).map(([store,total])=>{const storeMeta=resolveStoreColor(store==='Unassigned'?null:store);return <div key={store} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',fontSize:13}}><div style={{width:100}}><Tag label={store} color={storeMeta}/></div><div style={{flex:1,height:7,background:'#dfe7e3',borderRadius:99,overflow:'hidden'}}><div style={{height:'100%',width:`${grandTotal>0?(total/grandTotal)*100:0}%`,background:storeMeta?.bg||'#8FD8F7'}}/></div><span style={{color:'#17252b',minWidth:65,textAlign:'right',fontWeight:650}}>{fmtEUR(total)}</span></div>})}</div>}
+        {Object.keys(storeTotals).length>=1&&<div className="panel secondary-panel"><div className="section-title" style={{display:'flex',alignItems:'center',gap:7}}><IconWallet/> <span>Trošak po prodavnici</span></div>{Object.entries(storeTotals).sort((a,b)=>b[1]-a[1]).map(([store,total])=>{const storeMeta=resolveStoreColor(store==='Unassigned'?null:store);return <div key={store} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',fontSize:13}}><div style={{width:100}}><Tag label={store} color={storeMeta}/></div><div style={{flex:1,height:7,background:'#dfe7e3',borderRadius:99,overflow:'hidden'}}><div style={{height:'100%',width:`${grandTotal>0?(total/grandTotal)*100:0}%`,background:storeMeta?.bg||'#8FD8F7'}}/></div><span style={{color:'#17252b',minWidth:65,textAlign:'right',fontWeight:650}}>{fmtEUR(total)}</span></div>})}</div>}
       </div>
     </div>
   );
