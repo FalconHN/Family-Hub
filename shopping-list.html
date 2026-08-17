@@ -1303,10 +1303,7 @@ function SmartShoppingList() {
         .tabs-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:0;margin-bottom:12px;}
         .tab-btn{border:1px solid #dce6e2!important;background:#f8faf9!important;color:#63757a!important;border-radius:12px!important;padding:10px 8px!important;font-weight:750!important;}
         .tab-btn.active{background:#dcefeb!important;color:#176b76!important;border-color:#c4ded7!important;}
-        .mini-actions{grid-column:1/-1;display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:8px;align-items:stretch;}
-        .mini-actions label,.ghost{min-height:42px;box-sizing:border-box;display:flex!important;align-items:center;justify-content:center;gap:6px;}
-        .ghost{background:#fff!important;border:1px solid #dce6e2!important;color:#52666c!important;border-radius:12px!important;padding:8px 10px!important;font-weight:650!important;}
-        .mini-actions input{accent-color:#176b76;}
+        .ghost{min-height:42px;box-sizing:border-box;display:flex!important;align-items:center;justify-content:center;gap:6px;background:#fff!important;border:1px solid #dce6e2!important;color:#52666c!important;border-radius:12px!important;padding:8px 10px!important;font-weight:650!important;}
         .favorites{display:flex;gap:7px;align-items:center;overflow-x:auto;flex-wrap:nowrap;padding:0 2px 13px;scrollbar-width:none;}
         .favorites::-webkit-scrollbar{display:none;}
         .favorite-pill{border:1px solid #dce6e2!important;background:#fff!important;color:#344b52!important;border-radius:999px!important;padding:8px 11px!important;font-size:12px!important;white-space:nowrap!important;}
@@ -1368,8 +1365,7 @@ function SmartShoppingList() {
           .action-btn{min-height:52px;border-radius:12px!important;font-size:10px!important;}
           .tabs-row{gap:6px;margin-bottom:10px;}
           .tab-btn{padding:9px 5px!important;font-size:12px!important;}
-          .mini-actions{gap:6px;grid-template-columns:1.25fr 1fr 1fr;}
-          .mini-actions label,.ghost{min-height:39px;font-size:10px!important;padding:6px 5px!important;}
+          .ghost{min-height:39px;font-size:10px!important;padding:6px 5px!important;}
           .favorites{padding-bottom:10px;}
           .favorites > span:first-child{font-size:11px;}
           .favorite-pill{font-size:11px!important;padding:7px 9px!important;}
@@ -1474,11 +1470,6 @@ function SmartShoppingList() {
 
         <div className="tabs-row">
           {[{key:'all',label:'Sve stavke'},{key:'category',label:'Kategorije'},{key:'store',label:'Prodavnice'}].map(t=><button key={t.key} onClick={()=>setTab(t.key)} className={`tab-btn ${tab===t.key?'active':''}`}>{t.label}</button>)}
-          <div className="mini-actions">
-            <label><input type="checkbox" checked={hidePurchased} onChange={e=>setHidePurchased(e.target.checked)}/> Sakrij kupljeno</label>
-            <button onClick={clearPurchased} className="ghost"><IconBroom/> Očisti</button>
-            <button onClick={()=>setShowExport(s=>!s)} className="ghost"><IconExport/> Export</button>
-          </div>
         </div>
 
         {showExport&&<div className="panel" style={{padding:15,marginTop:12}}><textarea readOnly value={buildExportText()} style={{width:'100%',minHeight:140,background:'#f7f9f7',color:'#17252b',border:'1px solid #e1e7e3',borderRadius:11,padding:10,fontSize:13,fontFamily:'monospace',boxSizing:'border-box',resize:'vertical'}}/><div style={{display:'flex',gap:8,marginTop:8}}><button onClick={handleCopyExport} className="primary">Kopiraj tekst</button>{copyStatus&&<span style={{fontSize:13,color:'#287152',alignSelf:'center'}}>{copyStatus}</span>}</div></div>}
