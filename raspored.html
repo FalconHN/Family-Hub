@@ -76,9 +76,11 @@
   }
   .week-cas-card:hover { transform: translateY(-1px); }
   .week-cas-card:active { transform: scale(0.97); }
-  .week-cas-time { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+  .week-cas-time {
+    font-size: 10.5px; font-weight: 700; margin-bottom: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .week-cas-name { font-size: 13px; font-weight: 600; color: #0F222B; line-height: 1.25; }
-  .week-cas-name-room { font-size: 11px; font-weight: 500; color: #8A8578; }
   .week-cas-room { font-size: 11px; color: #8A8578; margin-top: 3px; }
   .week-cas-note {
     font-size: 11px; font-weight: 700; color: #8A8578; font-style: italic; margin-top: 3px; line-height: 1.25;
@@ -87,7 +89,15 @@
   .week-cas-note-date { display: flex; align-items: center; gap: 3px; font-size: 10.5px; color: #8A8578; margin-top: 3px; font-weight: 600; }
   .week-cas-note-date svg { flex: 0 0 auto; }
   @media (min-width: 900px) {
-    .week-day-col { flex: 1 1 0; min-width: 0; }
+    /* Ranije su kolone bile "flex: 1 1 0" (razvuku se da popune cijeli red) - na širem ekranu
+       je to ostavljalo mnogo praznog prostora UNUTAR svake kartice, jer sadržaj (vrijeme, predmet,
+       učionica) ne treba toliko širine. Sad kolone imaju fiksnu (samo malo veću nego na telefonu)
+       širinu i jednostavno stanu jedna do druge - ako ima više dana nego što stane u red, ostatak
+       se vidi klizanjem udesno, isto kao na telefonu. Sama bijela kartica ("Sedmični pregled" /
+       "Obaveze") sad se skuplja na širinu koliko joj stvarno treba (umjesto da se uvijek razvuče
+       na punu širinu stranice) - inače bi ostajao prazan bijeli prostor iza subote/nedjelje. */
+    .week-grid-card { width: max-content; max-width: 100%; }
+    .week-day-col { flex: 0 0 152px; }
   }
 
   .detail-overlay {
@@ -1058,17 +1068,17 @@ function renderWeekGrid() {
             const brojPart = e.broj ? e.broj + ". čas" : "";
             const timePart = formatCasTime(e);
             const timeLine = [brojPart, timePart].filter(Boolean).join(" · ");
-            // Predmet i učionica idu u istom redu (npr. "Crnogorski · Prizemlje"), nastavnik dobija
-            // svoj red ispod, a napomena i njeno "važi do" se spajaju u posljednji red - tako se sve
-            // uklapa na kompaktnoj kartici, a opet je svaki podatak jasno vidljiv.
-            const nazivRoomLine = e.ucionica
-              ? escapeHtml(e.naziv) + ' <span class="week-cas-name-room">· ' + escapeHtml(e.ucionica) + '</span>'
-              : escapeHtml(e.naziv);
+            // Učionica i nastavnik uvijek dobijaju SVOJ red ispod predmeta (isti stil, .week-cas-room
+            // za oba) - ranije je učionica bila spojena u isti red sa predmetom, ali kad bi predmet+
+            // učionica zajedno bili predugački za širinu kartice, tekst se lomio nasumično (nekad bi
+            // učionica ostala u redu, nekad pala ispod) - odvojen red je dosljedan bez obzira na dužinu
+            // teksta. Napomena i njeno "važi do" i dalje idu spojeni u posljednji red.
             const napomenaLine = [e.napomena, e.napomenaDatum ? formatDatumSrShort(e.napomenaDatum) : ""].filter(Boolean).join(" · ");
             return (
               '<div class="week-cas-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
                 (timeLine ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(timeLine) + '</div>' : "") +
-                '<div class="week-cas-name">' + nazivRoomLine + '</div>' +
+                '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
+                (e.ucionica ? '<div class="week-cas-room">' + escapeHtml(e.ucionica) + '</div>' : "") +
                 (e.nastavnik ? '<div class="week-cas-room">' + escapeHtml(e.nastavnik) + '</div>' : "") +
                 (napomenaLine ? '<div class="week-cas-note">' + escapeHtml(napomenaLine) + '</div>' : "") +
               '</div>'
