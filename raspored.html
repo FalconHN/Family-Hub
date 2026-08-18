@@ -89,15 +89,8 @@
   .week-cas-note-date { display: flex; align-items: center; gap: 3px; font-size: 10.5px; color: #8A8578; margin-top: 3px; font-weight: 600; }
   .week-cas-note-date svg { flex: 0 0 auto; }
   @media (min-width: 900px) {
-    /* Ranije su kolone bile "flex: 1 1 0" (razvuku se da popune cijeli red) - na širem ekranu
-       je to ostavljalo mnogo praznog prostora UNUTAR svake kartice, jer sadržaj (vrijeme, predmet,
-       učionica) ne treba toliko širine. Sad kolone imaju fiksnu (samo malo veću nego na telefonu)
-       širinu i jednostavno stanu jedna do druge - ako ima više dana nego što stane u red, ostatak
-       se vidi klizanjem udesno, isto kao na telefonu. Sama bijela kartica ("Sedmični pregled" /
-       "Obaveze") sad se skuplja na širinu koliko joj stvarno treba (umjesto da se uvijek razvuče
-       na punu širinu stranice) - inače bi ostajao prazan bijeli prostor iza subote/nedjelje. */
-    .week-grid-card { width: max-content; max-width: 100%; }
-    .week-day-col { flex: 0 0 152px; }
+    /* Na PC-u se kolone razvuku da popune cijeli red kartice (širina zavisi od broja dana). */
+    .week-day-col { flex: 1 1 0; min-width: 0; }
   }
 
   .detail-overlay {
