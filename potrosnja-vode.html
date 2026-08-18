@@ -530,6 +530,10 @@ function renderUnos() {
     monthIdx = Math.max(0, (year - START_YEAR) * 12 + mi);
     render();
   };
+  if (window.FH_UI) {
+    window.FH_UI.enhanceSelect(document.getElementById("monthSelect"));
+    window.FH_UI.enhanceSelect(document.getElementById("yearSelect"));
+  }
   document.querySelectorAll("input[data-meter]").forEach((inp) => {
     inp.addEventListener("input", (e) => {
       updateReadingKeepFocus(info.key, e.target.dataset.meter, e.target.dataset.field, e.target.value);
@@ -595,6 +599,7 @@ function renderGodisnje() {
   document.getElementById("prevYear").onclick = () => { if (overviewYear > START_YEAR) { overviewYear--; render(); } };
   document.getElementById("nextYear").onclick = () => { overviewYear++; render(); };
   document.getElementById("yearSelectOverview").onchange = (e) => { overviewYear = parseInt(e.target.value, 10); render(); };
+  if (window.FH_UI) window.FH_UI.enhanceSelect(document.getElementById("yearSelectOverview"));
 }
 
 function niceNum(range, round) {

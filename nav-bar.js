@@ -241,3 +241,286 @@
     if (sideSecondaryEl) sideSecondaryEl.style.display = showBackup ? "" : "none";
   };
 })();
+
+// ==== FH_UI: zajednicki "select" i "date" popup widgeti u stilu aplikacije ====
+// Zasto postoji: na Android telefonima nativni <select> otvara OS-ov (cesto taman) popup preko
+// inace svijetle aplikacije, a prazan <input type="date"> na telefonu ne prikazuje ni kalendar
+// ikonicu ni "dd.mm.gggg." tekst kao na PC-u, pa polje izgleda prazno i nejasno da je tu datum.
+// "color-scheme: light" (vidi gore) to samo djelimicno popravlja - zavisi od verzije Android
+// Chrome-a. Zato FH_UI pravi SOPSTVENI izgled (dugme + popup kartica u bojama aplikacije), dok
+// "ispod" i dalje drzi pravi native <select>/<input type="date"> (sakriven), tako da sav postojeci
+// kod koji cita element.value i slusa "change" dogadjaj radi bez ikakvih izmjena. Stranice samo
+// pozovu FH_UI.enhanceSelect(selectEl) / FH_UI.enhanceDate(inputEl) posto naprave element (jednom),
+// i FH_UI.refreshSelect(selectEl) / FH_UI.refreshDate(inputEl) ako kasnije negdje direktno postave
+// .value bez native "change" dogadjaja (npr. da sinhronizuju prikaz sa vec izabranom vrijednoscu).
+(function () {
+  var MONTH_NAMES = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"];
+  var DOW_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
+
+  function chevronIcon() {
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  }
+  function navIcon(dir) {
+    var pts = dir < 0 ? "15 18 9 12 15 6" : "9 18 15 12 9 6";
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="' + pts + '"/></svg>';
+  }
+  function calIcon() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  }
+
+  var style = document.createElement("style");
+  style.textContent =
+    '.fh-csel,.fh-cdate{position:relative;display:inline-flex;box-sizing:border-box;}' +
+    '.fh-csel-native,.fh-cdate-native{display:none !important;}' +
+    '.fh-csel-btn,.fh-cdate-btn{all:unset;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;cursor:pointer;box-sizing:border-box;}' +
+    '.fh-csel-btn svg,.fh-cdate-btn svg{flex:0 0 auto;opacity:.55;}' +
+    '.fh-csel-btn .fh-csel-label,.fh-cdate-btn .fh-cdate-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+    '.fh-cdate-label.placeholder{color:#A8A296;font-weight:500;}' +
+
+    '.fh-csel-popup{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;width:max-content;max-width:240px;' +
+      'max-height:280px;overflow-y:auto;background:#fff;border:1px solid #E6E1D8;border-radius:12px;' +
+      'box-shadow:0 10px 30px -8px rgba(15,34,43,0.28);padding:6px;z-index:400;display:none;' +
+      'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
+    '.fh-csel-popup.open{display:block;}' +
+    '.fh-csel-opt{padding:9px 12px;border-radius:8px;font-size:14px;font-weight:600;color:#0F222B;cursor:pointer;white-space:nowrap;}' +
+    '.fh-csel-opt:hover{background:#F0EDE5;}' +
+    '.fh-csel-opt.sel{background:#DEE9E3;color:#007991;}' +
+
+    '.fh-cdate-popup{position:absolute;top:calc(100% + 6px);left:0;width:264px;max-width:88vw;background:#fff;' +
+      'border:1px solid #E6E1D8;border-radius:14px;box-shadow:0 10px 30px -8px rgba(15,34,43,0.28);padding:10px;' +
+      'z-index:400;display:none;font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
+    '.fh-cdate-popup.open{display:block;}' +
+    '.fh-cdate-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}' +
+    '.fh-cdate-cal-title{font-weight:700;font-size:13.5px;color:#0F222B;}' +
+    '.fh-cdate-cal-nav{background:none;border:none;cursor:pointer;color:#657278;padding:4px;display:flex;' +
+      'align-items:center;justify-content:center;border-radius:6px;}' +
+    '.fh-cdate-cal-nav:hover{background:#F0EDE5;}' +
+    '.fh-cdate-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}' +
+    '.fh-cdate-dow{font-size:10.5px;font-weight:700;color:#8A8578;text-align:center;padding:4px 0;}' +
+    '.fh-cdate-day{font-size:13px;font-weight:600;color:#0F222B;text-align:center;padding:7px 0;border-radius:8px;cursor:pointer;}' +
+    '.fh-cdate-day:hover{background:#F0EDE5;}' +
+    '.fh-cdate-day.today{box-shadow:inset 0 0 0 1.5px #007991;}' +
+    '.fh-cdate-day.sel{background:#007991;color:#fff;}' +
+    '.fh-cdate-day.other{color:#D6D1C6;}' +
+    '.fh-cdate-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #F0EDE5;}' +
+    '.fh-cdate-clear,.fh-cdate-today{background:none;border:none;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 2px;}' +
+    '.fh-cdate-clear{color:#B0524A;}' +
+    '.fh-cdate-today{color:#007991;}';
+  document.head.appendChild(style);
+
+  function closeAllPopups() {
+    document.querySelectorAll(".fh-csel-popup.open, .fh-cdate-popup.open").forEach(function (p) {
+      p.classList.remove("open");
+    });
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".fh-csel, .fh-cdate")) closeAllPopups();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeAllPopups();
+  });
+
+  // Pomjeri popup unutar vidljive sirine ekrana ako bi normalno "izletio" preko lijeve/desne ivice
+  // (isti razlog zbog kojeg je "Cijena" ranije izlazila preko ivice modala na uzim telefonima).
+  function adjustPopupPosition(popup, wrap) {
+    popup.style.left = "0";
+    var wrapRect = wrap.getBoundingClientRect();
+    var popRect = popup.getBoundingClientRect();
+    var overflowRight = popRect.right - (window.innerWidth - 8);
+    if (overflowRight > 0) {
+      var newLeft = -overflowRight;
+      if (wrapRect.left + newLeft < 8) newLeft = 8 - wrapRect.left;
+      popup.style.left = newLeft + "px";
+    }
+  }
+
+  function enhanceSelect(selectEl) {
+    if (!selectEl || selectEl.dataset.fhEnhanced === "1") return;
+    selectEl.dataset.fhEnhanced = "1";
+
+    var wrap = document.createElement("span");
+    wrap.className = "fh-csel " + selectEl.className;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "fh-csel-btn";
+    btn.innerHTML = '<span class="fh-csel-label"></span>' + chevronIcon();
+    var popup = document.createElement("div");
+    popup.className = "fh-csel-popup";
+
+    selectEl.parentNode.insertBefore(wrap, selectEl);
+    wrap.appendChild(btn);
+    wrap.appendChild(popup);
+    wrap.appendChild(selectEl);
+    selectEl.classList.add("fh-csel-native");
+
+    function updateLabel() {
+      var opt = selectEl.options[selectEl.selectedIndex];
+      btn.querySelector(".fh-csel-label").textContent = opt ? opt.textContent : "";
+    }
+    function buildOptions() {
+      popup.innerHTML = "";
+      Array.prototype.forEach.call(selectEl.options, function (opt) {
+        var row = document.createElement("div");
+        row.className = "fh-csel-opt" + (opt.value === selectEl.value ? " sel" : "");
+        row.textContent = opt.textContent;
+        row.addEventListener("click", function (e) {
+          e.stopPropagation();
+          selectEl.value = opt.value;
+          selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+          updateLabel();
+          popup.classList.remove("open");
+        });
+        popup.appendChild(row);
+      });
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var isOpen = popup.classList.contains("open");
+      closeAllPopups();
+      if (!isOpen) {
+        buildOptions();
+        popup.classList.add("open");
+        adjustPopupPosition(popup, wrap);
+      }
+    });
+
+    selectEl._fhRefresh = updateLabel;
+    updateLabel();
+  }
+  function refreshSelect(selectEl) {
+    if (selectEl && selectEl._fhRefresh) selectEl._fhRefresh();
+  }
+
+  function enhanceDate(inputEl) {
+    if (!inputEl || inputEl.dataset.fhEnhanced === "1") return;
+    inputEl.dataset.fhEnhanced = "1";
+
+    var wrap = document.createElement("span");
+    wrap.className = "fh-cdate " + inputEl.className;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "fh-cdate-btn";
+    btn.innerHTML = '<span class="fh-cdate-label"></span>' + calIcon();
+    var popup = document.createElement("div");
+    popup.className = "fh-cdate-popup";
+
+    inputEl.parentNode.insertBefore(wrap, inputEl);
+    wrap.appendChild(btn);
+    wrap.appendChild(popup);
+    wrap.appendChild(inputEl);
+    inputEl.classList.add("fh-cdate-native");
+
+    var viewYear, viewMonth;
+
+    function fmt2(n) { return n < 10 ? "0" + n : "" + n; }
+    function parseVal() {
+      var v = inputEl.value;
+      if (!v) return null;
+      var p = v.split("-");
+      if (p.length !== 3) return null;
+      return { y: +p[0], m: +p[1] - 1, d: +p[2] };
+    }
+    function updateLabel() {
+      var v = parseVal();
+      var labelEl = btn.querySelector(".fh-cdate-label");
+      if (v) {
+        labelEl.textContent = fmt2(v.d) + "." + fmt2(v.m + 1) + "." + v.y + ".";
+        labelEl.classList.remove("placeholder");
+      } else {
+        labelEl.textContent = "Odaberi datum";
+        labelEl.classList.add("placeholder");
+      }
+    }
+    function setValue(y, m, d) {
+      inputEl.value = y + "-" + fmt2(m + 1) + "-" + fmt2(d);
+      inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+      updateLabel();
+    }
+    function buildCalendar() {
+      var today = new Date();
+      var sel = parseVal();
+      var startDow = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+      var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      var daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+      var html = '<div class="fh-cdate-cal-head">' +
+        '<button type="button" class="fh-cdate-cal-nav" data-nav="-1">' + navIcon(-1) + '</button>' +
+        '<span class="fh-cdate-cal-title">' + MONTH_NAMES[viewMonth] + " " + viewYear + '.</span>' +
+        '<button type="button" class="fh-cdate-cal-nav" data-nav="1">' + navIcon(1) + '</button>' +
+        '</div><div class="fh-cdate-grid">';
+      DOW_NAMES.forEach(function (dn) { html += '<div class="fh-cdate-dow">' + dn + '</div>'; });
+      for (var i = 0; i < startDow; i++) html += '<div class="fh-cdate-day other">' + (daysInPrevMonth - startDow + i + 1) + '</div>';
+      for (var d = 1; d <= daysInMonth; d++) {
+        var isToday = today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === d;
+        var isSel = sel && sel.y === viewYear && sel.m === viewMonth && sel.d === d;
+        html += '<div class="fh-cdate-day' + (isToday ? " today" : "") + (isSel ? " sel" : "") + '" data-day="' + d + '">' + d + '</div>';
+      }
+      var trailing = (7 - ((startDow + daysInMonth) % 7)) % 7;
+      for (var t = 1; t <= trailing; t++) html += '<div class="fh-cdate-day other">' + t + '</div>';
+      html += '</div><div class="fh-cdate-foot">' +
+        '<button type="button" class="fh-cdate-clear">Ukloni datum</button>' +
+        '<button type="button" class="fh-cdate-today">Danas</button>' +
+        '</div>';
+      popup.innerHTML = html;
+
+      Array.prototype.forEach.call(popup.querySelectorAll("[data-nav]"), function (b) {
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          viewMonth += +b.dataset.nav;
+          if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+          if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+          buildCalendar();
+        });
+      });
+      Array.prototype.forEach.call(popup.querySelectorAll(".fh-cdate-day:not(.other)"), function (dayEl) {
+        dayEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          setValue(viewYear, viewMonth, +dayEl.dataset.day);
+          popup.classList.remove("open");
+        });
+      });
+      popup.querySelector(".fh-cdate-clear").addEventListener("click", function (e) {
+        e.stopPropagation();
+        inputEl.value = "";
+        inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+        updateLabel();
+        popup.classList.remove("open");
+      });
+      popup.querySelector(".fh-cdate-today").addEventListener("click", function (e) {
+        e.stopPropagation();
+        var t = new Date();
+        viewYear = t.getFullYear(); viewMonth = t.getMonth();
+        buildCalendar();
+      });
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var isOpen = popup.classList.contains("open");
+      closeAllPopups();
+      if (!isOpen) {
+        var sel = parseVal();
+        var t = new Date();
+        viewYear = sel ? sel.y : t.getFullYear();
+        viewMonth = sel ? sel.m : t.getMonth();
+        buildCalendar();
+        popup.classList.add("open");
+        adjustPopupPosition(popup, wrap);
+      }
+    });
+
+    inputEl._fhRefresh = updateLabel;
+    updateLabel();
+  }
+  function refreshDate(inputEl) {
+    if (inputEl && inputEl._fhRefresh) inputEl._fhRefresh();
+  }
+
+  window.FH_UI = {
+    enhanceSelect: enhanceSelect,
+    refreshSelect: refreshSelect,
+    enhanceDate: enhanceDate,
+    refreshDate: refreshDate
+  };
+})();

@@ -53,11 +53,11 @@
 
   .day-select-row { display: flex; align-items: center; gap: 8px; margin-top: 0; margin-bottom: 12px; }
   .day-select-row .day-select-label { font-size: 12.5px; font-weight: 700; color: #8A8578; white-space: nowrap; }
-  .day-select-row select.day-select {
+  .day-select-row .day-select {
     flex: 0 0 auto; min-width: 150px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
     font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B; font-weight: 600;
   }
-  .day-select-row select.day-select:focus { border-color: #007991; }
+  .day-select-row .day-select:focus { border-color: #007991; }
 
   .casovi-col { display: flex; flex-direction: column; gap: 12px; }
 
@@ -132,11 +132,11 @@
   .detail-edit-row input:focus, .detail-field:focus { border-color: #007991; }
   .detail-field-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .detail-field-row .detail-field-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
-  .detail-field-row input.detail-date-input {
+  .detail-field-row .detail-date-input {
     flex: 0 0 auto; width: 150px; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
     font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
   }
-  .detail-field-row input.detail-date-input:focus { border-color: #007991; }
+  .detail-field-row .detail-date-input:focus { border-color: #007991; }
 
   .predmet-manage-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; flex-basis: 100%; width: 100%; }
   .add-row .manage-link, .manage-link {
@@ -218,7 +218,7 @@
   .add-row input.note-input { flex: 1; min-width: 160px; }
   .napomena-datum-row { display: flex; align-items: center; gap: 8px; flex-basis: 100%; width: 100%; margin-top: -2px; }
   .napomena-datum-row .napomena-datum-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
-  .add-row input.napomena-datum-input { width: 150px; flex: 0 0 auto; }
+  .add-row .napomena-datum-input { width: 150px; flex: 0 0 auto; }
   .add-row button {
     background: #007991; color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
     font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
@@ -783,8 +783,10 @@ function renderDaySelectors() {
         renderLists();
       });
       selectEl.dataset.built = "1";
+      if (window.FH_UI) window.FH_UI.enhanceSelect(selectEl);
     }
     selectEl.value = cfg.get();
+    if (window.FH_UI) window.FH_UI.refreshSelect(selectEl);
   });
 }
 
@@ -1136,6 +1138,7 @@ function renderObavezaDetailModal(dayKey, idx, mode) {
 
     document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
     document.getElementById("detailCancelBtn").addEventListener("click", () => renderObavezaDetailModal(dayKey, idx, "view"));
+    if (window.FH_UI) window.FH_UI.enhanceDate(document.getElementById("detailEdit_obDatum"));
     document.getElementById("detailSaveBtn").addEventListener("click", () => {
       const naziv = document.getElementById("detailEdit_obNaziv").value.trim();
       if (!naziv) return;
@@ -1237,6 +1240,7 @@ function renderDetailModal(dayKey, idx, mode) {
 
     document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
     document.getElementById("detailCancelBtn").addEventListener("click", () => renderDetailModal(dayKey, idx, "view"));
+    if (window.FH_UI) window.FH_UI.enhanceDate(document.getElementById("detailEdit_napomenaDatum"));
     document.getElementById("detailSaveBtn").addEventListener("click", () => {
       const naziv = document.getElementById("detailEdit_naziv").value.trim();
       if (!naziv) return;
@@ -1366,6 +1370,7 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
 
   addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("casovi", addRowElId));
   setupPredmetAutocomplete(addRowElId);
+  if (window.FH_UI) window.FH_UI.enhanceDate(document.getElementById(addRowElId + "_napomenaDatum"));
 
   casoviAddRowContext = contextKey;
   refreshPredmetSelectAndPanel(addRowElId);
@@ -1528,6 +1533,7 @@ function ensureObavezeAddRowSkeleton(addRowEl, addRowElId, timePlaceholder, name
   document.getElementById(addRowElId + "_name").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addEntry("obaveze", addRowElId);
   });
+  if (window.FH_UI) window.FH_UI.enhanceDate(document.getElementById(addRowElId + "_datum"));
   obavezeAddRowContext = contextKey;
 }
 
@@ -1576,6 +1582,7 @@ function addEntry(field, addRowElId) {
     if (nastavnikEl) nastavnikEl.value = "";
     napomenaEl.value = "";
     if (napomenaDatumEl) napomenaDatumEl.value = "";
+    if (window.FH_UI) window.FH_UI.refreshDate(napomenaDatumEl);
     nameEl.value = "";
     nameEl.focus();
     renderPredmetDropdown(addRowElId, { forceOpen: true });
@@ -1591,6 +1598,7 @@ function addEntry(field, addRowElId) {
 
     timeEl.value = "";
     if (datumEl) datumEl.value = "";
+    if (window.FH_UI) window.FH_UI.refreshDate(datumEl);
     nameEl.value = "";
     nameEl.focus();
   }
