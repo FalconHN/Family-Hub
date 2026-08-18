@@ -184,6 +184,7 @@
 </div>
 
 <script src="nav-bar.js?v=20260817"></script>
+<script src="backup-core.js?v=20260817"></script>
 <script>
 /* ======================================================================
    FAMILY HUB — Dashboard
@@ -341,6 +342,14 @@ function loadWater() {
   }).catch(() => { el.textContent = "—"; });
 }
 
+/* ---------- Automatski dnevni backup cijele aplikacije (vidi backup-core.js) ----------
+   Tiho radi u pozadini, najviše jednom dnevno; greške ne prekidaju rad dashboard-a
+   (npr. ako Firestore pravila za "backups" kolekciju još nisu podešena). */
+function runAutoBackup() {
+  if (!window.FH_BACKUP) return;
+  window.FH_BACKUP.runAutoBackupIfNeeded(db, waterDb).catch(() => {});
+}
+
 /* ---------- RASPORED: raspored/{childId}. Stari podaci drže obaveze unutar
    smjena — normalizeObaveze ih spaja (isto kao raspored.html). ---------- */
 function normalizeObaveze(raw) {
@@ -446,11 +455,13 @@ auth.onAuthStateChanged((user) => {
       loadRecipes();
       loadWater();
       loadSchedule();
+      runAutoBackup();
     }
   }).catch(() => {
     // Upit nije uspio -> tretiraj kao roditelja, prikaži sve.
     document.getElementById("hello").textContent = timeGreeting() + "!";
     loadShopping(); loadRecipes(); loadWater(); loadSchedule();
+    runAutoBackup();
   });
 });
 </script>

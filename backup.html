@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Backup</title>
+<meta name="theme-color" content="#F5F3EE" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Backup" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=7" />
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=7" />
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png?v=7" />
+<link rel="manifest" href="manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @keyframes fhspin { to { transform: rotate(360deg); } }
+  body {
+    font-family: 'Public Sans', sans-serif;
+    background: #F5F3EE;
+    color: #26313A;
+    min-height: 100vh;
+    padding: 28px 14px 60px;
+  }
+  .wrap { width: 100%; max-width: 560px; margin: 0 auto; }
+  @media (min-width: 900px) {
+    .wrap { max-width: 720px; }
+    h1 { font-size: 30px; }
+  }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-weight: 700; color: #0F222B; letter-spacing: -0.02em; }
+  .sub { color: #8A8578; font-size: 13.5px; margin-top: 2px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+
+  .card {
+    background: #fff; border-radius: 14px; padding: 18px;
+    box-shadow: 0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1);
+    margin-bottom: 16px;
+  }
+  .card h2 { font-family: 'Fraunces', Georgia, serif; font-size: 18px; font-weight: 700; color: #0F222B; margin-bottom: 6px; }
+  .card p.desc { font-size: 13.5px; color: #8A8578; line-height: 1.5; margin-bottom: 14px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: #007991; color: #fff; border: none; border-radius: 10px;
+    padding: 12px 16px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .btn:disabled { opacity: 0.55; cursor: default; }
+  .btn.secondary { background: #fff; color: #0F222B; border: 1px solid #E6E1D8; }
+  .btn.danger-outline { background: #fff; color: #B0524A; border: 1px solid #E7C9C4; }
+  .btn.small { padding: 8px 12px; font-size: 12.5px; border-radius: 8px; }
+
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .divider { height: 1px; background: #F0EDE5; margin: 16px 0; }
+
+  .status-msg { font-size: 13px; margin-top: 10px; color: #8A8578; }
+  .status-msg.ok { color: #2E8B6F; font-weight: 600; }
+  .status-msg.err { color: #B0524A; font-weight: 600; }
+
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: 1px solid #F0EDE5; border-radius: 10px; padding: 10px 12px;
+  }
+  .history-row .when { font-size: 13.5px; font-weight: 600; color: #0F222B; }
+  .history-row .when small { display: block; font-size: 11.5px; font-weight: 500; color: #8A8578; margin-top: 1px; }
+  .history-empty, .history-error { font-size: 13.5px; color: #8A8578; padding: 6px 2px; }
+  .history-error { color: #B0524A; }
+
+  .file-label {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: #fff; color: #0F222B; border: 1px solid #E6E1D8; border-radius: 10px;
+    padding: 12px 16px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  input[type="file"] { display: none; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<div id="appLoading" style="position:fixed; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:#F5F3EE; font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="width:34px; height:34px; border:3px solid #DDE7E4; border-top-color:#007991; border-radius:50%; animation:fhspin 0.8s linear infinite;"></div>
+  <div style="font-size:14px; font-weight:600; color:#5B6B70;">Učitavanje…</div>
+</div>
+
+<div id="appRoot" style="display:none;">
+  <div class="wrap">
+    <div class="header">
+      <div class="header-left">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="M8 17l4 4 4-4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        <div>
+          <h1>Backup</h1>
+          <div class="sub">Sigurnosne kopije cijele aplikacije</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ručni backup</h2>
+      <p class="desc">Preuzmi trenutno stanje (recepti, kupovina, raspored svih djece, potrošnja vode) kao jednu JSON datoteku na svoj telefon/računar. Dobro je uraditi ovo prije nego što uneseš veći broj recepata odjednom ili napraviš neku veću izmjenu.</p>
+      <div class="row">
+        <button class="btn" id="downloadBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Preuzmi kompletan backup
+        </button>
+      </div>
+      <div class="divider"></div>
+      <p class="desc" style="margin-bottom:10px;">Vrati podatke iz ranije preuzete JSON datoteke. <strong>Ovo prepisuje trenutne podatke</strong> — koristi samo ako je nešto pošlo po zlu.</p>
+      <div class="row">
+        <label class="file-label" for="restoreFile">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Vrati iz backupa (JSON fajl)
+        </label>
+        <input type="file" id="restoreFile" accept="application/json,.json" />
+      </div>
+      <div id="manualStatus" class="status-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Automatska istorija</h2>
+      <p class="desc">Aplikacija sama napravi jedan snimak dnevno (prilikom prve prijave tog dana) i čuva zadnjih 20. Ovo je zaštita za slučaj da neko zaboravi ručno da napravi backup.</p>
+      <div id="historyList" class="history-list"><div class="history-empty">Učitavanje istorije…</div></div>
+      <div id="historyStatus" class="status-msg"></div>
+    </div>
+  </div>
+</div>
+
+<script src="nav-bar.js?v=20260817"></script>
+<script src="backup-core.js?v=20260817"></script>
+<script>
+// ==== Glavni projekat (isti login kao ostale stranice) ====
+const firebaseConfig = {
+  apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
+  authDomain: "family-hub-m.firebaseapp.com",
+  projectId: "family-hub-m",
+  storageBucket: "family-hub-m.firebasestorage.app",
+  messagingSenderId: "267839729754",
+  appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ==== Voda je na odvojenom Firebase projektu (isti obrazac kao index.html) ====
+const waterConfig = {
+  apiKey: "AIzaSyDMn31Q4PmzwuTTZQE4BufSlxfvz85G8qs",
+  authDomain: "potrosnja-vode.firebaseapp.com",
+  projectId: "potrosnja-vode",
+  storageBucket: "potrosnja-vode.firebasestorage.app",
+  messagingSenderId: "1633026712",
+  appId: "1:1633026712:web:529f17a237845bf106c6ed"
+};
+let waterDb = null;
+try { waterDb = firebase.initializeApp(waterConfig, "waterApp").firestore(); } catch (e) { waterDb = null; }
+
+// Odjava - poziva se iz zajedničke nav trake (nav-bar.js).
+window.fhLogout = function () {
+  auth.signOut().catch(() => {}).finally(() => {
+    window.location.href = "index.html?v=20260817";
+  });
+};
+
+function fmtWhen(iso) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("sr-Latn-RS", { day: "numeric", month: "long", year: "numeric" }) +
+      " · " + d.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" });
+  } catch (e) { return iso; }
+}
+
+function setStatus(el, msg, kind) {
+  el.textContent = msg || "";
+  el.className = "status-msg" + (kind ? " " + kind : "");
+}
+
+function summarizeData(data) {
+  if (!data) return "0 stavki";
+  const parts = [];
+  try {
+    const rec = data["recepti/shared"];
+    if (rec && typeof rec.recepti === "string") parts.push(JSON.parse(rec.recepti).length + " recepata");
+  } catch (e) {}
+  try {
+    const sl = data["shopping-list/shared"];
+    if (sl && typeof sl.items === "string") parts.push(JSON.parse(sl.items).length + " stavki kupovine");
+  } catch (e) {}
+  const kids = ["filip", "jaksa", "miljan", "relja"].filter((id) => data["raspored/" + id]);
+  if (kids.length) parts.push("raspored (" + kids.length + "/4 djece)");
+  if (data["water/data"]) parts.push("potrošnja vode");
+  return parts.length ? parts.join(", ") : "podaci";
+}
+
+async function doRestore(dataObj, statusEl) {
+  if (!dataObj) { setStatus(statusEl, "Fajl ne sadrži prepoznatljive podatke.", "err"); return; }
+  const summary = summarizeData(dataObj);
+  const ok = window.confirm(
+    "Ovo će PREPISATI trenutne podatke (recepte, kupovinu, raspored, potrošnju vode) sadržajem: " +
+    summary + ".\n\nOva radnja se ne može poništiti. Nastaviti?"
+  );
+  if (!ok) return;
+  setStatus(statusEl, "Vraćanje u toku…");
+  try {
+    await window.FH_BACKUP.restoreAllData(db, waterDb, dataObj);
+    setStatus(statusEl, "Gotovo! Podaci su vraćeni. Otvori ili osvježi ostale stranice da vidiš izmjene.", "ok");
+  } catch (e) {
+    setStatus(statusEl, "Vraćanje nije uspjelo (" + (e && e.code ? e.code : "greška") + ").", "err");
+  }
+}
+
+function wireManualBackup() {
+  const downloadBtn = document.getElementById("downloadBtn");
+  const restoreFile = document.getElementById("restoreFile");
+  const manualStatus = document.getElementById("manualStatus");
+
+  downloadBtn.addEventListener("click", async () => {
+    downloadBtn.disabled = true;
+    setStatus(manualStatus, "Prikupljam podatke…");
+    try {
+      const data = await window.FH_BACKUP.collectAllData(db, waterDb);
+      window.FH_BACKUP.downloadBackupFile(data);
+      setStatus(manualStatus, "Preuzeto: " + summarizeData(data) + ".", "ok");
+    } catch (e) {
+      setStatus(manualStatus, "Preuzimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + ").", "err");
+    } finally {
+      downloadBtn.disabled = false;
+    }
+  });
+
+  restoreFile.addEventListener("change", async () => {
+    const file = restoreFile.files && restoreFile.files[0];
+    restoreFile.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const dataObj = parsed && parsed.data ? parsed.data : parsed;
+      await doRestore(dataObj, manualStatus);
+    } catch (e) {
+      setStatus(manualStatus, "Fajl nije validan JSON backup.", "err");
+    }
+  });
+}
+
+async function loadHistory() {
+  const listEl = document.getElementById("historyList");
+  const historyStatus = document.getElementById("historyStatus");
+  try {
+    const items = await window.FH_BACKUP.listAutoBackups(db, 20);
+    if (!items.length) {
+      listEl.innerHTML = '<div class="history-empty">Još nema automatskih snimaka — prvi će se napraviti sam prilikom sljedeće prijave.</div>';
+      return;
+    }
+    listEl.innerHTML = "";
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "history-row";
+      row.innerHTML =
+        '<div class="when">' + item.id + '<small>' + fmtWhen(item.createdAt) + '</small></div>' +
+        '<button class="btn secondary small" type="button">Vrati ovu verziju</button>';
+      row.querySelector("button").addEventListener("click", () => doRestore(item.data, historyStatus));
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    listEl.innerHTML = "";
+    const msg = (e && e.code === "permission-denied")
+      ? "Automatska istorija nije dostupna — Firestore pravila još ne dozvoljavaju čitanje kolekcije \"backups\". (Ručni backup gore i dalje radi.)"
+      : "Automatska istorija trenutno nije dostupna.";
+    listEl.innerHTML = '<div class="history-error">' + msg + '</div>';
+  }
+}
+
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = "index.html?v=20260817";
+    return;
+  }
+  db.collection("users").doc(user.uid).get().then((snap) => {
+    const role = (snap.exists && snap.data().role) || "parent";
+    if (role === "child") {
+      window.location.href = "raspored.html?v=20260817";
+      return;
+    }
+    if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
+    document.getElementById("appLoading").style.display = "none";
+    document.getElementById("appRoot").style.display = "block";
+    wireManualBackup();
+    loadHistory();
+  }).catch(() => {
+    // Upit nije uspio -> tretiraj kao roditelja (isto kao ostale stranice).
+    document.getElementById("appLoading").style.display = "none";
+    document.getElementById("appRoot").style.display = "block";
+    wireManualBackup();
+    loadHistory();
+  });
+});
+</script>
+</body>
+</html>

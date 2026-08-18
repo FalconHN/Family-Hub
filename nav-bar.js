@@ -25,17 +25,21 @@
       '<path d="M6 17h12"/>',
     logOut:
       '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>' +
-      '<polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'
+      '<polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+    cloudBackup:
+      '<path d="M12 13v8"/><path d="M8 17l4 4 4-4"/>' +
+      '<path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>'
   };
   function svgIcon(pathData) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
       'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' + pathData + '</svg>';
   }
   var APPS = [
-    { label: "Kupovina", icon: svgIcon(ICONS.cart),     file: "shopping-list.html",  enabled: true },
-    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  file: "recepti.html",        enabled: true },
-    { label: "Raspored", icon: svgIcon(ICONS.calendar), file: "raspored.html",       enabled: true },
-    { label: "Voda",     icon: svgIcon(ICONS.droplets), file: "potrosnja-vode.html", enabled: true }
+    { label: "Kupovina", icon: svgIcon(ICONS.cart),        file: "shopping-list.html",  enabled: true },
+    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),     file: "recepti.html",        enabled: true },
+    { label: "Raspored", icon: svgIcon(ICONS.calendar),    file: "raspored.html",       enabled: true },
+    { label: "Voda",     icon: svgIcon(ICONS.droplets),    file: "potrosnja-vode.html", enabled: true },
+    { label: "Backup",   icon: svgIcon(ICONS.cloudBackup), file: "backup.html",         enabled: true }
   ];
 
   var currentFile = (location.pathname.split("/").pop() || "index.html");
