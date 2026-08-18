@@ -18,6 +18,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
+  /* Forsira svijetlu temu za NATIVNE kontrole (select padajuće liste, date picker) -
+     bez ovoga, telefoni sa uključenim tamnim režimom prisilno tamne te elemente
+     (npr. lista dana ispadne crna, a datumsko polje izgleda prazno/nevidljivo) čak i kad
+     je cijela stranica namjerno svijetla. */
+  :root { color-scheme: light; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Public Sans', sans-serif;
@@ -1035,11 +1040,12 @@ function renderWeekGrid() {
             const brojPart = e.broj ? e.broj + ". čas" : "";
             const timePart = formatCasTime(e);
             const timeLine = [brojPart, timePart].filter(Boolean).join(" · ");
+            const roomTeacherLine = [e.ucionica, e.nastavnik].filter(Boolean).join(" · ");
             return (
               '<div class="week-cas-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
                 (timeLine ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(timeLine) + '</div>' : "") +
                 '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
-                (e.ucionica ? '<div class="week-cas-room">' + escapeHtml(e.ucionica) + '</div>' : "") +
+                (roomTeacherLine ? '<div class="week-cas-room">' + escapeHtml(roomTeacherLine) + '</div>' : "") +
                 (e.napomena ? '<div class="week-cas-note">' + escapeHtml(e.napomena) + '</div>' : "") +
                 (e.napomenaDatum ? '<div class="week-cas-note-date">' + clockIcon() + '<span>' + escapeHtml(formatDatumSrShort(e.napomenaDatum)) + '</span></div>' : "") +
               '</div>'
@@ -1218,6 +1224,7 @@ function renderDetailModal(dayKey, idx, mode) {
       '</div>' +
       '<input type="text" class="detail-field" placeholder="Predmet" value="' + escapeHtml(e.naziv || "") + '" id="detailEdit_naziv" />' +
       '<input type="text" class="detail-field" placeholder="Učionica (opciono)" value="' + escapeHtml(e.ucionica || "") + '" id="detailEdit_ucionica" />' +
+      '<input type="text" class="detail-field" placeholder="Nastavnik (opciono)" value="' + escapeHtml(e.nastavnik || "") + '" id="detailEdit_nastavnik" />' +
       '<input type="text" class="detail-field" placeholder="Napomena (opciono)" value="' + escapeHtml(e.napomena || "") + '" id="detailEdit_napomena" />' +
       '<div class="detail-field-row">' +
         '<span class="detail-field-label">Napomena važi do</span>' +
@@ -1239,6 +1246,7 @@ function renderDetailModal(dayKey, idx, mode) {
         do: document.getElementById("detailEdit_do").value,
         naziv: naziv,
         ucionica: document.getElementById("detailEdit_ucionica").value.trim(),
+        nastavnik: document.getElementById("detailEdit_nastavnik").value.trim(),
         napomena: document.getElementById("detailEdit_napomena").value.trim(),
         napomenaDatum: document.getElementById("detailEdit_napomenaDatum").value,
       };
@@ -1261,6 +1269,7 @@ function renderDetailModal(dayKey, idx, mode) {
     '<div class="detail-prop"><span class="detail-prop-label">Dan</span><span class="detail-prop-value">' + escapeHtml(day ? day.label : "") + '</span></div>' +
     '<div class="detail-prop"><span class="detail-prop-label">Vrijeme</span><span class="detail-prop-value">' + escapeHtml(timeLine) + '</span></div>' +
     '<div class="detail-prop"><span class="detail-prop-label">Učionica</span><span class="detail-prop-value">' + (e.ucionica ? escapeHtml(e.ucionica) : "–") + '</span></div>' +
+    '<div class="detail-prop"><span class="detail-prop-label">Nastavnik</span><span class="detail-prop-value">' + (e.nastavnik ? escapeHtml(e.nastavnik) : "–") + '</span></div>' +
     '<div class="detail-note-title">Napomena</div>' +
     '<div class="detail-note-body">' + (e.napomena ? escapeHtml(e.napomena) : '<span style="color:#8A8578;">Nema napomene.</span>') + '</div>' +
     (e.napomenaDatum
@@ -1341,6 +1350,7 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
       '<div class="autocomplete-dropdown" id="' + addRowElId + '_nameDropdown"></div>' +
     '</div>' +
     '<input type="text" class="room-input" placeholder="Učionica (opciono)" id="' + addRowElId + '_ucionica" />' +
+    '<input type="text" class="room-input" placeholder="Nastavnik (opciono)" id="' + addRowElId + '_nastavnik" />' +
     '<input type="text" class="note-input" placeholder="Napomena (opciono)" id="' + addRowElId + '_napomena" />' +
     '<div class="napomena-datum-row">' +
       '<span class="napomena-datum-label">Napomena važi do</span>' +
@@ -1534,6 +1544,7 @@ function addEntry(field, addRowElId) {
     const odEl = document.getElementById(addRowElId + "_od");
     const doEl = document.getElementById(addRowElId + "_do");
     const ucionicaEl = document.getElementById(addRowElId + "_ucionica");
+    const nastavnikEl = document.getElementById(addRowElId + "_nastavnik");
     const napomenaEl = document.getElementById(addRowElId + "_napomena");
     const napomenaDatumEl = document.getElementById(addRowElId + "_napomenaDatum");
     const novaStavka = {
@@ -1542,6 +1553,7 @@ function addEntry(field, addRowElId) {
       do: doEl.value,
       naziv: naziv,
       ucionica: ucionicaEl.value.trim(),
+      nastavnik: nastavnikEl ? nastavnikEl.value.trim() : "",
       napomena: napomenaEl.value.trim(),
       napomenaDatum: napomenaDatumEl ? napomenaDatumEl.value : "",
     };
@@ -1561,6 +1573,7 @@ function addEntry(field, addRowElId) {
     odEl.value = "";
     doEl.value = "";
     ucionicaEl.value = "";
+    if (nastavnikEl) nastavnikEl.value = "";
     napomenaEl.value = "";
     if (napomenaDatumEl) napomenaDatumEl.value = "";
     nameEl.value = "";

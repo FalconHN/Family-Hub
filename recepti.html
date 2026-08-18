@@ -575,7 +575,7 @@ function RecipeApp() {
           store: "",
           category: "",
           price: 0,
-          note: "",
+          note: recipe.naziv ? "Za: " + recipe.naziv : "",
           purchased: false,
           order: maxOrder + i + 1,
         }));

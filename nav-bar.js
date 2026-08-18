@@ -35,12 +35,15 @@
       'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' + pathData + '</svg>';
   }
   var APPS = [
-    { label: "Kupovina", icon: svgIcon(ICONS.cart),        file: "shopping-list.html",  enabled: true },
-    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),     file: "recepti.html",        enabled: true },
-    { label: "Raspored", icon: svgIcon(ICONS.calendar),    file: "raspored.html",       enabled: true },
-    { label: "Voda",     icon: svgIcon(ICONS.droplets),    file: "potrosnja-vode.html", enabled: true },
-    { label: "Backup",   icon: svgIcon(ICONS.cloudBackup), file: "backup.html",         enabled: true }
+    { label: "Kupovina", icon: svgIcon(ICONS.cart),     file: "shopping-list.html",  enabled: true },
+    { label: "Recepti",  icon: svgIcon(ICONS.chefHat),  file: "recepti.html",        enabled: true },
+    { label: "Raspored", icon: svgIcon(ICONS.calendar), file: "raspored.html",       enabled: true },
+    { label: "Voda",     icon: svgIcon(ICONS.droplets), file: "potrosnja-vode.html", enabled: true }
   ];
+  // Backup je odvojen od glavnih tabova (nije "peti ravnopravan tab") - na telefonu živi
+  // gore pored dugmeta za odjavu, na računaru u bočnoj traci odmah iznad Odjave. Ionako je
+  // to sporedna/administrativna radnja, a ne nešto što se koristi svakodnevno kao ostale.
+  var BACKUP_APP = { label: "Backup", icon: svgIcon(ICONS.cloudBackup), file: "backup.html", enabled: true };
 
   var currentFile = (location.pathname.split("/").pop() || "index.html");
 
@@ -84,12 +87,6 @@
     }).join("");
   }
 
-  var topBar = document.createElement("div");
-  topBar.id = "fhNavTop";
-  topBar.innerHTML =
-    '<span class="fh-top-title">Family Hub</span>' +
-    '<button class="fh-top-logout" id="fhLogoutBtnTop" aria-label="Odjava">' + svgIcon(ICONS.logOut) + '</button>';
-
   // Zapamcena uloga iz proslog logina (localStorage) - da odmah iscrtamo pravu
   // verziju trake, bez treptaja svih tabova dok se uloga tek ucita iz baze.
   var cachedRole = null;
@@ -99,6 +96,18 @@
       ? APPS.filter(function (app) { return app.file === "raspored.html"; })
       : APPS;
   }
+  // Backup nije dostupan djeci (isto pravilo kao za ostale roditeljske tabove).
+  function showBackupForRole(role) { return role !== "child"; }
+  var backupDisplay0 = showBackupForRole(cachedRole) ? "" : "display:none;";
+
+  var topBar = document.createElement("div");
+  topBar.id = "fhNavTop";
+  topBar.innerHTML =
+    '<span class="fh-top-title">Family Hub</span>' +
+    '<div class="fh-top-actions">' +
+      '<a class="fh-top-backup' + (BACKUP_APP.file === currentFile ? ' active' : '') + '" id="fhTopBackupLink" href="' + BACKUP_APP.file + '?v=' + NAV_VER + '" aria-label="Backup" style="' + backupDisplay0 + '">' + BACKUP_APP.icon + '</a>' +
+      '<button class="fh-top-logout" id="fhLogoutBtnTop" aria-label="Odjava">' + svgIcon(ICONS.logOut) + '</button>' +
+    '</div>';
 
   var bottomBar = document.createElement("div");
   bottomBar.id = "fhNavBottom";
@@ -109,6 +118,7 @@
   sideBar.innerHTML =
     '<div class="fh-side-header"><img class="fh-side-logo" src="icons/sidebar-logo.png" alt="Family Hub" /><span class="fh-side-title">Family Hub</span></div>' +
     '<div class="fh-side-tabs">' + tabsHtml("side", appsForRole(cachedRole)) + '</div>' +
+    '<div class="fh-side-secondary" id="fhSideSecondary" style="' + backupDisplay0 + '">' + tabsHtml("side", [BACKUP_APP]) + '</div>' +
     '<button class="fh-logout-btn" id="fhLogoutBtn">' +
       '<span class="fh-icon">' + svgIcon(ICONS.logOut) + '</span>' +
       '<span class="fh-label">Odjava</span>' +
@@ -116,6 +126,10 @@
 
   var style = document.createElement("style");
   style.textContent =
+    /* Forsira svijetlu temu za nativne form kontrole (select liste, date picker) na SVIM
+       stranicama - sprječava da telefoni sa tamnim režimom prikažu crnu/nevidljivu padajuću
+       listu ili datumsko polje preko inače svijetlog dizajna aplikacije. */
+    ':root{color-scheme:light;}' +
     /* shared tab look */
     '.fh-tab{display:flex;text-decoration:none;color:' + theme.text + ';border-radius:10px;position:relative;}' +
     '.fh-tab.active{color:' + theme.active + ';background:' + theme.activeBg + ';}' +
@@ -130,8 +144,10 @@
     'padding:calc(14px + env(safe-area-inset-top)) 16px 14px;' +
     'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
     '.fh-top-title{font-size:16px;font-weight:700;color:' + theme.headerText + ';}' +
-    '.fh-top-logout{background:none;border:none;color:' + theme.text + ';cursor:pointer;padding:4px;' +
-      'display:flex;align-items:center;justify-content:center;}' +
+    '.fh-top-actions{display:flex;align-items:center;gap:4px;}' +
+    '.fh-top-logout, .fh-top-backup{background:none;border:none;color:' + theme.text + ';cursor:pointer;padding:6px;' +
+      'border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;}' +
+    '.fh-top-backup.active{color:' + theme.active + ';background:' + theme.activeBg + ';}' +
 
     /* bottom bar (mobile default) */
     '#fhNavBottom{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;' +
@@ -163,7 +179,9 @@
       '.fh-tab-side .fh-label{font-size:14px;}' +
       '.fh-tab-side .fh-soon{margin-left:auto;font-size:9px;font-weight:700;' +
         'background:' + theme.soonBg + ';color:' + theme.soonText + ';padding:2px 6px;border-radius:6px;}' +
-      '.fh-logout-btn{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 12px;' +
+      '.fh-side-secondary{margin-top:auto;display:flex;flex-direction:column;gap:4px;' +
+        'padding-top:12px;margin-bottom:4px;border-top:1px solid ' + theme.border + ';}' +
+      '.fh-logout-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;' +
         'border:none;background:transparent;color:' + theme.text + ';border-radius:10px;cursor:pointer;' +
         'font-family:inherit;font-size:14px;text-align:left;}' +
       '.fh-logout-btn:hover{background:' + theme.activeBg + ';}' +
@@ -215,5 +233,11 @@
     bottomBar.innerHTML = tabsHtml("bottom", visibleApps);
     var tabsEl = sideBar.querySelector(".fh-side-tabs");
     if (tabsEl) tabsEl.innerHTML = tabsHtml("side", visibleApps);
+
+    var showBackup = showBackupForRole(role);
+    var topBackupEl = document.getElementById("fhTopBackupLink");
+    if (topBackupEl) topBackupEl.style.display = showBackup ? "" : "none";
+    var sideSecondaryEl = document.getElementById("fhSideSecondary");
+    if (sideSecondaryEl) sideSecondaryEl.style.display = showBackup ? "" : "none";
   };
 })();

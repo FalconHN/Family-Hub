@@ -1329,9 +1329,9 @@ function SmartShoppingList() {
         .add-modal-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
         .add-modal-title{font-family:var(--app-display-font);font-size:18px;font-weight:700;color:#17252b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
         .add-modal-close{border:0;background:#f0f4f2;color:#657278;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;flex:0 0 auto;}
-        .add-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-        .add-modal-field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#657278;font-weight:650;}
-        .add-modal-field input{border:1px solid #e0e8e5;background:#f8faf9;border-radius:11px;padding:9px 10px;font-size:14px;color:#17252b;box-sizing:border-box;}
+        .add-modal-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;}
+        .add-modal-field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#657278;font-weight:650;min-width:0;}
+        .add-modal-field input{width:100%;min-width:0;border:1px solid #e0e8e5;background:#f8faf9;border-radius:11px;padding:9px 10px;font-size:14px;color:#17252b;box-sizing:border-box;}
         .add-modal-btn-row{display:flex;gap:8px;margin-top:16px;}
         .add-modal-btn-row .primary{flex:1;justify-content:center;}
         .add-modal-cancel{border:1px solid #dce6e2;background:#fff;color:#52666c;border-radius:11px;padding:10px 14px;font-weight:650;cursor:pointer;}
