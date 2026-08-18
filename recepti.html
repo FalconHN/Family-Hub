@@ -836,32 +836,30 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
   const [listening, setListening] = useState(false);
   const [speechError, setSpeechError] = useState("");
   const recognitionRef = useRef(null);
+  // Prati da li KORISNIK želi da diktiranje bude uključeno (razlika od "listening" state-a):
+  // Chrome ponekad sam ugasi prepoznavanje poslije par sekundi tišine, čak i kad je continuous
+  // uključeno. Kad se to desi, a korisnik nije sam kliknuo "Zaustavi", automatski ga ponovo
+  // pokrećemo umjesto da diktiranje samo nestane čim korisnik napravi kraću pauzu.
+  const shouldListenRef = useRef(false);
 
   // Glasovni unos za "Priprema" - koristi ugrađenu Web Speech API funkciju browsera (besplatno,
   // bez posebnog servera/ključa). Najbolje radi u Chrome-u na Androidu; na iPhone-u/Safari-ju
   // radi djelimično, a u nekim browserima uopšte nije podržano - zato uvijek ostaje moguće i
-  // ručno kucanje, dugme za mikrofon je samo dodatna opcija.
+  // ručno kucanje, dugme za mikrofon je samo dodatna opcija. Jezik je hr-HR (hrvatski) jer je to
+  // najpouzdaniji izbor za ijekavicu koji Chrome/Google prepoznavanje govora podržava - srpski
+  // (sr-RS) prepoznaje na ekavici.
   useEffect(() => {
     return () => {
+      shouldListenRef.current = false;
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) {}
       }
     };
   }, []);
 
-  function toggleDictation() {
-    if (listening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      return;
-    }
-    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognitionCtor) {
-      setSpeechError("Glasovni unos nije podržan u ovom browseru. Probaj u Chrome-u na telefonu.");
-      return;
-    }
-    setSpeechError("");
+  function startRecognition(SpeechRecognitionCtor) {
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = "sr-RS";
+    recognition.lang = "hr-HR";
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.onresult = (event) => {
@@ -881,19 +879,47 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
     recognition.onerror = (event) => {
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setSpeechError("Dozvoli pristup mikrofonu da bi glasovni unos radio.");
+        shouldListenRef.current = false;
       } else if (event.error !== "no-speech" && event.error !== "aborted") {
         setSpeechError("Glasovni unos nije uspio. Probaj ponovo.");
+        shouldListenRef.current = false;
+      }
+      // "no-speech"/"aborted" ne gasimo shouldListenRef - to je samo kratka tišina, onend ispod
+      // će sam ponovo pokrenuti slušanje ako je korisnik i dalje "uključen".
+    };
+    recognition.onend = () => {
+      if (shouldListenRef.current) {
+        try {
+          recognition.start();
+          return; // ostaje "Slušam..." - nije korisnik zaustavio
+        } catch (e) {
+          // rijedak slučaj (npr. restart prebrzo) - samo prekini uredno ispod
+        }
       }
       setListening(false);
     };
-    recognition.onend = () => {
-      setListening(false);
-    };
     recognitionRef.current = recognition;
+    recognition.start();
+  }
+
+  function toggleDictation() {
+    if (listening) {
+      shouldListenRef.current = false;
+      if (recognitionRef.current) recognitionRef.current.stop();
+      return;
+    }
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setSpeechError("Glasovni unos nije podržan u ovom browseru. Probaj u Chrome-u na telefonu.");
+      return;
+    }
+    setSpeechError("");
+    shouldListenRef.current = true;
     try {
-      recognition.start();
+      startRecognition(SpeechRecognitionCtor);
       setListening(true);
     } catch (e) {
+      shouldListenRef.current = false;
       setSpeechError("Glasovni unos nije uspio. Probaj ponovo.");
     }
   }
