@@ -267,14 +267,28 @@
   function calIcon() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
   }
+  function clockSmallIcon() {
+    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>';
+  }
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
 
   var style = document.createElement("style");
   style.textContent =
-    '.fh-csel,.fh-cdate{position:relative;display:inline-flex;box-sizing:border-box;}' +
-    '.fh-csel-native,.fh-cdate-native{display:none !important;}' +
-    '.fh-csel-btn,.fh-cdate-btn{all:unset;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;cursor:pointer;box-sizing:border-box;}' +
-    '.fh-csel-btn svg,.fh-cdate-btn svg{flex:0 0 auto;opacity:.55;}' +
-    '.fh-csel-btn .fh-csel-label,.fh-cdate-btn .fh-cdate-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+    /* Rezervni ("fallback") izgled polja - ako stranica ne definise sopstveni border/pozadinu za
+       ovaj widget (kao sto se desilo sa "napomena važi do" poljem), makar izgleda kao ostala
+       polja umjesto da bude bez okvira. Stranicin CSS (npr. .day-select, .period-select) i dalje
+       ima prednost jer je konkretniji (dvije klase) i automatski nadjačava ovo. */
+    '.fh-csel,.fh-cdate,.fh-ctime{position:relative;display:inline-flex;box-sizing:border-box;' +
+      'border:1px solid #E6E1D8;border-radius:9px;padding:8px 10px;background:#FAF8F4;' +
+      'font-size:14px;color:#0F222B;}' +
+    '.fh-csel-native,.fh-cdate-native,.fh-ctime-native{display:none !important;}' +
+    /* Selektori dole namjerno ponavljaju roditeljsku klasu (npr. ".fh-csel .fh-csel-btn" umjesto
+       samo ".fh-csel-btn") da bi specificnost bila dovoljno visoka - stranice cesto imaju opsta
+       pravila tipa ".add-row button {...}" (boja/pozadina za SVE dugmice u toj sekciji) koja bi
+       inace "pregazila" izgled ovih widget-dugmica jer je "klasa+tag" specificnije od "sama klasa". */
+    '.fh-csel .fh-csel-btn,.fh-cdate .fh-cdate-btn{all:unset;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;cursor:pointer;box-sizing:border-box;}' +
+    '.fh-csel .fh-csel-btn svg,.fh-cdate .fh-cdate-btn svg{flex:0 0 auto;opacity:.55;}' +
+    '.fh-csel .fh-csel-btn .fh-csel-label,.fh-cdate .fh-cdate-btn .fh-cdate-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
     '.fh-cdate-label.placeholder{color:#A8A296;font-weight:500;}' +
 
     '.fh-csel-popup{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;width:max-content;max-width:240px;' +
@@ -292,9 +306,9 @@
     '.fh-cdate-popup.open{display:block;}' +
     '.fh-cdate-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}' +
     '.fh-cdate-cal-title{font-weight:700;font-size:13.5px;color:#0F222B;}' +
-    '.fh-cdate-cal-nav{background:none;border:none;cursor:pointer;color:#657278;padding:4px;display:flex;' +
+    '.fh-cdate-popup .fh-cdate-cal-nav{background:none;border:none;cursor:pointer;color:#657278;padding:4px;display:flex;' +
       'align-items:center;justify-content:center;border-radius:6px;}' +
-    '.fh-cdate-cal-nav:hover{background:#F0EDE5;}' +
+    '.fh-cdate-popup .fh-cdate-cal-nav:hover{background:#F0EDE5;}' +
     '.fh-cdate-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}' +
     '.fh-cdate-dow{font-size:10.5px;font-weight:700;color:#8A8578;text-align:center;padding:4px 0;}' +
     '.fh-cdate-day{font-size:13px;font-weight:600;color:#0F222B;text-align:center;padding:7px 0;border-radius:8px;cursor:pointer;}' +
@@ -303,18 +317,36 @@
     '.fh-cdate-day.sel{background:#007991;color:#fff;}' +
     '.fh-cdate-day.other{color:#D6D1C6;}' +
     '.fh-cdate-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #F0EDE5;}' +
-    '.fh-cdate-clear,.fh-cdate-today{background:none;border:none;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 2px;}' +
-    '.fh-cdate-clear{color:#B0524A;}' +
-    '.fh-cdate-today{color:#007991;}';
+    '.fh-cdate-popup .fh-cdate-clear,.fh-cdate-popup .fh-cdate-today{background:none;border:none;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 2px;}' +
+    '.fh-cdate-popup .fh-cdate-clear{color:#B0524A;}' +
+    '.fh-cdate-popup .fh-cdate-today{color:#007991;}' +
+
+    '.fh-ctime .fh-ctime-btn{all:unset;display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;cursor:pointer;box-sizing:border-box;}' +
+    '.fh-ctime .fh-ctime-btn svg{flex:0 0 auto;opacity:.55;}' +
+    '.fh-ctime-label.placeholder{color:#A8A296;font-weight:500;}' +
+    '.fh-ctime-popup{position:absolute;top:calc(100% + 6px);left:0;width:172px;max-width:88vw;background:#fff;' +
+      'border:1px solid #E6E1D8;border-radius:14px;box-shadow:0 10px 30px -8px rgba(15,34,43,0.28);padding:10px;' +
+      'z-index:400;display:none;font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
+    '.fh-ctime-popup.open{display:block;}' +
+    '.fh-ctime-cols{display:flex;gap:4px;}' +
+    '.fh-ctime-col{flex:1;max-height:170px;overflow-y:auto;scroll-snap-type:y proximity;}' +
+    '.fh-ctime-col-sep{display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-weight:700;color:#8A8578;}' +
+    '.fh-ctime-opt{padding:6px 0;text-align:center;font-size:13.5px;font-weight:600;color:#0F222B;border-radius:7px;cursor:pointer;scroll-snap-align:center;}' +
+    '.fh-ctime-opt:hover{background:#F0EDE5;}' +
+    '.fh-ctime-opt.sel{background:#007991;color:#fff;}' +
+    '.fh-ctime-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #F0EDE5;}' +
+    '.fh-ctime-popup .fh-ctime-clear{background:none;border:none;color:#B0524A;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 2px;}' +
+    '.fh-ctime-popup .fh-ctime-done{background:#007991;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}' +
+    '.fh-ctime-popup .fh-ctime-done:hover{background:#00636F;}';
   document.head.appendChild(style);
 
   function closeAllPopups() {
-    document.querySelectorAll(".fh-csel-popup.open, .fh-cdate-popup.open").forEach(function (p) {
+    document.querySelectorAll(".fh-csel-popup.open, .fh-cdate-popup.open, .fh-ctime-popup.open").forEach(function (p) {
       p.classList.remove("open");
     });
   }
   document.addEventListener("click", function (e) {
-    if (!e.target.closest(".fh-csel, .fh-cdate")) closeAllPopups();
+    if (!e.target.closest(".fh-csel, .fh-cdate, .fh-ctime")) closeAllPopups();
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeAllPopups();
@@ -517,10 +549,134 @@
     if (inputEl && inputEl._fhRefresh) inputEl._fhRefresh();
   }
 
+  // Isti razlog kao za enhanceDate: <input type="time"> na telefonu, kad je prazan, ne pokazuje
+  // ni ikonicu ni nagovjestaj da tu treba vrijeme - samo prazna kutija (izgleda kao nepoznato
+  // polje). Widget prikazuje jasan placeholder (npr. "Od"/"Do", iz title atributa) i otvara
+  // sopstveni birač sata/minuta u dvije klizajuće kolone.
+  function enhanceTime(inputEl) {
+    if (!inputEl || inputEl.dataset.fhEnhanced === "1") return;
+    inputEl.dataset.fhEnhanced = "1";
+
+    var wrap = document.createElement("span");
+    wrap.className = "fh-ctime " + inputEl.className;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "fh-ctime-btn";
+    btn.innerHTML = '<span class="fh-ctime-label"></span>' + clockSmallIcon();
+    var popup = document.createElement("div");
+    popup.className = "fh-ctime-popup";
+
+    inputEl.parentNode.insertBefore(wrap, inputEl);
+    wrap.appendChild(btn);
+    wrap.appendChild(popup);
+    wrap.appendChild(inputEl);
+    inputEl.classList.add("fh-ctime-native");
+
+    var curH = null, curM = null;
+
+    function updateLabel() {
+      var v = inputEl.value;
+      var labelEl = btn.querySelector(".fh-ctime-label");
+      if (v) {
+        labelEl.textContent = v;
+        labelEl.classList.remove("placeholder");
+      } else {
+        labelEl.textContent = inputEl.title || "Odaberi vrijeme";
+        labelEl.classList.add("placeholder");
+      }
+    }
+    function commit() {
+      inputEl.value = curH + ":" + curM;
+      inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+      updateLabel();
+      renderCols();
+    }
+    function renderCols() {
+      var hoursHtml = "";
+      for (var h = 0; h < 24; h++) {
+        var hv = pad2(h);
+        hoursHtml += '<div class="fh-ctime-opt' + (hv === curH ? " sel" : "") + '" data-h="' + hv + '">' + hv + '</div>';
+      }
+      var minsHtml = "";
+      for (var m = 0; m < 60; m++) {
+        var mv = pad2(m);
+        minsHtml += '<div class="fh-ctime-opt' + (mv === curM ? " sel" : "") + '" data-m="' + mv + '">' + mv + '</div>';
+      }
+      popup.innerHTML =
+        '<div class="fh-ctime-cols">' +
+          '<div class="fh-ctime-col" data-col="h">' + hoursHtml + '</div>' +
+          '<div class="fh-ctime-col-sep">:</div>' +
+          '<div class="fh-ctime-col" data-col="m">' + minsHtml + '</div>' +
+        '</div>' +
+        '<div class="fh-ctime-foot">' +
+          '<button type="button" class="fh-ctime-clear">Ukloni</button>' +
+          '<button type="button" class="fh-ctime-done">Gotovo</button>' +
+        '</div>';
+
+      Array.prototype.forEach.call(popup.querySelectorAll("[data-h]"), function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          curH = el.dataset.h;
+          if (curM === null) curM = "00";
+          commit();
+        });
+      });
+      Array.prototype.forEach.call(popup.querySelectorAll("[data-m]"), function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          curM = el.dataset.m;
+          if (curH === null) curH = "00";
+          commit();
+        });
+      });
+      popup.querySelector(".fh-ctime-clear").addEventListener("click", function (e) {
+        e.stopPropagation();
+        curH = null; curM = null;
+        inputEl.value = "";
+        inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+        updateLabel();
+        renderCols();
+      });
+      popup.querySelector(".fh-ctime-done").addEventListener("click", function (e) {
+        e.stopPropagation();
+        popup.classList.remove("open");
+      });
+    }
+    function scrollToSelected() {
+      var selH = popup.querySelector('.fh-ctime-col[data-col="h"] .sel');
+      var selM = popup.querySelector('.fh-ctime-col[data-col="m"] .sel');
+      if (selH) selH.scrollIntoView({ block: "center" });
+      if (selM) selM.scrollIntoView({ block: "center" });
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var isOpen = popup.classList.contains("open");
+      closeAllPopups();
+      if (!isOpen) {
+        var v = inputEl.value;
+        if (v) { var p = v.split(":"); curH = p[0]; curM = p[1]; }
+        else { curH = null; curM = null; }
+        renderCols();
+        popup.classList.add("open");
+        adjustPopupPosition(popup, wrap);
+        scrollToSelected();
+      }
+    });
+
+    inputEl._fhRefresh = updateLabel;
+    updateLabel();
+  }
+  function refreshTime(inputEl) {
+    if (inputEl && inputEl._fhRefresh) inputEl._fhRefresh();
+  }
+
   window.FH_UI = {
     enhanceSelect: enhanceSelect,
     refreshSelect: refreshSelect,
     enhanceDate: enhanceDate,
-    refreshDate: refreshDate
+    refreshDate: refreshDate,
+    enhanceTime: enhanceTime,
+    refreshTime: refreshTime
   };
 })();

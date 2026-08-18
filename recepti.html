@@ -401,6 +401,16 @@ function cameraIcon() {
     </svg>
   );
 }
+function micIcon(size) {
+  const s = size || 16;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+  );
+}
 function heartIcon(filled, size) {
   const s = size || 18;
   return (
@@ -823,6 +833,70 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
   const scanInputRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const [speechError, setSpeechError] = useState("");
+  const recognitionRef = useRef(null);
+
+  // Glasovni unos za "Priprema" - koristi ugrađenu Web Speech API funkciju browsera (besplatno,
+  // bez posebnog servera/ključa). Najbolje radi u Chrome-u na Androidu; na iPhone-u/Safari-ju
+  // radi djelimično, a u nekim browserima uopšte nije podržano - zato uvijek ostaje moguće i
+  // ručno kucanje, dugme za mikrofon je samo dodatna opcija.
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+    };
+  }, []);
+
+  function toggleDictation() {
+    if (listening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      return;
+    }
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setSpeechError("Glasovni unos nije podržan u ovom browseru. Probaj u Chrome-u na telefonu.");
+      return;
+    }
+    setSpeechError("");
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "sr-RS";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      let finalText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
+      }
+      finalText = finalText.trim();
+      if (finalText) {
+        setForm((prev) => {
+          const existing = prev.priprema || "";
+          const sep = existing && !/\s$/.test(existing) ? " " : "";
+          return { ...prev, priprema: existing + sep + finalText };
+        });
+      }
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setSpeechError("Dozvoli pristup mikrofonu da bi glasovni unos radio.");
+      } else if (event.error !== "no-speech" && event.error !== "aborted") {
+        setSpeechError("Glasovni unos nije uspio. Probaj ponovo.");
+      }
+      setListening(false);
+    };
+    recognition.onend = () => {
+      setListening(false);
+    };
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      setListening(true);
+    } catch (e) {
+      setSpeechError("Glasovni unos nije uspio. Probaj ponovo.");
+    }
+  }
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -1010,7 +1084,20 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <label style={labelStyle}>Priprema</label>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Priprema</label>
+            <button
+              type="button"
+              onClick={toggleDictation}
+              style={{
+                display: "flex", alignItems: "center", gap: 6, border: "none", borderRadius: 999,
+                padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                background: listening ? "#B3413E" : "#EAF3F4", color: listening ? "#fff" : "#007991",
+              }}
+            >
+              {micIcon(14)} {listening ? "Zaustavi" : "Izdiktiraj"}
+            </button>
+          </div>
           <textarea
             value={form.priprema}
             onChange={(e) => updateField("priprema", e.target.value)}
@@ -1018,6 +1105,12 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
             rows={5}
             style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
           />
+          {listening && (
+            <div style={{ color: "#007991", fontSize: 12, marginTop: 6, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              {micIcon(13)} Slušam... izgovori korake pripreme.
+            </div>
+          )}
+          {speechError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 6 }}>{speechError}</div>}
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>

@@ -76,6 +76,7 @@
   .week-cas-card:active { transform: scale(0.97); }
   .week-cas-time { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
   .week-cas-name { font-size: 13px; font-weight: 600; color: #0F222B; line-height: 1.25; }
+  .week-cas-name-room { font-weight: 500; color: #8A8578; }
   .week-cas-room { font-size: 11px; color: #8A8578; margin-top: 3px; }
   .week-cas-note {
     font-size: 11px; color: #8A8578; font-style: italic; margin-top: 3px; line-height: 1.25;
@@ -128,6 +129,7 @@
     font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
   }
   .detail-edit-row input { flex: 1; min-width: 0; }
+  .detail-edit-row .fh-ctime { flex: 1; min-width: 0; }
   .detail-field { width: 100%; display: block; margin-top: 8px; }
   .detail-edit-row input:focus, .detail-field:focus { border-color: #007991; }
   .detail-field-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
@@ -212,13 +214,19 @@
   .add-row input:focus, .add-row select:focus { border-color: #007991; }
   .add-row input.time-input { width: 120px; flex: 0 0 auto; }
   .add-row input.broj-input { width: 60px; flex: 0 0 auto; text-align: center; }
-  .add-row input.od-do-input { width: 92px; flex: 0 0 auto; }
+  .add-row .od-do-input {
+    width: 92px; flex: 0 0 auto; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
+    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
+  }
   .add-row input.room-input { width: 100px; flex: 0 0 auto; }
   .add-row input.name-input { flex: 1; min-width: 120px; }
   .add-row input.note-input { flex: 1; min-width: 160px; }
   .napomena-datum-row { display: flex; align-items: center; gap: 8px; flex-basis: 100%; width: 100%; margin-top: -2px; }
   .napomena-datum-row .napomena-datum-label { font-size: 12.5px; color: #8A8578; font-weight: 600; white-space: nowrap; }
-  .add-row .napomena-datum-input { width: 150px; flex: 0 0 auto; }
+  .add-row .napomena-datum-input {
+    width: 150px; flex: 0 0 auto; border: 1px solid #E6E1D8; border-radius: 9px; padding: 8px 10px;
+    font-size: 14px; font-family: inherit; background: #FAF8F4; outline: none; color: #0F222B;
+  }
   .add-row button {
     background: #007991; color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
     font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
@@ -1042,14 +1050,19 @@ function renderWeekGrid() {
             const brojPart = e.broj ? e.broj + ". čas" : "";
             const timePart = formatCasTime(e);
             const timeLine = [brojPart, timePart].filter(Boolean).join(" · ");
-            const roomTeacherLine = [e.ucionica, e.nastavnik].filter(Boolean).join(" · ");
+            // Predmet i učionica idu u istom redu (npr. "Crnogorski · Prizemlje"), nastavnik dobija
+            // svoj red ispod, a napomena i njeno "važi do" se spajaju u posljednji red - tako se sve
+            // uklapa na kompaktnoj kartici, a opet je svaki podatak jasno vidljiv.
+            const nazivRoomLine = e.ucionica
+              ? escapeHtml(e.naziv) + ' <span class="week-cas-name-room">· ' + escapeHtml(e.ucionica) + '</span>'
+              : escapeHtml(e.naziv);
+            const napomenaLine = [e.napomena, e.napomenaDatum ? formatDatumSrShort(e.napomenaDatum) : ""].filter(Boolean).join(" · ");
             return (
               '<div class="week-cas-card" style="background:' + hexToRgba(d.color, 0.08) + ';border-left-color:' + d.color + ';" data-day="' + d.key + '" data-index="' + i + '">' +
                 (timeLine ? '<div class="week-cas-time" style="color:' + (d.textColor || d.color) + ';">' + escapeHtml(timeLine) + '</div>' : "") +
-                '<div class="week-cas-name">' + escapeHtml(e.naziv) + '</div>' +
-                (roomTeacherLine ? '<div class="week-cas-room">' + escapeHtml(roomTeacherLine) + '</div>' : "") +
-                (e.napomena ? '<div class="week-cas-note">' + escapeHtml(e.napomena) + '</div>' : "") +
-                (e.napomenaDatum ? '<div class="week-cas-note-date">' + clockIcon() + '<span>' + escapeHtml(formatDatumSrShort(e.napomenaDatum)) + '</span></div>' : "") +
+                '<div class="week-cas-name">' + nazivRoomLine + '</div>' +
+                (e.nastavnik ? '<div class="week-cas-room">' + escapeHtml(e.nastavnik) + '</div>' : "") +
+                (napomenaLine ? '<div class="week-cas-note">' + escapeHtml(napomenaLine) + '</div>' : "") +
               '</div>'
             );
           }).join("");
@@ -1240,7 +1253,11 @@ function renderDetailModal(dayKey, idx, mode) {
 
     document.getElementById("detailCloseBtn").addEventListener("click", closeCasDetail);
     document.getElementById("detailCancelBtn").addEventListener("click", () => renderDetailModal(dayKey, idx, "view"));
-    if (window.FH_UI) window.FH_UI.enhanceDate(document.getElementById("detailEdit_napomenaDatum"));
+    if (window.FH_UI) {
+      window.FH_UI.enhanceDate(document.getElementById("detailEdit_napomenaDatum"));
+      window.FH_UI.enhanceTime(document.getElementById("detailEdit_od"));
+      window.FH_UI.enhanceTime(document.getElementById("detailEdit_do"));
+    }
     document.getElementById("detailSaveBtn").addEventListener("click", () => {
       const naziv = document.getElementById("detailEdit_naziv").value.trim();
       if (!naziv) return;
@@ -1370,7 +1387,11 @@ function ensureCasoviAddRowSkeleton(addRowEl, addRowElId, entries) {
 
   addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("casovi", addRowElId));
   setupPredmetAutocomplete(addRowElId);
-  if (window.FH_UI) window.FH_UI.enhanceDate(document.getElementById(addRowElId + "_napomenaDatum"));
+  if (window.FH_UI) {
+    window.FH_UI.enhanceDate(document.getElementById(addRowElId + "_napomenaDatum"));
+    window.FH_UI.enhanceTime(document.getElementById(addRowElId + "_od"));
+    window.FH_UI.enhanceTime(document.getElementById(addRowElId + "_do"));
+  }
 
   casoviAddRowContext = contextKey;
   refreshPredmetSelectAndPanel(addRowElId);
@@ -1527,7 +1548,10 @@ function ensureObavezeAddRowSkeleton(addRowEl, addRowElId, timePlaceholder, name
   addRowEl.innerHTML =
     '<input type="text" class="time-input" placeholder="' + timePlaceholder + '" id="' + addRowElId + '_time" />' +
     '<input type="text" class="name-input" placeholder="' + namePlaceholder + '" id="' + addRowElId + '_name" />' +
-    '<input type="date" class="napomena-datum-input" title="Vrijedi do (opciono - ako se ostavi prazno, obaveza je trajna i ponavlja se svake sedmice)" id="' + addRowElId + '_datum" />' +
+    '<div class="napomena-datum-row">' +
+      '<span class="napomena-datum-label">Vrijedi do</span>' +
+      '<input type="date" class="napomena-datum-input" title="Vrijedi do (opciono - ako se ostavi prazno, obaveza je trajna i ponavlja se svake sedmice)" id="' + addRowElId + '_datum" />' +
+    '</div>' +
     '<button type="button" class="submit-btn">Dodaj</button>';
   addRowEl.querySelector(".submit-btn").addEventListener("click", () => addEntry("obaveze", addRowElId));
   document.getElementById(addRowElId + "_name").addEventListener("keydown", (e) => {
@@ -1582,7 +1606,11 @@ function addEntry(field, addRowElId) {
     if (nastavnikEl) nastavnikEl.value = "";
     napomenaEl.value = "";
     if (napomenaDatumEl) napomenaDatumEl.value = "";
-    if (window.FH_UI) window.FH_UI.refreshDate(napomenaDatumEl);
+    if (window.FH_UI) {
+      window.FH_UI.refreshDate(napomenaDatumEl);
+      window.FH_UI.refreshTime(odEl);
+      window.FH_UI.refreshTime(doEl);
+    }
     nameEl.value = "";
     nameEl.focus();
     renderPredmetDropdown(addRowElId, { forceOpen: true });
