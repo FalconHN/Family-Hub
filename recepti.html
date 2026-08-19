@@ -313,9 +313,21 @@ function parsirajSastojakTekst(text) {
 // srpskom/bosanskom/crnogorskom jeziku (npr. "brašno" iz Cjenovnika treba da prepozna "brašna" iz
 // recepta). Zahtijeva da se bar prva 3 slova poklapaju I da se poklapa skoro cijela riječ (do 2
 // slova razlike na kraju) - da ne bi slučajno spojio dvije različite namirnice.
+// Skida naša slova sa kvačicama (š,č,ć,ž,đ) na obična latinična slova, da bi se npr. "brasno"
+// (unešeno u Cjenovniku bez kvačica, česta pojava na telefonu bez podešene srpske/bosanske
+// tastature) poklopilo sa "brašno" iz teksta recepta. Bez ovoga poređenje ispod broji "š" i "s"
+// kao potpuno različita slova, pa se poklapanje lomi tačno na mjestu razlike.
+function skiniKvacice(s) {
+  return (s || "")
+    .replace(/[šŠ]/g, "s")
+    .replace(/[čćČĆ]/g, "c")
+    .replace(/[žŽ]/g, "z")
+    .replace(/[đĐ]/g, "dj");
+}
+
 function nazivPodudaranje(a, b) {
-  const x = (a || "").trim().toLowerCase();
-  const y = (b || "").trim().toLowerCase();
+  const x = skiniKvacice((a || "").trim().toLowerCase());
+  const y = skiniKvacice((b || "").trim().toLowerCase());
   if (!x || !y) return false;
   if (x === y) return true;
   let common = 0;
@@ -330,8 +342,8 @@ function nazivPodudaranje(a, b) {
 // namjerno ograničen na najviše 3 slova (koliko obično ima nastavak za padež), da npr. "so" ne bi
 // slučajno pokupio potpuno drugu riječ koja slučajno počinje isto (npr. "sok od limuna").
 function nazivOdgovara(bazniNaziv, sastojakNaziv) {
-  const x = (bazniNaziv || "").trim().toLowerCase();
-  const y = (sastojakNaziv || "").trim().toLowerCase();
+  const x = skiniKvacice((bazniNaziv || "").trim().toLowerCase());
+  const y = skiniKvacice((sastojakNaziv || "").trim().toLowerCase());
   if (!x || !y) return false;
   if (y === x) return true;
   if (x.length <= 3 && y.indexOf(x) === 0 && y.length - x.length <= 3) return true;
@@ -810,6 +822,40 @@ function RecipeApp() {
     }, 400);
     return () => clearTimeout(cjenovnikSaveTimer.current);
   }, [cjenovnik, loaded]);
+
+  // Kad je otvoren neki od "modala" (detalji recepta, forma za dodavanje/izmjenu ili Cjenovnik),
+  // gurni jedan dodatni unos u istoriju browsera. Tako dugme/gest "nazad" na telefonu prvo
+  // zatvori modal (ostaješ na stranici Recepti), umjesto da odmah izađe sa cijele stranice na
+  // prethodnu (npr. na početni ekran). Kad se modal zatvori preko X/Otkaži dugmeta, sami
+  // "pojedemo" taj dodatni unos (history.back()) da se ne gomilaju prazni koraci u istoriji.
+  const modalHistoryRef = useRef({ pushed: false, poppingFromBack: false });
+  const modalOpen = !!(detailId || form || cjenovnikOpen);
+  useEffect(() => {
+    const st = modalHistoryRef.current;
+    if (modalOpen && !st.pushed) {
+      window.history.pushState({ fhModal: true }, "");
+      st.pushed = true;
+    } else if (!modalOpen && st.pushed) {
+      st.pushed = false;
+      if (!st.poppingFromBack) window.history.back();
+      st.poppingFromBack = false;
+    }
+  }, [modalOpen]);
+
+  useEffect(() => {
+    function onPopState() {
+      const st = modalHistoryRef.current;
+      if (st.pushed) {
+        st.pushed = false;
+        st.poppingFromBack = true;
+        setDetailId(null);
+        setForm(null);
+        setCjenovnikOpen(false);
+      }
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   function showToast(msg, type) {
     const t = type || "success";
