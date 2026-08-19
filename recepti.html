@@ -767,14 +767,22 @@ function RecipeApp() {
             try {
               const parsed = JSON.parse(data.recepti);
               if (Array.isArray(parsed)) {
-                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, brojPorcija: "", ...r, sastojci: normalizeSastojci(r.sastojci) })));
+                const next = parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, brojPorcija: "", ...r, sastojci: normalizeSastojci(r.sastojci) }));
+                // Ako su podaci koji su stigli iz baze suštinski isti kao ono što već prikazujemo
+                // (npr. baza samo "odjekne" nazad naš vlastiti upis, ili stigne suvišni snapshot),
+                // ne pravimo novi niz/objekte - to bi natjeralo cijelu listu i otvoreni prozorčić da
+                // se iznova iscrtaju bez ikakve stvarne promjene, što se na sporijoj/nestabilnoj
+                // mreži vidi kao kratak "trzaj"/treperenje ekrana.
+                setRecipes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
               }
             } catch (e) {}
           }
           if (typeof data.cjenovnik === "string" && data.cjenovnik !== lastSentCjenovnik.current) {
             try {
               const parsedC = JSON.parse(data.cjenovnik);
-              if (Array.isArray(parsedC)) setCjenovnik(parsedC);
+              if (Array.isArray(parsedC)) {
+                setCjenovnik((prev) => (JSON.stringify(prev) === JSON.stringify(parsedC) ? prev : parsedC));
+              }
             } catch (e) {}
           }
         } else {
