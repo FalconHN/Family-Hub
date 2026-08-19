@@ -156,6 +156,89 @@ function safeUrl(u) {
   return /^https?:\/\//i.test(s) ? s : "";
 }
 
+// ---- Cijena recepta ----
+// Sastojak je sad objekat { naziv, kolicina, jedinica } umjesto obične riječi teksta (radi
+// nazad-kompatibilnosti stari recepti imaju sastojke kao obične stringove - normalizeSastojak
+// ih pretvara u isti oblik, samo bez količine/jedinice, pa se ništa staro ne pokvari).
+// Cijena se računa preko posebnog "Cjenovnika" (lista cijena po jedinici mjere za namirnice koje
+// se ponavljaju kroz recepte) - kad sastojak ima unesenu količinu+jedinicu I postoji u cjenovniku
+// pod istim nazivom, cijena se sama izračuna; u suprotnom se taj sastojak jednostavno ne uračunava
+// (a korisniku se pokazuje da cijena nije potpuna).
+const JEDINICE = ["g", "kg", "ml", "l", "kom"];
+const UNIT_BASE = {
+  g: { base: "masa", factor: 1 },
+  kg: { base: "masa", factor: 1000 },
+  ml: { base: "zapremina", factor: 1 },
+  l: { base: "zapremina", factor: 1000 },
+  kom: { base: "komad", factor: 1 },
+};
+
+function normalizeSastojak(s) {
+  if (typeof s === "string") return { naziv: s, kolicina: "", jedinica: "" };
+  if (s && typeof s === "object") {
+    return {
+      naziv: s.naziv || "",
+      kolicina: s.kolicina === undefined || s.kolicina === null ? "" : s.kolicina,
+      jedinica: s.jedinica || "",
+    };
+  }
+  return { naziv: "", kolicina: "", jedinica: "" };
+}
+function normalizeSastojci(arr) {
+  return Array.isArray(arr) ? arr.map(normalizeSastojak) : [];
+}
+
+function fmtEUR(n) {
+  const v = Number.isFinite(n) ? n : 0;
+  return v.toFixed(2).replace(".", ",") + " €";
+}
+
+function findCijenaEntry(naziv, cjenovnik) {
+  const key = (naziv || "").trim().toLowerCase();
+  if (!key) return null;
+  return (cjenovnik || []).find((c) => (c.naziv || "").trim().toLowerCase() === key) || null;
+}
+
+// Cijena jednog sastojka (u €) na osnovu unesene količine/jedinice i cjenovnika, ili null ako
+// nedostaje količina/jedinica, sastojak nije u cjenovniku, ili su jedinice nespojive (npr. grami
+// naspram litara).
+function sastojakCijena(sastojak, cjenovnik) {
+  const kolicina = Number(sastojak.kolicina);
+  if (!sastojak.kolicina || !isFinite(kolicina) || kolicina <= 0 || !sastojak.jedinica) return null;
+  const entry = findCijenaEntry(sastojak.naziv, cjenovnik);
+  if (!entry || !entry.jedinica || !isFinite(Number(entry.cijena)) || Number(entry.cijena) < 0) return null;
+  // entry.kolicina = koliko je namirnice bilo u pakovanju za koje je unesena entry.cijena
+  // (npr. "10 jaja = 2,20€" -> entryKolicina=10, entry.cijena=2.20). Ako polje ne postoji (stariji
+  // unosi iz prve verzije cjenovnika, gdje je cijena već bila po jedinici), tretira se kao 1.
+  const entryKolicina = entry.kolicina === undefined || entry.kolicina === null || entry.kolicina === "" ? 1 : Number(entry.kolicina);
+  if (!isFinite(entryKolicina) || entryKolicina <= 0) return null;
+  const sUnit = UNIT_BASE[sastojak.jedinica];
+  const eUnit = UNIT_BASE[entry.jedinica];
+  if (!sUnit || !eUnit || sUnit.base !== eUnit.base) return null;
+  const kolicinaUBaznoj = kolicina * sUnit.factor;
+  const entryKolicinaUBaznoj = entryKolicina * eUnit.factor;
+  const cijenaPoBaznoj = Number(entry.cijena) / entryKolicinaUBaznoj;
+  return kolicinaUBaznoj * cijenaPoBaznoj;
+}
+
+// Ukupna (približna) cijena recepta - sabira cijene svih sastojaka koji se mogu izračunati.
+// Vraća null ako se nijedan sastojak ne može izračunati (nema smisla prikazivati "0,00 €").
+function receptCijena(recipe, cjenovnik) {
+  const sastojci = recipe.sastojci || [];
+  let ukupno = 0;
+  let poznato = 0;
+  let nepoznato = 0;
+  sastojci.forEach((s) => {
+    if (!s || !s.naziv) return;
+    const c = sastojakCijena(s, cjenovnik);
+    if (c === null) { nepoznato++; return; }
+    ukupno += c;
+    poznato++;
+  });
+  if (poznato === 0) return null;
+  return { ukupno, poznato, nepoznato };
+}
+
 // Slika recepta sa sigurnim fallback-om: ako nema URL-a ili se slika ne učita
 // (npr. slomljen link), prikazuje ikonicu kuvarske kape umjesto praznog sivog kvadrata.
 function RecipeImage({ url, alt, iconSize }) {
@@ -179,8 +262,9 @@ function emptyRecipeForm() {
     kategorija: "",
     slikaUrl: "",
     videoUrl: "",
-    sastojci: [""],
+    sastojci: [{ naziv: "", kolicina: "", jedinica: "" }],
     priprema: "",
+    brojPorcija: "",
   };
 }
 
@@ -356,6 +440,65 @@ function CategoryDropdown({ value, onChange, options, wrapperStyle }) {
   );
 }
 
+// Mali izbornik jedinice mjere (g / kg / ml / l / kom) - isti obrazac kao CategoryDropdown iznad
+// (prilagođeni padajući meni umjesto pravog <select>, jer <select> na Android telefonima iskače
+// kao taman sistemski dijalog koji ignoriše boje stranice).
+function UnitDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", flex: "0 0 64px" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%", height: "100%", minHeight: 40, boxSizing: "border-box", border: "1px solid #E4DFD3", borderRadius: 9,
+          padding: "0 8px", fontSize: 13.5, fontFamily: "inherit", background: "#fff", color: value ? "#0F222B" : "#8A8578", outline: "none",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 3,
+        }}
+      >
+        <span>{value || "j."}</span>
+        <span style={{ flexShrink: 0, color: "#8A8578", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>{chevronDownIcon()}</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: 74,
+            background: "#fff", borderRadius: 12, boxShadow: "0 12px 30px -8px rgba(15,34,43,0.28)", padding: 6,
+            zIndex: 40,
+          }}
+        >
+          {JEDINICE.map((j) => (
+            <div
+              key={j}
+              onMouseDown={(e) => { e.preventDefault(); onChange(j); setOpen(false); }}
+              style={{
+                padding: "8px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13.5, color: "#0F222B",
+                background: j === value ? "#F5DEC0" : "transparent", fontWeight: j === value ? 700 : 500,
+              }}
+            >
+              {j}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function chefHatIcon(size) {
   const s = size || 40;
   return (
@@ -419,9 +562,19 @@ function heartIcon(filled, size) {
     </svg>
   );
 }
+function moneyIcon(size) {
+  const s = size || 16;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <text x="12" y="16.5" textAnchor="middle" fontSize="11" fontWeight="700" stroke="none" fill="currentColor">€</text>
+    </svg>
+  );
+}
 
 function RecipeApp() {
   const [recipes, setRecipes] = useState([]);
+  const [cjenovnik, setCjenovnik] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Sve");
@@ -429,9 +582,12 @@ function RecipeApp() {
   const [form, setForm] = useState(null); // null = no form open, object = editing/adding
   const [toast, setToast] = useState(null); // null ili { msg, type: "success" | "error" }
   const [addingToCart, setAddingToCart] = useState(false);
+  const [cjenovnikOpen, setCjenovnikOpen] = useState(false);
 
   const lastSentRecipes = useRef(null);
+  const lastSentCjenovnik = useRef(null);
   const saveTimer = useRef(null);
+  const cjenovnikSaveTimer = useRef(null);
   const toastTimer = useRef(null);
 
   useEffect(() => {
@@ -443,12 +599,18 @@ function RecipeApp() {
             try {
               const parsed = JSON.parse(data.recepti);
               if (Array.isArray(parsed)) {
-                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, ...r })));
+                setRecipes(parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, brojPorcija: "", ...r, sastojci: normalizeSastojci(r.sastojci) })));
               }
             } catch (e) {}
           }
+          if (typeof data.cjenovnik === "string" && data.cjenovnik !== lastSentCjenovnik.current) {
+            try {
+              const parsedC = JSON.parse(data.cjenovnik);
+              if (Array.isArray(parsedC)) setCjenovnik(parsedC);
+            } catch (e) {}
+          }
         } else {
-          sharedDocRef.set({ recepti: JSON.stringify([]) });
+          sharedDocRef.set({ recepti: JSON.stringify([]), cjenovnik: JSON.stringify([]) });
         }
         setLoaded(true);
       },
@@ -475,6 +637,23 @@ function RecipeApp() {
     }, 400);
     return () => clearTimeout(saveTimer.current);
   }, [recipes, loaded]);
+
+  // Cjenovnik (cijene po jedinici mjere za namirnice) se čuva u istom dokumentu kao i recepti,
+  // samo u drugom polju - isti obrazac autosnimanja (400ms poslije zadnje izmjene).
+  useEffect(() => {
+    if (!loaded) return;
+    if (cjenovnikSaveTimer.current) clearTimeout(cjenovnikSaveTimer.current);
+    cjenovnikSaveTimer.current = setTimeout(() => {
+      const json = JSON.stringify(cjenovnik);
+      lastSentCjenovnik.current = json;
+      sharedDocRef.set({ cjenovnik: json }, { merge: true }).catch((e) => {
+        console.error("Failed to save cjenovnik", e);
+        lastSentCjenovnik.current = null;
+        showToast("Snimanje cjenovnika nije uspjelo (" + (e && e.code ? e.code : "greška") + ").", "error");
+      });
+    }, 400);
+    return () => clearTimeout(cjenovnikSaveTimer.current);
+  }, [cjenovnik, loaded]);
 
   function showToast(msg, type) {
     const t = type || "success";
@@ -510,7 +689,7 @@ function RecipeApp() {
       const q = search.trim().toLowerCase();
       if (!q) return true;
       if (r.naziv.toLowerCase().includes(q)) return true;
-      return (r.sastojci || []).some((s) => (s || "").toLowerCase().includes(q));
+      return (r.sastojci || []).some((s) => (s && s.naziv || "").toLowerCase().includes(q));
     })
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -518,7 +697,11 @@ function RecipeApp() {
     setForm(emptyRecipeForm());
   }
   function openEditForm(recipe) {
-    setForm({ ...recipe, sastojci: recipe.sastojci && recipe.sastojci.length ? recipe.sastojci.slice() : [""] });
+    setForm({
+      ...recipe,
+      sastojci: recipe.sastojci && recipe.sastojci.length ? recipe.sastojci.map((s) => ({ ...s })) : [{ naziv: "", kolicina: "", jedinica: "" }],
+      brojPorcija: recipe.brojPorcija || "",
+    });
     setDetailId(null);
   }
   function closeForm() {
@@ -527,7 +710,13 @@ function RecipeApp() {
   function saveForm() {
     const naziv = (form.naziv || "").trim();
     if (!naziv) return;
-    const cleanSastojci = (form.sastojci || []).map((s) => (s || "").trim()).filter(Boolean);
+    const cleanSastojci = (form.sastojci || [])
+      .map((s) => ({
+        naziv: (s.naziv || "").trim(),
+        kolicina: s.kolicina === "" || s.kolicina === null || s.kolicina === undefined ? "" : Number(s.kolicina),
+        jedinica: s.jedinica || "",
+      }))
+      .filter((s) => s.naziv);
     const cleaned = {
       id: form.id || uid(),
       naziv: naziv,
@@ -536,6 +725,7 @@ function RecipeApp() {
       videoUrl: safeUrl(form.videoUrl),
       sastojci: cleanSastojci,
       priprema: (form.priprema || "").trim(),
+      brojPorcija: form.brojPorcija === "" || form.brojPorcija === null || form.brojPorcija === undefined ? "" : Number(form.brojPorcija),
     };
     setRecipes((prev) => {
       const existingIdx = prev.findIndex((r) => r.id === cleaned.id);
@@ -578,17 +768,23 @@ function RecipeApp() {
           } catch (e) {}
         }
         const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
-        const newItems = recipe.sastojci.map((naziv, i) => ({
-          id: uid() + i,
-          name: naziv,
-          quantity: 1,
-          store: "",
-          category: "",
-          price: 0,
-          note: recipe.naziv ? "Za: " + recipe.naziv : "",
-          purchased: false,
-          order: maxOrder + i + 1,
-        }));
+        const newItems = recipe.sastojci.map((s, i) => {
+          const kolicinaText = s.kolicina && s.jedinica ? (s.kolicina + " " + s.jedinica) : "";
+          const noteParts = [];
+          if (recipe.naziv) noteParts.push("Za: " + recipe.naziv);
+          if (kolicinaText) noteParts.push(kolicinaText);
+          return {
+            id: uid() + i,
+            name: s.naziv,
+            quantity: 1,
+            store: "",
+            category: "",
+            price: 0,
+            note: noteParts.join(" · "),
+            purchased: false,
+            order: maxOrder + i + 1,
+          };
+        });
         const updated = items.concat(newItems);
         tx.set(shoppingRef, { items: JSON.stringify(updated) }, { merge: true });
       });
@@ -617,13 +813,24 @@ function RecipeApp() {
               <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2 }}>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={openAddForm}
-            style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: 160, height: 40, boxSizing: "border-box" }}
-          >
-            + Dodaj recept
-          </button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setCjenovnikOpen(true)}
+              title="Cjenovnik namirnica"
+              aria-label="Cjenovnik namirnica"
+              style={{ background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 9, width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxSizing: "border-box" }}
+            >
+              {moneyIcon(18)}
+            </button>
+            <button
+              type="button"
+              onClick={openAddForm}
+              style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: 160, height: 40, boxSizing: "border-box" }}
+            >
+              + Dodaj recept
+            </button>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
@@ -669,6 +876,14 @@ function RecipeApp() {
                   <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                     <CategoryTag label={r.kategorija} />
                     <span style={{ color: "#8A8578", fontSize: 11.5 }}>{(r.sastojci || []).length} sastojaka</span>
+                    {(() => {
+                      const c = receptCijena(r, cjenovnik);
+                      return c ? (
+                        <span style={{ color: "#007991", fontSize: 11.5, fontWeight: 700 }}>
+                          {c.nepoznato > 0 ? "~" : ""}{fmtEUR(c.ukupno)}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -693,6 +908,7 @@ function RecipeApp() {
       {detailRecipe && !form && (
         <RecipeDetailModal
           recipe={detailRecipe}
+          cjenovnik={cjenovnik}
           onClose={() => setDetailId(null)}
           onEdit={() => openEditForm(detailRecipe)}
           onDelete={() => deleteRecipe(detailRecipe.id)}
@@ -709,15 +925,26 @@ function RecipeApp() {
           onSave={saveForm}
           onCancel={closeForm}
           knownCategories={knownCategories}
+          cjenovnik={cjenovnik}
           isNew={!recipes.some((r) => r.id === form.id)}
+        />
+      )}
+
+      {cjenovnikOpen && (
+        <CjenovnikModal
+          cjenovnik={cjenovnik}
+          setCjenovnik={setCjenovnik}
+          onClose={() => setCjenovnikOpen(false)}
         />
       )}
     </div>
   );
 }
 
-function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onToggleFavorite, addingToCart }) {
+function RecipeDetailModal({ recipe, cjenovnik, onClose, onEdit, onDelete, onAddToCart, onToggleFavorite, addingToCart }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const cijena = receptCijena(recipe, cjenovnik);
+  const porcije = Number(recipe.brojPorcija) > 0 ? Number(recipe.brojPorcija) : null;
   return (
     <div
       onClick={onClose}
@@ -750,9 +977,27 @@ function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onT
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 600, color: "#0F222B", lineHeight: 1.25 }}>{recipe.naziv}</div>
           </div>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
             <CategoryTag label={recipe.kategorija} />
+            {porcije && <span style={{ color: "#8A8578", fontSize: 12.5 }}>{porcije} {porcije === 1 ? "porcija" : "porcije"}</span>}
           </div>
+
+          {cijena && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 10, padding: "10px 12px", marginBottom: 16, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#007991" }}>
+                {moneyIcon(15)}
+                <span style={{ fontSize: 13.5, fontWeight: 700 }}>
+                  {cijena.nepoznato > 0 ? "~ " : ""}{fmtEUR(cijena.ukupno)}
+                  {porcije ? " · " + fmtEUR(cijena.ukupno / porcije) + " / porciji" : ""}
+                </span>
+              </div>
+              {cijena.nepoznato > 0 && (
+                <span style={{ color: "#8A8578", fontSize: 11.5 }}>
+                  ({cijena.nepoznato} {cijena.nepoznato === 1 ? "sastojak nije" : "sastojka nisu"} u cjenovniku)
+                </span>
+              )}
+            </div>
+          )}
 
           {recipe.videoUrl && (
             <a
@@ -771,9 +1016,18 @@ function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onT
               <div style={{ color: "#8A8578", fontSize: 13.5 }}>Nema unešenih sastojaka.</div>
             ) : (
               <ul style={{ margin: 0, paddingLeft: 20, color: "#3A362E", fontSize: 14, lineHeight: 1.7 }}>
-                {recipe.sastojci.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
+                {recipe.sastojci.map((s, i) => {
+                  const kolicinaText = s.kolicina && s.jedinica ? (s.kolicina + " " + s.jedinica + " ") : "";
+                  const cijenaSastojka = sastojakCijena(s, cjenovnik);
+                  return (
+                    <li key={i}>
+                      {kolicinaText}{s.naziv}
+                      {cijenaSastojka !== null && (
+                        <span style={{ color: "#8A8578", fontSize: 12.5 }}> · {fmtEUR(cijenaSastojka)}</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -826,7 +1080,7 @@ function RecipeDetailModal({ recipe, onClose, onEdit, onDelete, onAddToCart, onT
   );
 }
 
-function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isNew }) {
+function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cjenovnik, isNew }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
@@ -937,14 +1191,16 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
     try {
       const r = await scanRecipeFromImage(file);
       setForm((prev) => {
+        // Skener vraća sastojke kao običan tekst (npr. "500g brašna") - količina/jedinica se ne
+        // pogađaju automatski, korisnik ih po želji naknadno doda radi računanja cijene.
         const sastojci = Array.isArray(r.sastojci) && r.sastojci.length
-          ? r.sastojci.map((s) => String(s))
+          ? r.sastojci.map((s) => ({ naziv: String(s), kolicina: "", jedinica: "" }))
           : prev.sastojci;
         return {
           ...prev,
           naziv: r.naziv ? String(r.naziv) : prev.naziv,
           kategorija: r.kategorija ? String(r.kategorija) : prev.kategorija,
-          sastojci: sastojci && sastojci.length ? sastojci : [""],
+          sastojci: sastojci && sastojci.length ? sastojci : [{ naziv: "", kolicina: "", jedinica: "" }],
           priprema: r.priprema ? String(r.priprema) : prev.priprema,
         };
       });
@@ -972,10 +1228,10 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
       setUploading(false);
     }
   }
-  function updateSastojak(idx, value) {
+  function updateSastojak(idx, field, value) {
     setForm((prev) => {
       const next = prev.sastojci.slice();
-      next[idx] = value;
+      next[idx] = { ...next[idx], [field]: value };
       return { ...prev, sastojci: next };
     });
   }
@@ -983,16 +1239,18 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
     setForm((prev) => {
       const next = prev.sastojci.slice();
       next.splice(idx, 1);
-      if (next.length === 0) next.push("");
+      if (next.length === 0) next.push({ naziv: "", kolicina: "", jedinica: "" });
       return { ...prev, sastojci: next };
     });
   }
   function addSastojak() {
-    setForm((prev) => ({ ...prev, sastojci: prev.sastojci.concat([""]) }));
+    setForm((prev) => ({ ...prev, sastojci: prev.sastojci.concat([{ naziv: "", kolicina: "", jedinica: "" }]) }));
   }
 
   const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9, border: "1px solid #E4DFD3", fontSize: 14, fontFamily: "inherit", color: "#0F222B", background: "#fff" };
   const labelStyle = { fontWeight: 700, fontSize: 12.5, color: "#0F222B", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.3 };
+  const cjenovnikNames = Array.from(new Set((cjenovnik || []).map((c) => c.naziv).filter(Boolean))).sort((a, b) => a.localeCompare(b, "sr"));
+  const receptCijenaForm = receptCijena(form, cjenovnik);
 
   return (
     <div
@@ -1081,25 +1339,59 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
         </div>
 
         <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Broj porcija (opciono)</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            value={form.brojPorcija}
+            onChange={(e) => updateField("brojPorcija", e.target.value)}
+            placeholder="npr. 4"
+            style={{ ...inputStyle, width: 90 }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Sastojci</label>
-          {form.sastojci.map((s, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input
-                type="text"
-                value={s}
-                onChange={(e) => updateSastojak(i, e.target.value)}
-                placeholder={"Sastojak " + (i + 1)}
-                style={inputStyle}
-              />
-              <button
-                type="button"
-                onClick={() => removeSastojak(i)}
-                style={{ flexShrink: 0, width: 38, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                {xIcon()}
-              </button>
-            </div>
-          ))}
+          <div style={{ color: "#8A8578", fontSize: 12, marginBottom: 8, lineHeight: 1.4 }}>
+            Količina i jedinica su opcione - unesi ih da bi se cijena sastojka sama izračunala (ako je namirnica u Cjenovniku).
+          </div>
+          {form.sastojci.map((s, i) => {
+            const cijenaSastojka = sastojakCijena(s, cjenovnik);
+            return (
+              <div key={i} style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <AutocompleteInput
+                    value={s.naziv}
+                    onChange={(v) => updateSastojak(i, "naziv", v)}
+                    options={cjenovnikNames}
+                    placeholder={"Sastojak " + (i + 1)}
+                    style={inputStyle}
+                  />
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    value={s.kolicina}
+                    onChange={(e) => updateSastojak(i, "kolicina", e.target.value)}
+                    placeholder="kol."
+                    style={{ ...inputStyle, flex: "0 0 64px", padding: "10px 8px" }}
+                  />
+                  <UnitDropdown value={s.jedinica} onChange={(v) => updateSastojak(i, "jedinica", v)} />
+                  <button
+                    type="button"
+                    onClick={() => removeSastojak(i)}
+                    style={{ flexShrink: 0, width: 38, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    {xIcon()}
+                  </button>
+                </div>
+                {cijenaSastojka !== null && (
+                  <div style={{ color: "#007991", fontSize: 12, marginTop: 3, fontWeight: 600 }}>≈ {fmtEUR(cijenaSastojka)}</div>
+                )}
+              </div>
+            );
+          })}
           <button
             type="button"
             onClick={addSastojak}
@@ -1107,6 +1399,12 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
           >
             + Dodaj sastojak
           </button>
+          {receptCijenaForm && (
+            <div style={{ marginTop: 10, color: "#007991", fontSize: 13, fontWeight: 700 }}>
+              Ukupno: {receptCijenaForm.nepoznato > 0 ? "~ " : ""}{fmtEUR(receptCijenaForm.ukupno)}
+              {receptCijenaForm.nepoznato > 0 ? " (" + receptCijenaForm.nepoznato + " " + (receptCijenaForm.nepoznato === 1 ? "sastojak nije" : "sastojka nisu") + " u cjenovniku)" : ""}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 20 }}>
@@ -1150,6 +1448,159 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, isN
           <button
             type="button"
             onClick={onSave}
+            style={{ flex: 1, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "12px 12px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Sačuvaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cjenovnik - lista namirnica koje se ponavljaju kroz recepte. Ovdje se ne unosi direktno cijena
+// po jedinici mjere (npr. €/kg), nego onako kako se stvarno kupuje - npr. "10 jaja = 2,20 €" ili
+// "1 kg brašna = 0,55 €" - aplikacija sama izračuna cijenu po jedinici mjere dijeljenjem
+// (cijena pakovanja / količina u pakovanju), i to koristi za automatsko računanje cijene recepta.
+function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
+  const [rows, setRows] = useState(() =>
+    (cjenovnik && cjenovnik.length
+      ? cjenovnik.map((c) => ({ ...c, kolicina: c.kolicina === undefined || c.kolicina === null || c.kolicina === "" ? 1 : c.kolicina }))
+      : []
+    ).concat([{ naziv: "", kolicina: 1, jedinica: "kg", cijena: "" }])
+  );
+
+  const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9, border: "1px solid #E4DFD3", fontSize: 13.5, fontFamily: "inherit", color: "#0F222B", background: "#fff" };
+
+  // Cijena po jedinici mjere za jedan red (npr. "10 jaja = 2,20€" -> 0,22 €/kom), samo za prikaz -
+  // ne čuva se posebno, uvijek se računa iz kolicina+cijena kad zatreba (ovdje i pri računanju
+  // cijene recepta), tako korisnik uvijek vidi/uređuje brojeve onako kako ih je i unio.
+  function jedinicnaCijena(row) {
+    const k = Number(row.kolicina);
+    const c = row.cijena === "" || row.cijena === null || row.cijena === undefined ? NaN : Number(row.cijena);
+    if (!row.kolicina || !isFinite(k) || k <= 0 || !isFinite(c) || c < 0 || !row.jedinica) return null;
+    return c / k;
+  }
+
+  function updateRow(idx, field, value) {
+    setRows((prev) => {
+      const next = prev.slice();
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  }
+  function removeRow(idx) {
+    setRows((prev) => {
+      const next = prev.slice();
+      next.splice(idx, 1);
+      return next;
+    });
+  }
+  function addRow() {
+    setRows((prev) => prev.concat([{ naziv: "", kolicina: 1, jedinica: "kg", cijena: "" }]));
+  }
+  function handleSave() {
+    const cleaned = rows
+      .map((r) => ({
+        naziv: (r.naziv || "").trim(),
+        kolicina: r.kolicina === "" || r.kolicina === null || r.kolicina === undefined ? "" : Number(r.kolicina),
+        jedinica: r.jedinica || "kg",
+        cijena: r.cijena === "" || r.cijena === null || r.cijena === undefined ? "" : Number(r.cijena),
+      }))
+      .filter((r) => r.naziv && r.kolicina !== "" && isFinite(r.kolicina) && r.kolicina > 0 && r.cijena !== "" && isFinite(r.cijena) && r.cijena >= 0);
+    setCjenovnik(cleaned);
+    onClose();
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: "#0F222B" }}>Cjenovnik</div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0EDE4", color: "#0F222B", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+        <div style={{ color: "#8A8578", fontSize: 12.5, marginBottom: 16, lineHeight: 1.45 }}>
+          Unesi kako si stvarno kupio/la - npr. 10 jaja = 2,20 €, ili 1 kg brašna = 0,55 €. Cijena po jedinici mjere se sama izračuna. Naziv mora biti isti kao naziv sastojka u receptu da bi se cijena prepoznala.
+        </div>
+
+        {rows.map((r, i) => {
+          const jc = jedinicnaCijena(r);
+          return (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={r.naziv}
+                  onChange={(e) => updateRow(i, "naziv", e.target.value)}
+                  placeholder="Naziv namirnice"
+                  style={inputStyle}
+                />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  value={r.kolicina}
+                  onChange={(e) => updateRow(i, "kolicina", e.target.value)}
+                  placeholder="kol."
+                  style={{ ...inputStyle, flex: "0 0 56px", padding: "9px 6px" }}
+                />
+                <UnitDropdown value={r.jedinica} onChange={(v) => updateRow(i, "jedinica", v)} />
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  value={r.cijena}
+                  onChange={(e) => updateRow(i, "cijena", e.target.value)}
+                  placeholder="€"
+                  style={{ ...inputStyle, flex: "0 0 60px" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeRow(i)}
+                  style={{ flexShrink: 0, width: 36, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  {xIcon()}
+                </button>
+              </div>
+              {jc !== null && (
+                <div style={{ color: "#007991", fontSize: 12, marginTop: 3, fontWeight: 600 }}>
+                  = {fmtEUR(jc)} / {r.jedinica}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={addRow}
+          style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 20 }}
+        >
+          + Dodaj namirnicu
+        </button>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "12px 12px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Otkaži
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
             style={{ flex: 1, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "12px 12px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
           >
             Sačuvaj
