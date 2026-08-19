@@ -193,29 +193,179 @@ function fmtEUR(n) {
   return v.toFixed(2).replace(".", ",") + " €";
 }
 
-function findCijenaEntry(naziv, cjenovnik) {
-  const key = (naziv || "").trim().toLowerCase();
-  if (!key) return null;
-  return (cjenovnik || []).find((c) => (c.naziv || "").trim().toLowerCase() === key) || null;
+// Prepoznaje razne oblike riječi za jedinice mjere u slobodnom tekstu (npr. "grama", "kilograma",
+// ali i balkanske mjere "dag"/deka i "dl" koje se svode na g/ml uz množilac - npr. "20 dag" = 200g).
+// Kašika/kašičica su standardne metričke mjere (1 kašika = 15 ml, 1 kašičica = 5 ml) - za tečnosti
+// (ulje, mlijeko...) se svode na ml, jer im je zapremina fiksna. Za par čestih suvih namirnica
+// (KASIKA_GRAMI ispod) se posebno svode na grame, jer za njih ml ne odgovara stvarnoj težini.
+const JEDINICA_ALIASES = {
+  g: { jedinica: "g", mnozilac: 1 }, gr: { jedinica: "g", mnozilac: 1 }, gram: { jedinica: "g", mnozilac: 1 }, grama: { jedinica: "g", mnozilac: 1 }, grami: { jedinica: "g", mnozilac: 1 },
+  dag: { jedinica: "g", mnozilac: 10 }, deka: { jedinica: "g", mnozilac: 10 }, dekagram: { jedinica: "g", mnozilac: 10 }, dekagrama: { jedinica: "g", mnozilac: 10 },
+  kg: { jedinica: "kg", mnozilac: 1 }, kilogram: { jedinica: "kg", mnozilac: 1 }, kilograma: { jedinica: "kg", mnozilac: 1 },
+  ml: { jedinica: "ml", mnozilac: 1 }, mililitar: { jedinica: "ml", mnozilac: 1 }, mililitra: { jedinica: "ml", mnozilac: 1 }, mililitara: { jedinica: "ml", mnozilac: 1 },
+  dl: { jedinica: "ml", mnozilac: 100 }, decilitar: { jedinica: "ml", mnozilac: 100 }, decilitra: { jedinica: "ml", mnozilac: 100 }, decilitara: { jedinica: "ml", mnozilac: 100 },
+  l: { jedinica: "l", mnozilac: 1 }, lit: { jedinica: "l", mnozilac: 1 }, litar: { jedinica: "l", mnozilac: 1 }, litra: { jedinica: "l", mnozilac: 1 }, litre: { jedinica: "l", mnozilac: 1 }, litara: { jedinica: "l", mnozilac: 1 },
+  kom: { jedinica: "kom", mnozilac: 1 }, komad: { jedinica: "kom", mnozilac: 1 }, komada: { jedinica: "kom", mnozilac: 1 },
+  kašika: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kašike: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kašiku: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kašikom: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" },
+  kasika: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasike: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasiku: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasikom: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" },
+  kašičica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
+  kasicica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
+};
+function mapirajJedinicu(rawWord) {
+  return JEDINICA_ALIASES[(rawWord || "").toLowerCase()] || null;
+}
+function parsirajBroj(txt) {
+  const n = parseFloat((txt || "").replace(",", "."));
+  return isFinite(n) ? n : null;
 }
 
-// Cijena jednog sastojka (u €) na osnovu unesene količine/jedinice i cjenovnika, ili null ako
-// nedostaje količina/jedinica, sastojak nije u cjenovniku, ili su jedinice nespojive (npr. grami
-// naspram litara).
+// Približna težina RAVNE kašike/kašičice za par čestih suvih namirnica - gustina zavisi od
+// namirnice (šećer, brašno, so... sve različito teže), pa se za njih kašika/kašičica posebno
+// svodi na grame umjesto na zapreminu (ml) kao za tečnosti. Brojevi su po standardnoj kuvarskoj
+// tablici mjera. Ovo je procjena za RAVNU kašiku; ako se u receptu misli na punu/nabreklu kašiku,
+// stvarna težina može biti i skoro duplo veća.
+const KASIKA_GRAMI = [
+  { naziv: "šećer", kasika: 12, kasicica: 4 },
+  { naziv: "brašno", kasika: 10, kasicica: 3 },
+  { naziv: "so", kasika: 15, kasicica: 5 },
+  { naziv: "kakao", kasika: 6, kasicica: 2 },
+  { naziv: "puter", kasika: 14, kasicica: 5 },
+  { naziv: "med", kasika: 20, kasicica: 6 },
+  { naziv: "pirinač", kasika: 15, kasicica: 3 },
+  { naziv: "prašak", kasika: 10, kasicica: 3 },
+];
+function nadjiKasikaGrame(naziv) {
+  const y = (naziv || "").trim().toLowerCase();
+  if (!y) return null;
+  const kandidati = KASIKA_GRAMI.filter((k) => nazivOdgovara(k.naziv, y));
+  if (!kandidati.length) return null;
+  // Ako se poklopi više unosa, uzmi najspecifičniji (najduži naziv u tabeli).
+  return kandidati.reduce((best, k) => (k.naziv.length > best.naziv.length ? k : best));
+}
+
+// Iz broja (npr. "2") i prepoznate jedinice (uInfo iz mapirajJedinicu) odredi konačnu
+// količinu+jedinicu - posebno računa kašiku/kašičicu suvih namirnica u grame (vidi KASIKA_GRAMI),
+// za sve ostalo samo primjenjuje množilac (npr. dag/dl/kg...).
+function primijeniJedinicu(broj, uInfo, ostatakNaziva) {
+  if (uInfo.vrsta && ostatakNaziva) {
+    const suvo = nadjiKasikaGrame(ostatakNaziva);
+    if (suvo) {
+      const grami = uInfo.vrsta === "kasika" ? suvo.kasika : suvo.kasicica;
+      return { kolicina: broj * grami, jedinica: "g" };
+    }
+  }
+  return { kolicina: broj * uInfo.mnozilac, jedinica: uInfo.jedinica };
+}
+
+// Pokušava da iz slobodnog teksta sastojka (npr. "500g brašna" ili "brašno 500g") SAM izvuče
+// količinu, jedinicu mjere i preostali naziv namirnice - da korisnik NE MORA ručno da dijeli
+// stare sastojke u posebna polja, nego samo unese Cjenovnik i cijena se sama nađe. Prepoznaje i
+// oblik "3 jaja" (broj bez prave mjere - tretira se kao komad). Ako ne uspije da nađe broj na
+// početku ili kraju teksta, vraća null (taj sastojak jednostavno ostaje bez automatske cijene,
+// ništa se ne pokvari - korisnik i dalje može ručno unijeti Količinu/Jedinicu u formi ako želi).
+function parsirajSastojakTekst(text) {
+  const s = (text || "").trim();
+  if (!s) return null;
+
+  // Oblik "500g brašna" / "500 g brašna" / "3 jaja" / "2 kašike šećera"
+  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)\s*([a-zA-ZčćžšđČĆŽŠĐ]*)\s*(.*)$/);
+  if (m && m[1]) {
+    const broj = parsirajBroj(m[1]);
+    if (broj && broj > 0) {
+      let ostatak = (m[3] || "").trim();
+      const uInfo = mapirajJedinicu(m[2]);
+      let jedinica, kolicina;
+      if (!uInfo) {
+        if (m[2]) ostatak = (m[2] + " " + ostatak).trim();
+        jedinica = "kom";
+        kolicina = broj;
+      } else {
+        const rez = primijeniJedinicu(broj, uInfo, ostatak);
+        jedinica = rez.jedinica;
+        kolicina = rez.kolicina;
+      }
+      if (ostatak) return { kolicina: kolicina, jedinica: jedinica, naziv: ostatak };
+    }
+  }
+
+  // Oblik "brašno 500g" / "brašno 500 g"
+  m = s.match(/^(.*?)\s+([0-9]+(?:[.,][0-9]+)?)\s*([a-zA-ZčćžšđČĆŽŠĐ]*)$/);
+  if (m && m[2]) {
+    const broj = parsirajBroj(m[2]);
+    if (broj && broj > 0) {
+      const ostatak = (m[1] || "").trim();
+      const uInfo = mapirajJedinicu(m[3]);
+      const rez = uInfo ? primijeniJedinicu(broj, uInfo, ostatak) : { kolicina: broj, jedinica: "kom" };
+      if (ostatak) return { kolicina: rez.kolicina, jedinica: rez.jedinica, naziv: ostatak };
+    }
+  }
+
+  return null;
+}
+
+// Da li su dva naziva "ista" namirnica - dozvoljava malu razliku na kraju riječi zbog padeža u
+// srpskom/bosanskom/crnogorskom jeziku (npr. "brašno" iz Cjenovnika treba da prepozna "brašna" iz
+// recepta). Zahtijeva da se bar prva 3 slova poklapaju I da se poklapa skoro cijela riječ (do 2
+// slova razlike na kraju) - da ne bi slučajno spojio dvije različite namirnice.
+function nazivPodudaranje(a, b) {
+  const x = (a || "").trim().toLowerCase();
+  const y = (b || "").trim().toLowerCase();
+  if (!x || !y) return false;
+  if (x === y) return true;
+  let common = 0;
+  const maxCommon = Math.min(x.length, y.length);
+  while (common < maxCommon && x[common] === y[common]) common++;
+  return common >= 3 && common >= maxCommon - 2;
+}
+
+// Isto kao nazivPodudaranje, uz dodatnu proveru za kratke osnovne nazive (npr. "So" iz Cjenovnika,
+// 2 slova) kod kojih se padež samo dodaje na kraj (npr. "soli") - nazivPodudaranje sam po sebi to
+// ne hvata jer je riječ prekratka za pravilo "bar 3 zajednička slova". Dodatak na kraju je
+// namjerno ograničen na najviše 3 slova (koliko obično ima nastavak za padež), da npr. "so" ne bi
+// slučajno pokupio potpuno drugu riječ koja slučajno počinje isto (npr. "sok od limuna").
+function nazivOdgovara(bazniNaziv, sastojakNaziv) {
+  const x = (bazniNaziv || "").trim().toLowerCase();
+  const y = (sastojakNaziv || "").trim().toLowerCase();
+  if (!x || !y) return false;
+  if (y === x) return true;
+  if (x.length <= 3 && y.indexOf(x) === 0 && y.length - x.length <= 3) return true;
+  return nazivPodudaranje(x, y);
+}
+
+function findCijenaEntry(naziv, cjenovnik) {
+  const key = (naziv || "").trim();
+  if (!key) return null;
+  return (cjenovnik || []).find((c) => nazivOdgovara(c.naziv, key)) || null;
+}
+
+// Efektivna količina/jedinica/naziv za računanje cijene: ako je korisnik u formi ručno unio
+// Količinu i Jedinicu, to ima prednost (najpouzdanije). Ako nije, pokuša se automatsko čitanje
+// iz teksta naziva sastojka (parsirajSastojakTekst) - ovo pokriva stare/slobodno-unesene sastojke
+// bez ikakve dodatne izmjene recepta.
+function efektivnaKolicinaJedinica(sastojak) {
+  if (sastojak.kolicina && sastojak.jedinica) {
+    return { kolicina: Number(sastojak.kolicina), jedinica: sastojak.jedinica, naziv: sastojak.naziv };
+  }
+  return parsirajSastojakTekst(sastojak.naziv);
+}
+
+// Cijena jednog sastojka (u €) na osnovu (ručno unesene ili automatski pročitane) količine i
+// jedinice i cjenovnika, ili null ako se količina ne može odrediti, sastojak nije u cjenovniku,
+// ili su jedinice nespojive (npr. grami naspram litara).
 function sastojakCijena(sastojak, cjenovnik) {
-  const kolicina = Number(sastojak.kolicina);
-  if (!sastojak.kolicina || !isFinite(kolicina) || kolicina <= 0 || !sastojak.jedinica) return null;
-  const entry = findCijenaEntry(sastojak.naziv, cjenovnik);
+  const eff = efektivnaKolicinaJedinica(sastojak);
+  if (!eff || !eff.kolicina || !isFinite(eff.kolicina) || eff.kolicina <= 0 || !eff.jedinica) return null;
+  const entry = findCijenaEntry(eff.naziv, cjenovnik);
   if (!entry || !entry.jedinica || !isFinite(Number(entry.cijena)) || Number(entry.cijena) < 0) return null;
   // entry.kolicina = koliko je namirnice bilo u pakovanju za koje je unesena entry.cijena
   // (npr. "10 jaja = 2,20€" -> entryKolicina=10, entry.cijena=2.20). Ako polje ne postoji (stariji
   // unosi iz prve verzije cjenovnika, gdje je cijena već bila po jedinici), tretira se kao 1.
   const entryKolicina = entry.kolicina === undefined || entry.kolicina === null || entry.kolicina === "" ? 1 : Number(entry.kolicina);
   if (!isFinite(entryKolicina) || entryKolicina <= 0) return null;
-  const sUnit = UNIT_BASE[sastojak.jedinica];
+  const sUnit = UNIT_BASE[eff.jedinica];
   const eUnit = UNIT_BASE[entry.jedinica];
   if (!sUnit || !eUnit || sUnit.base !== eUnit.base) return null;
-  const kolicinaUBaznoj = kolicina * sUnit.factor;
+  const kolicinaUBaznoj = eff.kolicina * sUnit.factor;
   const entryKolicinaUBaznoj = entryKolicina * eUnit.factor;
   const cijenaPoBaznoj = Number(entry.cijena) / entryKolicinaUBaznoj;
   return kolicinaUBaznoj * cijenaPoBaznoj;
