@@ -1850,9 +1850,14 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
 // "1 kg brašna = 0,55 €" - aplikacija sama izračuna cijenu po jedinici mjere dijeljenjem
 // (cijena pakovanja / količina u pakovanju), i to koristi za automatsko računanje cijene recepta.
 function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
+  // Spisak se poređa po abecedi (nazivu) - lakše je pronaći namirnicu u dužem spisku po slovima nego
+  // pamtiti kojim je redom unesena. Prazan red za novi unos ostaje na dnu dok se ne popuni i sačuva -
+  // poslije čuvanja i ponovnog otvaranja i on se uklopi na svoje mjesto po abecedi.
   const [rows, setRows] = useState(() =>
     (cjenovnik && cjenovnik.length
-      ? cjenovnik.map((c) => ({ ...c, kolicina: c.kolicina === undefined || c.kolicina === null || c.kolicina === "" ? 1 : c.kolicina }))
+      ? cjenovnik
+          .map((c) => ({ ...c, kolicina: c.kolicina === undefined || c.kolicina === null || c.kolicina === "" ? 1 : c.kolicina }))
+          .sort((a, b) => (a.naziv || "").localeCompare(b.naziv || "", "sr", { sensitivity: "base" }))
       : []
     ).concat([{ naziv: "", kolicina: 1, jedinica: "kg", cijena: "" }])
   );
@@ -1961,7 +1966,7 @@ function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
                   placeholder="cijena"
                   style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
                 />
-                <span style={{ color: "#8A8578", fontSize: 13.5, flexShrink: 0 }}>€</span>
+                <span style={{ color: "#0F222B", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>€</span>
               </div>
               {jc !== null && (
                 <div style={{ color: "#007991", fontSize: 12.5, marginTop: 5, fontWeight: 700 }}>
