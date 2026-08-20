@@ -843,8 +843,8 @@ function moneyIcon(size) {
   const s = size || 16;
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9"/>
-      <text x="12" y="16.5" textAnchor="middle" fontSize="11" fontWeight="700" stroke="none" fill="currentColor">€</text>
+      <circle cx="12" cy="12" r="9.5"/>
+      <text x="12" y="16.9" textAnchor="middle" fontSize="16" fontWeight="700" stroke="none" fill="currentColor">€</text>
     </svg>
   );
 }
@@ -1157,7 +1157,7 @@ function RecipeApp() {
               aria-label="Cjenovnik namirnica"
               style={{ background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 9, width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxSizing: "border-box" }}
             >
-              {moneyIcon(18)}
+              {moneyIcon(27)}
             </button>
             <button
               type="button"
