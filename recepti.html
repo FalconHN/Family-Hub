@@ -274,16 +274,21 @@ function parsirajSastojakTekst(text) {
   const s = (text || "").trim();
   if (!s) return null;
 
-  // Oblik "500g brašna" / "500 g brašna" / "3 jaja" / "2 kašike šećera"
-  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)\s*([a-zA-ZčćžšđČĆŽŠĐ]*)\s*(.*)$/);
+  // Oblik "500g brašna" / "500 g brašna" / "3 jaja" / "2 kašike šećera" / "1/2 praška za pecivo"
+  // (razlomak poslije cijelog broja je opcion - "1/2" se svede na 0.5 prije daljeg računanja).
+  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)(?:\s*\/\s*([0-9]+(?:[.,][0-9]+)?))?\s*([a-zA-ZčćžšđČĆŽŠĐ]*)\s*(.*)$/);
   if (m && m[1]) {
-    const broj = parsirajBroj(m[1]);
+    let broj = parsirajBroj(m[1]);
+    if (broj !== null && m[2]) {
+      const imenilac = parsirajBroj(m[2]);
+      if (imenilac) broj = broj / imenilac;
+    }
     if (broj && broj > 0) {
-      let ostatak = (m[3] || "").trim();
-      const uInfo = mapirajJedinicu(m[2]);
+      let ostatak = (m[4] || "").trim();
+      const uInfo = mapirajJedinicu(m[3]);
       let jedinica, kolicina;
       if (!uInfo) {
-        if (m[2]) ostatak = (m[2] + " " + ostatak).trim();
+        if (m[3]) ostatak = (m[3] + " " + ostatak).trim();
         jedinica = "kom";
         kolicina = broj;
       } else {
@@ -326,6 +331,26 @@ function skiniKvacice(s) {
     .replace(/[đĐ]/g, "dj");
 }
 
+// Levenshtein rastojanje - najmanji broj izmjena (dodaj/obriši/zamijeni jedno slovo) potrebnih da
+// se riječ "a" pretvori u riječ "b". Koristi se kao rezervni pokušaj poklapanja naziva ispod.
+function levenshteinRastojanje(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cijena = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cijena);
+    }
+    const tmp = prev; prev = curr; curr = tmp;
+  }
+  return prev[n];
+}
+
 function nazivPodudaranje(a, b) {
   const x = skiniKvacice((a || "").trim().toLowerCase());
   const y = skiniKvacice((b || "").trim().toLowerCase());
@@ -334,7 +359,16 @@ function nazivPodudaranje(a, b) {
   let common = 0;
   const maxCommon = Math.min(x.length, y.length);
   while (common < maxCommon && x[common] === y[common]) common++;
-  return common >= 3 && common >= maxCommon - 2;
+  if (common >= 3 && common >= maxCommon - 2) return true;
+  // Zajednički početak ne hvata promjene USRED riječi, npr. "prašak" (nominativ) -> "praška"
+  // (genitiv, "pola praška") - slovo "a" se u srpskom/bosanskom jeziku kod ovakvih riječi pomjera
+  // ili nestaje ("nepostojano a": prašak/praška, sastanak/sastanka, momak/momka...), pa se prekid
+  // dogodi odmah na mjestu promjene i gornje pravilo ne prepozna da je u pitanju ista riječ. Prag
+  // za Levenshtein rastojanje raste sa dužinom riječi, da kraće riječi ne bi lako lažno poklopile
+  // nepovezane riječi slične dužine.
+  if (maxCommon < 4) return false;
+  const prag = maxCommon <= 5 ? 1 : maxCommon <= 8 ? 2 : 3;
+  return levenshteinRastojanje(x, y) <= prag;
 }
 
 // Isto kao nazivPodudaranje, uz dodatnu proveru za kratke osnovne nazive (npr. "So" iz Cjenovnika,
