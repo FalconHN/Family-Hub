@@ -254,6 +254,20 @@ function parsirajBroj(txt) {
   return isFinite(n) ? n : null;
 }
 
+// Čisti tekst iz polja za unos broja (Količina/Cijena) dok korisnik kuca - prihvata i zarez i tačku
+// kao decimalni znak (na balkanskim tastaturama zarez je uobičajen), i dozvoljava samo cifre i JEDAN
+// decimalni znak (zamijenjen tačkom, da bude spreman za Number()/parsirajBroj kasnije). Ova polja su
+// "type=text" (ne "type=number") baš zato što HTML "number" polje na mnogim telefonima/browserima
+// odbija zarez kao decimalni znak, pa se broj poslije zareza jednostavno izgubi i ne sačuva.
+function normalizujBroj(v) {
+  let x = (v || "").replace(",", ".").replace(/[^0-9.]/g, "");
+  const prvaTacka = x.indexOf(".");
+  if (prvaTacka !== -1) {
+    x = x.slice(0, prvaTacka + 1) + x.slice(prvaTacka + 1).replace(/\./g, "");
+  }
+  return x;
+}
+
 // Približna težina RAVNE kašike/kašičice za par čestih suvih namirnica - gustina zavisi od
 // namirnice (šećer, brašno, so... sve različito teže), pa se za njih kašika/kašičica posebno
 // svodi na grame umjesto na zapreminu (ml) kao za tečnosti. Brojevi su po standardnoj kuvarskoj
@@ -1735,11 +1749,10 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    min="0"
                     value={s.kolicina}
-                    onChange={(e) => updateSastojak(i, "kolicina", e.target.value)}
+                    onChange={(e) => updateSastojak(i, "kolicina", normalizujBroj(e.target.value))}
                     placeholder="količina"
                     style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
                   />
@@ -1931,22 +1944,20 @@ function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  min="0"
                   value={r.kolicina}
-                  onChange={(e) => updateRow(i, "kolicina", e.target.value)}
+                  onChange={(e) => updateRow(i, "kolicina", normalizujBroj(e.target.value))}
                   placeholder="količina"
                   style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
                 />
                 <UnitDropdown value={r.jedinica} onChange={(v) => updateRow(i, "jedinica", v)} />
                 <span style={{ color: "#8A8578", fontSize: 13.5, flexShrink: 0 }}>=</span>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  min="0"
                   value={r.cijena}
-                  onChange={(e) => updateRow(i, "cijena", e.target.value)}
+                  onChange={(e) => updateRow(i, "cijena", normalizujBroj(e.target.value))}
                   placeholder="cijena"
                   style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
                 />
