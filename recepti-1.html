@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Recepti</title>
+<meta name="theme-color" content="#F5F3EE" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Recepti" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=7" />
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=7" />
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png?v=7" />
+<link rel="manifest" href="manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#F5F3EE; height:100%; overflow-x: hidden; }
+  #root { min-height:100%; overflow-x: hidden; }
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  @keyframes fhspin { to { transform: rotate(360deg); } }
+  @keyframes fhpulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+  /* Sklanja ugrađene strelice za povećaj/smanji na poljima za broj (Količina, Cijena, Broj
+     porcija...) - te strelice na uskim poljima pojedu skoro pola prostora, pa se sam broj (npr.
+     "1,69") ne vidi cijeo. Bez njih polje ima punu širinu za sam upisani broj. */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAK9h4XR4ozUsOvkqaVNOnn9PS5XOBizAg",
+    authDomain: "family-hub-m.firebaseapp.com",
+    projectId: "family-hub-m",
+    storageBucket: "family-hub-m.firebasestorage.app",
+    messagingSenderId: "267839729754",
+    appId: "1:267839729754:web:04625e020a8dcd2e0e6863"
+  };
+  firebase.initializeApp(firebaseConfig);
+  // Auth guard: bounce to login page if not signed in.
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = "index.html?v=20260817";
+      return;
+    }
+    // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo (isto kao
+    // shopping-list.html - Recepti su za sada samo za roditelje).
+    firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
+      const role = (snap.exists && snap.data().role) || 'parent';
+      if (role === 'child') {
+        window.location.href = "raspored.html?v=20260817";
+        return;
+      }
+      if (typeof window.fhApplyRole === 'function') window.fhApplyRole(role);
+    }).catch(() => { /* ako upit ne uspije, ne blokiramo postojeci pristup */ });
+  });
+  // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
+  window.fhLogout = function () {
+    firebase.auth().signOut().catch(() => {}).finally(() => {
+      window.location.href = "index.html?v=20260817";
+    });
+  };
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/plain" id="app-source-code">
+const { useState, useEffect, useRef } = React;
+
+// Firestore is used directly below for shared, real-time sync (isti obrazac kao shopping-list.html:
+// jedan zajednicki dokument, polje sa nizom snimljeno kao JSON string).
+const db = firebase.firestore();
+const sharedDocRef = db.collection('recepti').doc('shared');
+
+const DEFAULT_CATEGORIES = ["Doručak", "Ručak", "Večera", "Dezert", "Užina"];
+
+// Cloudinary - besplatan servis za čuvanje slika koje korisnici otpremaju sa telefona/računara
+// (bez kartice/naplate, sam po sebi CDN-uje i optimizuje slike). "Unsigned" upload preset znači
+// da se otpremanje radi direktno iz browsera bez tajnog ključa.
+const CLOUDINARY_CLOUD_NAME = "family-hub";
+const CLOUDINARY_UPLOAD_PRESET = "recepti";
+
+async function uploadImageToCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD_NAME + "/image/upload", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error("Cloudinary upload failed with status " + res.status);
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("Cloudinary upload response missing secure_url");
+  return data.secure_url;
+}
+
+// "Skeniraj recept": šalje fotografiju Cloudflare Worker-u (koji drži Gemini ključ)
+// i dobija nazad strukturisan recept. VAŽNO: zamijeni URL ispod svojim Worker URL-om
+// nakon što ga deployuješ (vidi recept-ocr-worker.js).
+const RECIPE_OCR_WORKER_URL = "https://recept-ocr.ivanmitrovic82usa-503.workers.dev";
+
+// Smanjuje sliku (radi brzine i limita) i vraća base64 (bez "data:" prefiksa).
+function fileToDownscaledBase64(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = () => reject(new Error("Ne mogu da učitam sliku."));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("Ne mogu da pročitam fajl."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function scanRecipeFromImage(file) {
+  if (!RECIPE_OCR_WORKER_URL || RECIPE_OCR_WORKER_URL.indexOf("REPLACE-WITH") !== -1) {
+    throw new Error("Skener još nije podešen (Worker URL nije unešen u recepti.html).");
+  }
+  const { base64, mimeType } = await fileToDownscaledBase64(file, 1600);
+  const res = await fetch(RECIPE_OCR_WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: base64, mimeType }),
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    throw new Error((data && data.error) || ("Greška servera (" + res.status + ")."));
+  }
+  return data || {};
+}
+
+// ---- Besplatna rezerva za čitanje teksta sa slike (bez AI), kad Gemini ne uspije ----
+// Tesseract.js radi direktno u browseru (samo prvi put preuzme "jezički paket", pa radi bez
+// interneta/troška poslije toga) - "vidi" slova, ali za razliku od AI ne razumije SADRŽAJ (ne zna
+// šta je naziv, sastojak, ili korak pripreme). Zato solidno radi za OTKUCAN/štampan tekst (npr.
+// screenshot recepta sa sajta), a znatno slabije za rukom pisan tekst. AI (Gemini) ostaje prvi
+// izbor kad je dostupan - ovo je samo rezerva za kad Google javi da je privremeno preopterećen.
+const TESSERACT_CDN_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+let tesseractLoadPromise = null;
+function loadTesseractScript() {
+  if (window.Tesseract) return Promise.resolve();
+  if (tesseractLoadPromise) return tesseractLoadPromise;
+  tesseractLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = TESSERACT_CDN_URL;
+    s.onload = () => resolve();
+    s.onerror = () => { tesseractLoadPromise = null; reject(new Error("Ne mogu da učitam lokalni čitač teksta.")); };
+    document.head.appendChild(s);
+  });
+  return tesseractLoadPromise;
+}
+async function localOcrFromImage(file) {
+  await loadTesseractScript();
+  const { data } = await window.Tesseract.recognize(file, "srp_latn+eng");
+  return (data && data.text) || "";
+}
+
+function uid() {
+  return Date.now().toString() + Math.random().toString(36).slice(2, 8);
+}
+
+// Propušta samo http(s) linkove. Sprječava npr. "javascript:..." u polju slike/videa
+// da se iskoristi kao klik-XSS. Prazno polje ostaje prazno.
+function safeUrl(u) {
+  const s = (u || "").trim();
+  if (!s) return "";
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+
+// ---- Cijena recepta ----
+// Sastojak je sad objekat { naziv, kolicina, jedinica } umjesto obične riječi teksta (radi
+// nazad-kompatibilnosti stari recepti imaju sastojke kao obične stringove - normalizeSastojak
+// ih pretvara u isti oblik, samo bez količine/jedinice, pa se ništa staro ne pokvari).
+// Cijena se računa preko posebnog "Cjenovnika" (lista cijena po jedinici mjere za namirnice koje
+// se ponavljaju kroz recepte) - kad sastojak ima unesenu količinu+jedinicu I postoji u cjenovniku
+// pod istim nazivom, cijena se sama izračuna; u suprotnom se taj sastojak jednostavno ne uračunava
+// (a korisniku se pokazuje da cijena nije potpuna).
+const JEDINICE = ["g", "kg", "ml", "l", "kom"];
+const UNIT_BASE = {
+  g: { base: "masa", factor: 1 },
+  kg: { base: "masa", factor: 1000 },
+  ml: { base: "zapremina", factor: 1 },
+  l: { base: "zapremina", factor: 1000 },
+  kom: { base: "komad", factor: 1 },
+};
+
+function normalizeSastojak(s) {
+  if (typeof s === "string") return { naziv: s, kolicina: "", jedinica: "" };
+  if (s && typeof s === "object") {
+    return {
+      naziv: s.naziv || "",
+      kolicina: s.kolicina === undefined || s.kolicina === null ? "" : s.kolicina,
+      jedinica: s.jedinica || "",
+    };
+  }
+  return { naziv: "", kolicina: "", jedinica: "" };
+}
+function normalizeSastojci(arr) {
+  return Array.isArray(arr) ? arr.map(normalizeSastojak) : [];
+}
+
+function fmtEUR(n) {
+  const v = Number.isFinite(n) ? n : 0;
+  return v.toFixed(2).replace(".", ",") + " €";
+}
+
+// Prepoznaje razne oblike riječi za jedinice mjere u slobodnom tekstu (npr. "grama", "kilograma",
+// ali i balkanske mjere "dag"/deka i "dl" koje se svode na g/ml uz množilac - npr. "20 dag" = 200g).
+// Kašika/kašičica su standardne metričke mjere (1 kašika = 15 ml, 1 kašičica = 5 ml) - za tečnosti
+// (ulje, mlijeko...) se svode na ml, jer im je zapremina fiksna. Za par čestih suvih namirnica
+// (KASIKA_GRAMI ispod) se posebno svode na grame, jer za njih ml ne odgovara stvarnoj težini.
+const JEDINICA_ALIASES = {
+  g: { jedinica: "g", mnozilac: 1 }, gr: { jedinica: "g", mnozilac: 1 }, gram: { jedinica: "g", mnozilac: 1 }, grama: { jedinica: "g", mnozilac: 1 }, grami: { jedinica: "g", mnozilac: 1 },
+  dag: { jedinica: "g", mnozilac: 10 }, deka: { jedinica: "g", mnozilac: 10 }, dekagram: { jedinica: "g", mnozilac: 10 }, dekagrama: { jedinica: "g", mnozilac: 10 },
+  kg: { jedinica: "kg", mnozilac: 1 }, kilogram: { jedinica: "kg", mnozilac: 1 }, kilograma: { jedinica: "kg", mnozilac: 1 },
+  ml: { jedinica: "ml", mnozilac: 1 }, mililitar: { jedinica: "ml", mnozilac: 1 }, mililitra: { jedinica: "ml", mnozilac: 1 }, mililitara: { jedinica: "ml", mnozilac: 1 },
+  dl: { jedinica: "ml", mnozilac: 100 }, decilitar: { jedinica: "ml", mnozilac: 100 }, decilitra: { jedinica: "ml", mnozilac: 100 }, decilitara: { jedinica: "ml", mnozilac: 100 },
+  l: { jedinica: "l", mnozilac: 1 }, lit: { jedinica: "l", mnozilac: 1 }, litar: { jedinica: "l", mnozilac: 1 }, litra: { jedinica: "l", mnozilac: 1 }, litre: { jedinica: "l", mnozilac: 1 }, litara: { jedinica: "l", mnozilac: 1 },
+  kom: { jedinica: "kom", mnozilac: 1 }, komad: { jedinica: "kom", mnozilac: 1 }, komada: { jedinica: "kom", mnozilac: 1 },
+  kašika: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kašike: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kašiku: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kašikom: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" },
+  kasika: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasike: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasiku: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasikom: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" },
+  kašičica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
+  kasicica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
+};
+function mapirajJedinicu(rawWord) {
+  // Skida tačke prije provjere (npr. "kg." -> "kg", "gr." -> "gr") - dozvoljava i skraćenice sa
+  // tačkama iz teksta sastojka (vidi napomenu uz regex u parsirajSastojakTekst ispod).
+  return JEDINICA_ALIASES[(rawWord || "").toLowerCase().replace(/\./g, "")] || null;
+}
+function parsirajBroj(txt) {
+  const n = parseFloat((txt || "").replace(",", "."));
+  return isFinite(n) ? n : null;
+}
+
+// Čisti tekst iz polja za unos broja (Količina/Cijena) dok korisnik kuca - prihvata i zarez i tačku
+// kao decimalni znak (na balkanskim tastaturama zarez je uobičajen), i dozvoljava samo cifre i JEDAN
+// decimalni znak (zamijenjen tačkom, da bude spreman za Number()/parsirajBroj kasnije). Ova polja su
+// "type=text" (ne "type=number") baš zato što HTML "number" polje na mnogim telefonima/browserima
+// odbija zarez kao decimalni znak, pa se broj poslije zareza jednostavno izgubi i ne sačuva.
+function normalizujBroj(v) {
+  let x = (v || "").replace(",", ".").replace(/[^0-9.]/g, "");
+  const prvaTacka = x.indexOf(".");
+  if (prvaTacka !== -1) {
+    x = x.slice(0, prvaTacka + 1) + x.slice(prvaTacka + 1).replace(/\./g, "");
+  }
+  return x;
+}
+
+// Približna težina RAVNE kašike/kašičice za par čestih suvih namirnica - gustina zavisi od
+// namirnice (šećer, brašno, so... sve različito teže), pa se za njih kašika/kašičica posebno
+// svodi na grame umjesto na zapreminu (ml) kao za tečnosti. Brojevi su po standardnoj kuvarskoj
+// tablici mjera. Ovo je procjena za RAVNU kašiku; ako se u receptu misli na punu/nabreklu kašiku,
+// stvarna težina može biti i skoro duplo veća.
+const KASIKA_GRAMI = [
+  { naziv: "šećer", kasika: 12, kasicica: 4 },
+  { naziv: "brašno", kasika: 10, kasicica: 3 },
+  { naziv: "so", kasika: 15, kasicica: 5 },
+  { naziv: "kakao", kasika: 6, kasicica: 2 },
+  { naziv: "puter", kasika: 14, kasicica: 5 },
+  { naziv: "med", kasika: 20, kasicica: 6 },
+  { naziv: "pirinač", kasika: 15, kasicica: 3 },
+  { naziv: "prašak", kasika: 10, kasicica: 3 },
+];
+function nadjiKasikaGrame(naziv) {
+  const y = (naziv || "").trim().toLowerCase();
+  if (!y) return null;
+  const kandidati = KASIKA_GRAMI.filter((k) => nazivOdgovara(k.naziv, y));
+  if (!kandidati.length) return null;
+  // Ako se poklopi više unosa, uzmi najspecifičniji (najduži naziv u tabeli).
+  return kandidati.reduce((best, k) => (k.naziv.length > best.naziv.length ? k : best));
+}
+
+// Iz broja (npr. "2") i prepoznate jedinice (uInfo iz mapirajJedinicu) odredi konačnu
+// količinu+jedinicu - posebno računa kašiku/kašičicu suvih namirnica u grame (vidi KASIKA_GRAMI),
+// za sve ostalo samo primjenjuje množilac (npr. dag/dl/kg...).
+function primijeniJedinicu(broj, uInfo, ostatakNaziva) {
+  if (uInfo.vrsta && ostatakNaziva) {
+    const suvo = nadjiKasikaGrame(ostatakNaziva);
+    if (suvo) {
+      const grami = uInfo.vrsta === "kasika" ? suvo.kasika : suvo.kasicica;
+      return { kolicina: broj * grami, jedinica: "g" };
+    }
+  }
+  return { kolicina: broj * uInfo.mnozilac, jedinica: uInfo.jedinica };
+}
+
+// Pokušava da iz slobodnog teksta sastojka (npr. "500g brašna" ili "brašno 500g") SAM izvuče
+// količinu, jedinicu mjere i preostali naziv namirnice - da korisnik NE MORA ručno da dijeli
+// stare sastojke u posebna polja, nego samo unese Cjenovnik i cijena se sama nađe. Prepoznaje i
+// oblik "3 jaja" (broj bez prave mjere - tretira se kao komad). Ako ne uspije da nađe broj na
+// početku ili kraju teksta, vraća null (taj sastojak jednostavno ostaje bez automatske cijene,
+// ništa se ne pokvari - korisnik i dalje može ručno unijeti Količinu/Jedinicu u formi ako želi).
+function parsirajSastojakTekst(text) {
+  const s = (text || "").trim();
+  if (!s) return null;
+
+  // Oblik "500g brašna" / "500 g brašna" / "3 jaja" / "2 kašike šećera" / "1/2 praška za pecivo"
+  // (razlomak poslije cijelog broja je opcion - "1/2" se svede na 0.5 prije daljeg računanja).
+  // Riječ poslije broja dozvoljava i tačku poslije svakog slova (npr. "p.z.p." ili "kg.") - inače bi
+  // se čitanje prekinulo na prvoj tački i naziv bi ispao pogrešno podijeljen (npr. "p" + ".z.p.").
+  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)(?:\s*\/\s*([0-9]+(?:[.,][0-9]+)?))?\s*((?:[a-zA-ZčćžšđČĆŽŠĐ]\.?)*)\s*(.*)$/);
+  if (m && m[1]) {
+    let broj = parsirajBroj(m[1]);
+    if (broj !== null && m[2]) {
+      const imenilac = parsirajBroj(m[2]);
+      if (imenilac) broj = broj / imenilac;
+    }
+    if (broj && broj > 0) {
+      let ostatak = (m[4] || "").trim();
+      const uInfo = mapirajJedinicu(m[3]);
+      let jedinica, kolicina;
+      if (!uInfo) {
+        if (m[3]) ostatak = (m[3] + " " + ostatak).trim();
+        jedinica = "kom";
+        kolicina = broj;
+      } else {
+        const rez = primijeniJedinicu(broj, uInfo, ostatak);
+        jedinica = rez.jedinica;
+        kolicina = rez.kolicina;
+      }
+      if (ostatak) return { kolicina: kolicina, jedinica: jedinica, naziv: ostatak };
+    }
+  }
+
+  // Oblik "brašno 500g" / "brašno 500 g"
+  m = s.match(/^(.*?)\s+([0-9]+(?:[.,][0-9]+)?)\s*((?:[a-zA-ZčćžšđČĆŽŠĐ]\.?)*)$/);
+  if (m && m[2]) {
+    const broj = parsirajBroj(m[2]);
+    if (broj && broj > 0) {
+      const ostatak = (m[1] || "").trim();
+      const uInfo = mapirajJedinicu(m[3]);
+      const rez = uInfo ? primijeniJedinicu(broj, uInfo, ostatak) : { kolicina: broj, jedinica: "kom" };
+      if (ostatak) return { kolicina: rez.kolicina, jedinica: rez.jedinica, naziv: ostatak };
+    }
+  }
+
+  return null;
+}
+
+// Da li su dva naziva "ista" namirnica - dozvoljava malu razliku na kraju riječi zbog padeža u
+// srpskom/bosanskom/crnogorskom jeziku (npr. "brašno" iz Cjenovnika treba da prepozna "brašna" iz
+// recepta). Zahtijeva da se bar prva 3 slova poklapaju I da se poklapa skoro cijela riječ (do 2
+// slova razlike na kraju) - da ne bi slučajno spojio dvije različite namirnice.
+// Skida naša slova sa kvačicama (š,č,ć,ž,đ) na obična latinična slova, da bi se npr. "brasno"
+// (unešeno u Cjenovniku bez kvačica, česta pojava na telefonu bez podešene srpske/bosanske
+// tastature) poklopilo sa "brašno" iz teksta recepta. Bez ovoga poređenje ispod broji "š" i "s"
+// kao potpuno različita slova, pa se poklapanje lomi tačno na mjestu razlike.
+function skiniKvacice(s) {
+  return (s || "")
+    .replace(/[šŠ]/g, "s")
+    .replace(/[čćČĆ]/g, "c")
+    .replace(/[žŽ]/g, "z")
+    .replace(/[đĐ]/g, "dj");
+}
+
+// Uobičajene skraćenice iz recepata - prije poređenja naziva, skraćenica se zamijeni punim
+// nazivom namirnice, da bi se prepoznala i cijena našla automatski bez obzira da li je
+// skraćenica upisana u Cjenovniku, u receptu, ili u oba (npr. "p.z.p.", "pzp", "p z p" ->
+// "prašak za pecivo"). Radi i kad je skraćenica dio duže fraze (npr. "kesica p.z.p."), a ne
+// hvata je slučajno usred neke druge riječi (mora biti okružena razmakom/početkom/krajem/znakom).
+const SKRACENICE = [{ obrazac: /(^|[^a-z])p\.?\s*z\.?\s*p\.?(?=$|[^a-z])/g, puno: "prasak za pecivo" }];
+function prosiriSkracenice(s) {
+  let rez = s || "";
+  SKRACENICE.forEach(({ obrazac, puno }) => {
+    rez = rez.replace(obrazac, (cijeli, pre) => pre + puno);
+  });
+  return rez;
+}
+
+// Levenshtein rastojanje - najmanji broj izmjena (dodaj/obriši/zamijeni jedno slovo) potrebnih da
+// se riječ "a" pretvori u riječ "b". Koristi se kao rezervni pokušaj poklapanja naziva ispod.
+function levenshteinRastojanje(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cijena = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cijena);
+    }
+    const tmp = prev; prev = curr; curr = tmp;
+  }
+  return prev[n];
+}
+
+function nazivPodudaranje(a, b) {
+  const xSirovo = skiniKvacice((a || "").trim().toLowerCase());
+  const ySirovo = skiniKvacice((b || "").trim().toLowerCase());
+  const x = prosiriSkracenice(xSirovo);
+  const y = prosiriSkracenice(ySirovo);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  // "Sadržana fraza" provjera (npr. "prasak za pecivo" unutar "kesica prasak za pecivo") se radi
+  // SAMO kad je bar jedna strana stvarno nastala razvijanjem skraćenice (x/y se razlikuje od
+  // sirovog teksta) - inače bi npr. "Šećer" lažno pokupio "Vanilin šećer" (obična riječ je skoro
+  // uvijek "sadržana" u nekom dužem, srodnom ali RAZLIČITOM nazivu, pa opšte pravilo nije sigurno).
+  const xPromijenjen = x !== xSirovo;
+  const yPromijenjen = y !== ySirovo;
+  if (xPromijenjen || yPromijenjen) {
+    const kraci = x.length <= y.length ? x : y;
+    const duzi = x.length <= y.length ? y : x;
+    if (kraci.length >= 4) {
+      const escapiran = kraci.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp("(^|[^a-z])" + escapiran + "($|[^a-z])").test(duzi)) return true;
+    }
+  }
+  let common = 0;
+  const maxCommon = Math.min(x.length, y.length);
+  while (common < maxCommon && x[common] === y[common]) common++;
+  if (common >= 3 && common >= maxCommon - 2) return true;
+  // Zajednički početak ne hvata promjene USRED riječi, npr. "prašak" (nominativ) -> "praška"
+  // (genitiv, "pola praška") - slovo "a" se u srpskom/bosanskom jeziku kod ovakvih riječi pomjera
+  // ili nestaje ("nepostojano a": prašak/praška, sastanak/sastanka, momak/momka...), pa se prekid
+  // dogodi odmah na mjestu promjene i gornje pravilo ne prepozna da je u pitanju ista riječ. Prag
+  // za Levenshtein rastojanje raste sa dužinom riječi, da kraće riječi ne bi lako lažno poklopile
+  // nepovezane riječi slične dužine.
+  if (maxCommon < 4) return false;
+  const prag = maxCommon <= 5 ? 1 : maxCommon <= 8 ? 2 : 3;
+  return levenshteinRastojanje(x, y) <= prag;
+}
+
+// Isto kao nazivPodudaranje, uz dodatnu proveru za kratke osnovne nazive (npr. "So" iz Cjenovnika,
+// 2 slova) kod kojih se padež samo dodaje na kraj (npr. "soli") - nazivPodudaranje sam po sebi to
+// ne hvata jer je riječ prekratka za pravilo "bar 3 zajednička slova". Dodatak na kraju je
+// namjerno ograničen na najviše 3 slova (koliko obično ima nastavak za padež), da npr. "so" ne bi
+// slučajno pokupio potpuno drugu riječ koja slučajno počinje isto (npr. "sok od limuna").
+function nazivOdgovara(bazniNaziv, sastojakNaziv) {
+  const x = skiniKvacice((bazniNaziv || "").trim().toLowerCase());
+  const y = skiniKvacice((sastojakNaziv || "").trim().toLowerCase());
+  if (!x || !y) return false;
+  if (y === x) return true;
+  if (x.length <= 3 && y.indexOf(x) === 0 && y.length - x.length <= 3) return true;
+  return nazivPodudaranje(x, y);
+}
+
+function findCijenaEntry(naziv, cjenovnik) {
+  const key = (naziv || "").trim();
+  if (!key) return null;
+  return (cjenovnik || []).find((c) => nazivOdgovara(c.naziv, key)) || null;
+}
+
+// Efektivna količina/jedinica/naziv za računanje cijene: ako je korisnik u formi ručno unio
+// Količinu i Jedinicu, to ima prednost (najpouzdanije). Ako nije, pokuša se automatsko čitanje
+// iz teksta naziva sastojka (parsirajSastojakTekst) - ovo pokriva stare/slobodno-unesene sastojke
+// bez ikakve dodatne izmjene recepta.
+function efektivnaKolicinaJedinica(sastojak) {
+  if (sastojak.kolicina && sastojak.jedinica) {
+    return { kolicina: Number(sastojak.kolicina), jedinica: sastojak.jedinica, naziv: sastojak.naziv };
+  }
+  return parsirajSastojakTekst(sastojak.naziv);
+}
+
+// Cijena jednog sastojka (u €) na osnovu (ručno unesene ili automatski pročitane) količine i
+// jedinice i cjenovnika, ili null ako se količina ne može odrediti, sastojak nije u cjenovniku,
+// ili su jedinice nespojive (npr. grami naspram litara).
+function sastojakCijena(sastojak, cjenovnik) {
+  const eff = efektivnaKolicinaJedinica(sastojak);
+  if (!eff || !eff.kolicina || !isFinite(eff.kolicina) || eff.kolicina <= 0 || !eff.jedinica) return null;
+  const entry = findCijenaEntry(eff.naziv, cjenovnik);
+  if (!entry || !entry.jedinica || !isFinite(Number(entry.cijena)) || Number(entry.cijena) < 0) return null;
+  // entry.kolicina = koliko je namirnice bilo u pakovanju za koje je unesena entry.cijena
+  // (npr. "10 jaja = 2,20€" -> entryKolicina=10, entry.cijena=2.20). Ako polje ne postoji (stariji
+  // unosi iz prve verzije cjenovnika, gdje je cijena već bila po jedinici), tretira se kao 1.
+  const entryKolicina = entry.kolicina === undefined || entry.kolicina === null || entry.kolicina === "" ? 1 : Number(entry.kolicina);
+  if (!isFinite(entryKolicina) || entryKolicina <= 0) return null;
+  const sUnit = UNIT_BASE[eff.jedinica];
+  const eUnit = UNIT_BASE[entry.jedinica];
+  if (!sUnit || !eUnit || sUnit.base !== eUnit.base) return null;
+  const kolicinaUBaznoj = eff.kolicina * sUnit.factor;
+  const entryKolicinaUBaznoj = entryKolicina * eUnit.factor;
+  const cijenaPoBaznoj = Number(entry.cijena) / entryKolicinaUBaznoj;
+  return kolicinaUBaznoj * cijenaPoBaznoj;
+}
+
+// Ukupna (približna) cijena recepta - sabira cijene svih sastojaka koji se mogu izračunati.
+// Vraća null ako se nijedan sastojak ne može izračunati (nema smisla prikazivati "0,00 €").
+function receptCijena(recipe, cjenovnik) {
+  const sastojci = recipe.sastojci || [];
+  let ukupno = 0;
+  let poznato = 0;
+  let nepoznato = 0;
+  sastojci.forEach((s) => {
+    if (!s || !s.naziv) return;
+    const c = sastojakCijena(s, cjenovnik);
+    if (c === null) { nepoznato++; return; }
+    ukupno += c;
+    poznato++;
+  });
+  if (poznato === 0) return null;
+  return { ukupno, poznato, nepoznato };
+}
+
+// Slika recepta sa sigurnim fallback-om: ako nema URL-a ili se slika ne učita
+// (npr. slomljen link), prikazuje ikonicu kuvarske kape umjesto praznog sivog kvadrata.
+function RecipeImage({ url, alt, iconSize }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [url]); // reset kad se recept izmijeni
+  if (!url || broken) return chefHatIcon(iconSize);
+  return (
+    <img
+      src={url}
+      alt={alt || ""}
+      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+function emptyRecipeForm() {
+  return {
+    id: null,
+    naziv: "",
+    kategorija: "",
+    slikaUrl: "",
+    videoUrl: "",
+    sastojci: [{ naziv: "", kolicina: "", jedinica: "" }],
+    priprema: "",
+    brojPorcija: "",
+  };
+}
+
+const CATEGORY_COLORS = [
+  { bg: "#DCEFE3", text: "#1F7A52" },
+  { bg: "#E3ECF5", text: "#2F6690" },
+  { bg: "#F3E8D9", text: "#B8895E" },
+  { bg: "#EEE3F0", text: "#8E6C9E" },
+  { bg: "#F5E1DC", text: "#C97B63" },
+  { bg: "#E6F1F2", text: "#007991" },
+];
+function colorForCategory(name) {
+  if (!name) return { bg: "#EAE6DC", text: "#8A8578" };
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
+}
+
+function CategoryTag({ label }) {
+  if (!label) return null;
+  const c = colorForCategory(label);
+  return (
+    <span style={{ background: c.bg, color: c.text, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+      {label}
+    </span>
+  );
+}
+
+// Prilagođena (custom) padajuća lista - zamjena za ugrađeni <datalist>, koji na iPhone/Safari-ju
+// ne prikazuje ponuđene opcije (kucanje inače radi normalno). Isti obrazac kao u ostalim
+// aplikacijama (raspored.html, shopping-list.html).
+function AutocompleteInput({ value, onChange, options, placeholder, style, onKeyDown, onBlur, autoFocus }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  const q = (value || "").trim().toLowerCase();
+  const filtered = q === "" ? options : options.filter((o) => o.toLowerCase().includes(q));
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        position: "relative",
+        width: style && style.width ? undefined : "100%",
+        flex: style && style.flex ? style.flex : undefined,
+      }}
+    >
+      <input
+        autoFocus={autoFocus}
+        autoComplete="off"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+          if (onKeyDown) onKeyDown(e);
+        }}
+        onBlur={(e) => { setOpen(false); if (onBlur) onBlur(e); }}
+        style={{ width: "100%", boxSizing: "border-box", ...style }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30, background: "#fff", border: "1px solid #E6E1D8", borderRadius: 8, marginTop: 3, maxHeight: 190, overflowY: "auto", boxShadow: "0 8px 20px -8px rgba(27,58,74,0.3)" }}>
+          {filtered.map((o) => (
+            <div
+              key={o}
+              onMouseDown={(e) => { e.preventDefault(); onChange(o); setOpen(false); }}
+              style={{ padding: "8px 10px", fontSize: 13.5, color: "#0F222B", cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#FAF8F4"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function chevronDownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  );
+}
+function checkIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
+// Prilagođena padajuća lista za filter kategorija - izgleda kao kartica koja iskače ispod
+// kontrole, sa istaknutom trenutno izabranom kategorijom (pozadina boje breskve + kvačica).
+// Native <select> ne može ovako da se stilizuje, pa je ovo poseban React komponent.
+function CategoryDropdown({ value, onChange, options, wrapperStyle }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  const displayLabel = value === "Sve" ? "Sve kategorije" : value;
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", ...(wrapperStyle || {}) }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9,
+          padding: "0 10px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: "#0F222B", outline: "none",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayLabel}</span>
+        <span style={{ flexShrink: 0, color: "#8A8578", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>{chevronDownIcon()}</span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 210, maxWidth: "min(260px, calc(100vw - 28px))",
+            background: "#fff", borderRadius: 18, boxShadow: "0 12px 30px -8px rgba(15,34,43,0.28)", padding: 8,
+            maxHeight: 320, overflowY: "auto", zIndex: 40,
+          }}
+        >
+          {options.map((c) => {
+            const selected = c === value;
+            const label = c === "Sve" ? "Sve kategorije" : c;
+            return (
+              <div
+                key={c}
+                onMouseDown={(e) => { e.preventDefault(); onChange(c); setOpen(false); }}
+                style={{
+                  padding: "12px 14px", borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  gap: 10, fontSize: 15, color: "#0F222B", background: selected ? "#F5DEC0" : "transparent", fontWeight: selected ? 700 : 500,
+                }}
+              >
+                <span>{label}</span>
+                {selected && <span style={{ flexShrink: 0, color: "#0F222B" }}>{checkIcon()}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mali izbornik jedinice mjere (g / kg / ml / l / kom) - isti obrazac kao CategoryDropdown iznad
+// (prilagođeni padajući meni umjesto pravog <select>, jer <select> na Android telefonima iskače
+// kao taman sistemski dijalog koji ignoriše boje stranice).
+function UnitDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", flex: "0 0 64px" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%", height: "100%", minHeight: 40, boxSizing: "border-box", border: "1px solid #E4DFD3", borderRadius: 9,
+          padding: "0 8px", fontSize: 13.5, fontFamily: "inherit", background: "#fff", color: value ? "#0F222B" : "#8A8578", outline: "none",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 3,
+        }}
+      >
+        <span>{value || "j."}</span>
+        <span style={{ flexShrink: 0, color: "#8A8578", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>{chevronDownIcon()}</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: 74,
+            background: "#fff", borderRadius: 12, boxShadow: "0 12px 30px -8px rgba(15,34,43,0.28)", padding: 6,
+            zIndex: 40,
+          }}
+        >
+          {JEDINICE.map((j) => (
+            <div
+              key={j}
+              onMouseDown={(e) => { e.preventDefault(); onChange(j); setOpen(false); }}
+              style={{
+                padding: "8px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13.5, color: "#0F222B",
+                background: j === value ? "#F5DEC0" : "transparent", fontWeight: j === value ? 700 : 500,
+              }}
+            >
+              {j}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function chefHatIcon(size) {
+  const s = size || 40;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#C9C3B5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+      <path d="M6 17h12"/>
+    </svg>
+  );
+}
+function playIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  );
+}
+function cartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+    </svg>
+  );
+}
+function pencilIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
+}
+function trashIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>;
+}
+function xIcon() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}
+function uploadIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  );
+}
+function cameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+    </svg>
+  );
+}
+function micIcon(size) {
+  const s = size || 16;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+  );
+}
+function heartIcon(filled, size) {
+  const s = size || 18;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  );
+}
+function moneyIcon(size) {
+  const s = size || 16;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9.5"/>
+      <text x="12" y="12" textAnchor="middle" dominantBaseline="central" fontSize="16" fontWeight="700" stroke="none" fill="currentColor">€</text>
+    </svg>
+  );
+}
+
+function RecipeApp() {
+  const [recipes, setRecipes] = useState([]);
+  const [cjenovnik, setCjenovnik] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Sve");
+  const [detailId, setDetailId] = useState(null);
+  const [form, setForm] = useState(null); // null = no form open, object = editing/adding
+  const [toast, setToast] = useState(null); // null ili { msg, type: "success" | "error" }
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cjenovnikOpen, setCjenovnikOpen] = useState(false);
+  // true dok prikazani podaci dolaze iz lokalnog keša telefona (brzo, ali možda zastarjelo ako je
+  // nešto izmijenjeno na drugom uređaju u međuvremenu), a baza još nije potvrdila da su
+  // najsvježiji. Koristi se samo za mali, suptilni indikator - ne blokira ništa i ne mijenja kad
+  // se šta iscrtava.
+  const [syncing, setSyncing] = useState(false);
+
+  const lastSentRecipes = useRef(null);
+  const lastSentCjenovnik = useRef(null);
+  const saveTimer = useRef(null);
+  const cjenovnikSaveTimer = useRef(null);
+  const toastTimer = useRef(null);
+
+  useEffect(() => {
+    const unsub = sharedDocRef.onSnapshot(
+      (snap) => {
+        if (snap.exists) {
+          const data = snap.data() || {};
+          if (typeof data.recepti === "string" && data.recepti !== lastSentRecipes.current) {
+            try {
+              const parsed = JSON.parse(data.recepti);
+              if (Array.isArray(parsed)) {
+                const next = parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, brojPorcija: "", ...r, sastojci: normalizeSastojci(r.sastojci) }));
+                // Ako su podaci koji su stigli iz baze suštinski isti kao ono što već prikazujemo
+                // (npr. baza samo "odjekne" nazad naš vlastiti upis, ili stigne suvišni snapshot),
+                // ne pravimo novi niz/objekte - to bi natjeralo cijelu listu i otvoreni prozorčić da
+                // se iznova iscrtaju bez ikakve stvarne promjene, što se na sporijoj/nestabilnoj
+                // mreži vidi kao kratak "trzaj"/treperenje ekrana.
+                setRecipes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+              }
+            } catch (e) {}
+          }
+          if (typeof data.cjenovnik === "string" && data.cjenovnik !== lastSentCjenovnik.current) {
+            try {
+              const parsedC = JSON.parse(data.cjenovnik);
+              if (Array.isArray(parsedC)) {
+                setCjenovnik((prev) => (JSON.stringify(prev) === JSON.stringify(parsedC) ? prev : parsedC));
+              }
+            } catch (e) {}
+          }
+        } else {
+          sharedDocRef.set({ recepti: JSON.stringify([]), cjenovnik: JSON.stringify([]) });
+        }
+        setLoaded(true);
+        // snap.metadata.fromCache je true dok je ovo lokalno sačuvana kopija (prije nego što
+        // baza potvrdi da je najsvježija) - koristimo to samo da pokažemo mali indikator, ne za
+        // ništa drugo.
+        setSyncing(!!(snap.metadata && snap.metadata.fromCache));
+      },
+      (err) => {
+        console.error("Firestore sync error", err);
+        showToast("Greška pri učitavanju recepata (" + (err && err.code ? err.code : "provjeri internet") + ").", "error");
+        setLoaded(true);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const json = JSON.stringify(recipes);
+      lastSentRecipes.current = json;
+      sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => {
+        console.error("Failed to save recepti", e);
+        lastSentRecipes.current = null; // ne blokiraj ponovni pokušaj kasnije ako se doc ipak promijeni
+        showToast("Snimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + "). Recept NIJE sačuvan trajno — provjeri internet ili se javi.", "error");
+      });
+    }, 400);
+    return () => clearTimeout(saveTimer.current);
+  }, [recipes, loaded]);
+
+  // Cjenovnik (cijene po jedinici mjere za namirnice) se čuva u istom dokumentu kao i recepti,
+  // samo u drugom polju - isti obrazac autosnimanja (400ms poslije zadnje izmjene).
+  useEffect(() => {
+    if (!loaded) return;
+    if (cjenovnikSaveTimer.current) clearTimeout(cjenovnikSaveTimer.current);
+    cjenovnikSaveTimer.current = setTimeout(() => {
+      const json = JSON.stringify(cjenovnik);
+      lastSentCjenovnik.current = json;
+      sharedDocRef.set({ cjenovnik: json }, { merge: true }).catch((e) => {
+        console.error("Failed to save cjenovnik", e);
+        lastSentCjenovnik.current = null;
+        showToast("Snimanje cjenovnika nije uspjelo (" + (e && e.code ? e.code : "greška") + ").", "error");
+      });
+    }, 400);
+    return () => clearTimeout(cjenovnikSaveTimer.current);
+  }, [cjenovnik, loaded]);
+
+  // Kad je otvoren neki od "modala" (detalji recepta, forma za dodavanje/izmjenu ili Cjenovnik),
+  // gurni jedan dodatni unos u istoriju browsera. Tako dugme/gest "nazad" na telefonu prvo
+  // zatvori modal (ostaješ na stranici Recepti), umjesto da odmah izađe sa cijele stranice na
+  // prethodnu (npr. na početni ekran). Kad se modal zatvori preko X/Otkaži dugmeta, sami
+  // "pojedemo" taj dodatni unos (history.back()) da se ne gomilaju prazni koraci u istoriji.
+  const modalHistoryRef = useRef({ pushed: false, poppingFromBack: false });
+  const modalOpen = !!(detailId || form || cjenovnikOpen);
+  useEffect(() => {
+    const st = modalHistoryRef.current;
+    if (modalOpen && !st.pushed) {
+      window.history.pushState({ fhModal: true }, "");
+      st.pushed = true;
+    } else if (!modalOpen && st.pushed) {
+      st.pushed = false;
+      if (!st.poppingFromBack) window.history.back();
+      st.poppingFromBack = false;
+    }
+  }, [modalOpen]);
+
+  useEffect(() => {
+    function onPopState() {
+      const st = modalHistoryRef.current;
+      if (st.pushed) {
+        st.pushed = false;
+        st.poppingFromBack = true;
+        setDetailId(null);
+        setForm(null);
+        setCjenovnikOpen(false);
+      }
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function showToast(msg, type) {
+    const t = type || "success";
+    setToast({ msg, type: t });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), t === "error" ? 6000 : 3000);
+  }
+
+  // Isti "pun ekran" indikator učitavanja kao na ostalim stranicama (raspored.html),
+  // da iskustvo bude jednoliko dok se ne poveže sa bazom.
+  if (!loaded) {
+    return (
+      <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, background: "#F5F3EE", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div style={{ width: 34, height: 34, border: "3px solid #DDE7E4", borderTopColor: "#007991", borderRadius: "50%", animation: "fhspin 0.8s linear infinite" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "#5B6B70" }}>Učitavanje…</div>
+      </div>
+    );
+  }
+
+  const knownCategories = Array.from(
+    new Set([...DEFAULT_CATEGORIES, ...recipes.map((r) => r.kategorija).filter(Boolean)])
+  ).sort((a, b) => a.localeCompare(b, "sr"));
+
+  const allCategoriesForFilter = ["Sve", "Omiljeni", ...knownCategories];
+
+  const visibleRecipes = recipes
+    .filter((r) => {
+      if (categoryFilter === "Sve") return true;
+      if (categoryFilter === "Omiljeni") return !!r.omiljen;
+      return r.kategorija === categoryFilter;
+    })
+    .filter((r) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      if (r.naziv.toLowerCase().includes(q)) return true;
+      return (r.sastojci || []).some((s) => (s && s.naziv || "").toLowerCase().includes(q));
+    })
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  function openAddForm() {
+    setForm(emptyRecipeForm());
+  }
+  function openEditForm(recipe) {
+    setForm({
+      ...recipe,
+      sastojci: recipe.sastojci && recipe.sastojci.length ? recipe.sastojci.map((s) => ({ ...s })) : [{ naziv: "", kolicina: "", jedinica: "" }],
+      brojPorcija: recipe.brojPorcija || "",
+    });
+    setDetailId(null);
+  }
+  function closeForm() {
+    setForm(null);
+  }
+  function saveForm() {
+    const naziv = (form.naziv || "").trim();
+    if (!naziv) return;
+    const cleanSastojci = (form.sastojci || [])
+      .map((s) => ({
+        naziv: (s.naziv || "").trim(),
+        kolicina: s.kolicina === "" || s.kolicina === null || s.kolicina === undefined ? "" : Number(s.kolicina),
+        jedinica: s.jedinica || "",
+      }))
+      .filter((s) => s.naziv);
+    const cleaned = {
+      id: form.id || uid(),
+      naziv: naziv,
+      kategorija: (form.kategorija || "").trim(),
+      slikaUrl: safeUrl(form.slikaUrl),
+      videoUrl: safeUrl(form.videoUrl),
+      sastojci: cleanSastojci,
+      priprema: (form.priprema || "").trim(),
+      brojPorcija: form.brojPorcija === "" || form.brojPorcija === null || form.brojPorcija === undefined ? "" : Number(form.brojPorcija),
+    };
+    setRecipes((prev) => {
+      const existingIdx = prev.findIndex((r) => r.id === cleaned.id);
+      if (existingIdx >= 0) {
+        const next = prev.slice();
+        next[existingIdx] = { ...prev[existingIdx], ...cleaned };
+        return next;
+      }
+      const maxOrder = prev.reduce((m, r) => Math.max(m, r.order || 0), 0);
+      return prev.concat([{ ...cleaned, order: maxOrder + 1 }]);
+    });
+    setForm(null);
+  }
+  function deleteRecipe(id) {
+    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    if (detailId === id) setDetailId(null);
+  }
+  function toggleFavorite(id) {
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, omiljen: !r.omiljen } : r)));
+  }
+
+  async function addIngredientsToShoppingList(recipe) {
+    if (!recipe.sastojci || recipe.sastojci.length === 0) {
+      showToast("Ovaj recept nema unešene sastojke.", "error");
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      const shoppingRef = db.collection("shopping-list").doc("shared");
+      // Transakcija: čita i piše atomično, pa se stavke ne izgube ako neko u istom
+      // trenutku mijenja kupovinu na drugom uređaju (sprječava "gaženje" liste).
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(shoppingRef);
+        const data = snap.exists ? snap.data() : {};
+        let items = [];
+        if (typeof data.items === "string") {
+          try {
+            const parsed = JSON.parse(data.items);
+            if (Array.isArray(parsed)) items = parsed;
+          } catch (e) {}
+        }
+        const maxOrder = items.reduce((m, it) => Math.max(m, it.order || 0), 0);
+        const newItems = recipe.sastojci.map((s, i) => {
+          const kolicinaText = s.kolicina && s.jedinica ? (s.kolicina + " " + s.jedinica) : "";
+          const noteParts = [];
+          if (recipe.naziv) noteParts.push("Za: " + recipe.naziv);
+          if (kolicinaText) noteParts.push(kolicinaText);
+          return {
+            id: uid() + i,
+            name: s.naziv,
+            quantity: 1,
+            store: "",
+            category: "",
+            price: 0,
+            note: noteParts.join(" · "),
+            purchased: false,
+            order: maxOrder + i + 1,
+          };
+        });
+        const updated = items.concat(newItems);
+        tx.set(shoppingRef, { items: JSON.stringify(updated) }, { merge: true });
+      });
+      showToast("Sastojci (" + recipe.sastojci.length + ") dodati u kupovinu!");
+    } catch (e) {
+      console.error("Failed to add ingredients to shopping list", e);
+      showToast("Nije uspjelo dodavanje u kupovinu. Pokušaj ponovo.", "error");
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  const detailRecipe = detailId ? recipes.find((r) => r.id === detailId) : null;
+
+  return (
+    <div style={{ background: "#F5F3EE", minHeight: "100%", color: "#0F222B", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 1120, margin: "0 auto", padding: "28px 14px 60px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#007991" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/>
+              <path d="M6 17h12"/>
+            </svg>
+            <div>
+              <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 700, color: "#0F222B", letterSpacing: "-0.02em", margin: 0 }}>Recepti</h1>
+              <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                <span>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</span>
+                {syncing && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#A9A398" }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#A9A398", animation: "fhpulse 1.2s ease-in-out infinite" }} />
+                    <span style={{ fontSize: 11.5 }}>sinhronizuje se…</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setCjenovnikOpen(true)}
+              title="Cjenovnik namirnica"
+              aria-label="Cjenovnik namirnica"
+              style={{ background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 9, width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxSizing: "border-box" }}
+            >
+              {moneyIcon(27)}
+            </button>
+            <button
+              type="button"
+              onClick={openAddForm}
+              style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: 160, height: 40, boxSizing: "border-box" }}
+            >
+              + Dodaj recept
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Pretraži po nazivu ili sastojku..."
+            style={{ flex: "3 1 160px", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "0 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
+          />
+          <CategoryDropdown
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            options={allCategoriesForFilter}
+            wrapperStyle={{ flex: "0 1 160px", minWidth: 100, maxWidth: 160 }}
+          />
+        </div>
+
+        {visibleRecipes.length === 0 ? (
+          <div style={{ color: "#8A8578", fontSize: 14, padding: "30px 4px", textAlign: "center" }}>
+            {recipes.length === 0 ? "Još nema dodanih recepata." : "Nema recepata koji odgovaraju pretrazi."}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+            {visibleRecipes.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => setDetailId(r.id)}
+                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)" }}
+              >
+                <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <RecipeImage url={r.slikaUrl} alt={r.naziv} iconSize={36} />
+                  <button
+                    type="button"
+                    aria-label={r.omiljen ? "Ukloni iz omiljenih" : "Dodaj u omiljene"}
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(r.id); }}
+                    style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.9)", color: r.omiljen ? "#E0555A" : "#8A8578", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 4px rgba(15,34,43,0.18)", padding: 0 }}
+                  >
+                    {heartIcon(r.omiljen, 16)}
+                  </button>
+                </div>
+                <div style={{ padding: "10px 12px 12px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                    <CategoryTag label={r.kategorija} />
+                    <span style={{ color: "#8A8578", fontSize: 11.5 }}>{(r.sastojci || []).length} sastojaka</span>
+                    {(() => {
+                      const c = receptCijena(r, cjenovnik);
+                      return c ? (
+                        <span style={{ color: "#007991", fontSize: 11.5, fontWeight: 700 }}>
+                          {c.nepoznato > 0 ? "~" : ""}{fmtEUR(c.ukupno)}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {toast && (
+        <div
+          style={{
+            position: "fixed", left: "50%", bottom: "calc(90px + env(safe-area-inset-bottom))", transform: "translateX(-50%)",
+            background: toast.type === "error" ? "#B3413E" : "#1F7A52", color: "#fff", padding: "12px 16px", borderRadius: 10,
+            fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, textAlign: "center", boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)",
+            zIndex: 10001, maxWidth: "calc(100vw - 32px)", boxSizing: "border-box",
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
+
+      {detailRecipe && !form && (
+        <RecipeDetailModal
+          recipe={detailRecipe}
+          cjenovnik={cjenovnik}
+          onClose={() => setDetailId(null)}
+          onEdit={() => openEditForm(detailRecipe)}
+          onDelete={() => deleteRecipe(detailRecipe.id)}
+          onAddToCart={() => addIngredientsToShoppingList(detailRecipe)}
+          onToggleFavorite={() => toggleFavorite(detailRecipe.id)}
+          addingToCart={addingToCart}
+        />
+      )}
+
+      {form && (
+        <RecipeFormModal
+          form={form}
+          setForm={setForm}
+          onSave={saveForm}
+          onCancel={closeForm}
+          knownCategories={knownCategories}
+          cjenovnik={cjenovnik}
+          isNew={!recipes.some((r) => r.id === form.id)}
+        />
+      )}
+
+      {cjenovnikOpen && (
+        <CjenovnikModal
+          cjenovnik={cjenovnik}
+          setCjenovnik={setCjenovnik}
+          onClose={() => setCjenovnikOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecipeDetailModal({ recipe, cjenovnik, onClose, onEdit, onDelete, onAddToCart, onToggleFavorite, addingToCart }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const cijena = receptCijena(recipe, cjenovnik);
+  const porcije = Number(recipe.brojPorcija) > 0 ? Number(recipe.brojPorcija) : null;
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)" }}
+      >
+        <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          <RecipeImage url={recipe.slikaUrl} alt={recipe.naziv} iconSize={48} />
+          <button
+            type="button"
+            aria-label={recipe.omiljen ? "Ukloni iz omiljenih" : "Dodaj u omiljene"}
+            onClick={onToggleFavorite}
+            style={{ position: "absolute", top: 12, left: 12, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.92)", color: recipe.omiljen ? "#E0555A" : "#8A8578", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 6px rgba(15,34,43,0.2)", padding: 0 }}
+          >
+            {heartIcon(recipe.omiljen, 19)}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: "50%", background: "rgba(15,34,43,0.55)", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+
+        <div style={{ padding: "18px 20px 24px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 600, color: "#0F222B", lineHeight: 1.25 }}>{recipe.naziv}</div>
+          </div>
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <CategoryTag label={recipe.kategorija} />
+            {porcije && <span style={{ color: "#8A8578", fontSize: 12.5 }}>{porcije} {porcije === 1 ? "porcija" : "porcije"}</span>}
+          </div>
+
+          {cijena && (
+            <div style={{ background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#007991", marginBottom: 10 }}>
+                {moneyIcon(14)}
+                <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>Cijena recepta</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 22, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontSize: 21, fontWeight: 800, color: "#0F222B", lineHeight: 1 }}>
+                    {cijena.nepoznato > 0 ? "~" : ""}{fmtEUR(cijena.ukupno)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8A8578", marginTop: 3 }}>ukupno</div>
+                </div>
+                {porcije && (
+                  <div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: "#007991", lineHeight: 1 }}>
+                      {cijena.nepoznato > 0 ? "~" : ""}{fmtEUR(cijena.ukupno / porcije)}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#8A8578", marginTop: 3 }}>po porciji</div>
+                  </div>
+                )}
+              </div>
+              {cijena.nepoznato > 0 && (
+                <div style={{ color: "#8A8578", fontSize: 11.5, marginTop: 9, lineHeight: 1.4 }}>
+                  {cijena.nepoznato} {cijena.nepoznato === 1 ? "sastojak nije uračunat" : "sastojka nisu uračunata"} (nema ih u Cjenovniku)
+                </div>
+              )}
+            </div>
+          )}
+
+          {recipe.videoUrl && (
+            <a
+              href={recipe.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#0F222B", color: "#fff", textDecoration: "none", padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, marginBottom: 18 }}
+            >
+              {playIcon()} Pogledaj video
+            </a>
+          )}
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: "#0F222B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>Sastojci</div>
+            {(recipe.sastojci || []).length === 0 ? (
+              <div style={{ color: "#8A8578", fontSize: 13.5 }}>Nema unešenih sastojaka.</div>
+            ) : (
+              <div>
+                {recipe.sastojci.map((s, i) => {
+                  const kolicinaText = s.kolicina && s.jedinica ? (s.kolicina + " " + s.jedinica) : "";
+                  const cijenaSastojka = sastojakCijena(s, cjenovnik);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12,
+                        padding: "8px 0", borderBottom: i < recipe.sastojci.length - 1 ? "1px solid #F0EDE4" : "none",
+                      }}
+                    >
+                      <span style={{ color: "#3A362E", fontSize: 14, lineHeight: 1.4 }}>
+                        {kolicinaText && <span style={{ color: "#8A8578", fontWeight: 600 }}>{kolicinaText} </span>}
+                        {s.naziv}
+                      </span>
+                      {cijenaSastojka !== null && (
+                        <span style={{ color: "#5B6B70", fontSize: 12.5, fontWeight: 700, flexShrink: 0, whiteSpace: "nowrap" }}>{fmtEUR(cijenaSastojka)}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {recipe.priprema && (
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: "#0F222B", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>Priprema</div>
+              <div style={{ color: "#3A362E", fontSize: 14, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{recipe.priprema}</div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={onAddToCart}
+            disabled={addingToCart}
+            style={{ width: "100%", background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 700, fontSize: 14.5, cursor: addingToCart ? "default" : "pointer", opacity: addingToCart ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit", marginBottom: 12 }}
+          >
+            {cartIcon()} {addingToCart ? "Dodavanje..." : "Dodaj sve sastojke u kupovinu"}
+          </button>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              type="button"
+              onClick={onEdit}
+              style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "10px 12px", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" }}
+            >
+              {pencilIcon()} Izmijeni
+            </button>
+            {!confirmDelete ? (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                style={{ flex: 1, background: "#fff", color: "#B3413E", border: "1px solid #E4DFD3", borderRadius: 10, padding: "10px 12px", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" }}
+              >
+                {trashIcon()} Obriši
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onDelete}
+                style={{ flex: 1, background: "#B3413E", color: "#fff", border: "1px solid #B3413E", borderRadius: 10, padding: "10px 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Potvrdi brisanje
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cjenovnik, isNew }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const [scanNotice, setScanNotice] = useState(""); // info (ne greška) kad se koristi rezerva bez AI
+  const scanInputRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const [speechError, setSpeechError] = useState("");
+  const recognitionRef = useRef(null);
+  // Prati da li KORISNIK želi da diktiranje bude uključeno (razlika od "listening" state-a):
+  // Chrome ponekad sam ugasi prepoznavanje poslije par sekundi tišine, čak i kad je continuous
+  // uključeno. Kad se to desi, a korisnik nije sam kliknuo "Zaustavi", automatski ga ponovo
+  // pokrećemo umjesto da diktiranje samo nestane čim korisnik napravi kraću pauzu.
+  const shouldListenRef = useRef(false);
+
+  // Glasovni unos za "Priprema" - koristi ugrađenu Web Speech API funkciju browsera (besplatno,
+  // bez posebnog servera/ključa). Najbolje radi u Chrome-u na Androidu; na iPhone-u/Safari-ju
+  // radi djelimično, a u nekim browserima uopšte nije podržano - zato uvijek ostaje moguće i
+  // ručno kucanje, dugme za mikrofon je samo dodatna opcija. Jezik je hr-HR (hrvatski) jer je to
+  // najpouzdaniji izbor za ijekavicu koji Chrome/Google prepoznavanje govora podržava - srpski
+  // (sr-RS) prepoznaje na ekavici.
+  useEffect(() => {
+    return () => {
+      shouldListenRef.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+    };
+  }, []);
+
+  function startRecognition(SpeechRecognitionCtor) {
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "hr-HR";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      let finalText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
+      }
+      finalText = finalText.trim();
+      if (finalText) {
+        setForm((prev) => {
+          const existing = prev.priprema || "";
+          const sep = existing && !/\s$/.test(existing) ? " " : "";
+          return { ...prev, priprema: existing + sep + finalText };
+        });
+      }
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setSpeechError("Dozvoli pristup mikrofonu da bi glasovni unos radio.");
+        shouldListenRef.current = false;
+      } else if (event.error !== "no-speech" && event.error !== "aborted") {
+        setSpeechError("Glasovni unos nije uspio. Probaj ponovo.");
+        shouldListenRef.current = false;
+      }
+      // "no-speech"/"aborted" ne gasimo shouldListenRef - to je samo kratka tišina, onend ispod
+      // će sam ponovo pokrenuti slušanje ako je korisnik i dalje "uključen".
+    };
+    recognition.onend = () => {
+      if (shouldListenRef.current) {
+        try {
+          recognition.start();
+          return; // ostaje "Slušam..." - nije korisnik zaustavio
+        } catch (e) {
+          // rijedak slučaj (npr. restart prebrzo) - samo prekini uredno ispod
+        }
+      }
+      setListening(false);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
+  function toggleDictation() {
+    if (listening) {
+      shouldListenRef.current = false;
+      if (recognitionRef.current) recognitionRef.current.stop();
+      return;
+    }
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setSpeechError("Glasovni unos nije podržan u ovom browseru. Probaj u Chrome-u na telefonu.");
+      return;
+    }
+    setSpeechError("");
+    shouldListenRef.current = true;
+    try {
+      startRecognition(SpeechRecognitionCtor);
+      setListening(true);
+    } catch (e) {
+      shouldListenRef.current = false;
+      setSpeechError("Glasovni unos nije uspio. Probaj ponovo.");
+    }
+  }
+
+  function updateField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleScanSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // dozvoli ponovni odabir iste slike
+    if (!file) return;
+    setScanError("");
+    setScanNotice("");
+    setScanning(true);
+    try {
+      const r = await scanRecipeFromImage(file);
+      setForm((prev) => {
+        // Skener vraća sastojke kao običan tekst (npr. "500g brašna") - količina/jedinica se ne
+        // pogađaju automatski, korisnik ih po želji naknadno doda radi računanja cijene.
+        const sastojci = Array.isArray(r.sastojci) && r.sastojci.length
+          ? r.sastojci.map((s) => ({ naziv: String(s), kolicina: "", jedinica: "" }))
+          : prev.sastojci;
+        return {
+          ...prev,
+          naziv: r.naziv ? String(r.naziv) : prev.naziv,
+          kategorija: r.kategorija ? String(r.kategorija) : prev.kategorija,
+          sastojci: sastojci && sastojci.length ? sastojci : [{ naziv: "", kolicina: "", jedinica: "" }],
+          priprema: r.priprema ? String(r.priprema) : prev.priprema,
+        };
+      });
+    } catch (err) {
+      console.error("AI skener nije uspio, probam lokalno prepoznavanje teksta (bez AI)...", err);
+      try {
+        const text = await localOcrFromImage(file);
+        const cleaned = (text || "").split("\n").map((l) => l.trim()).filter(Boolean).join("\n");
+        if (!cleaned) throw new Error("prazno");
+        setForm((prev) => ({ ...prev, priprema: prev.priprema ? prev.priprema + "\n" + cleaned : cleaned }));
+        setScanNotice("AI trenutno nedostupan, pa je korišćeno osnovno prepoznavanje teksta (bez AI) - manje pouzdano, naročito za rukopis. Tekst je ubačen u „Priprema” ispod; provjeri ga i sam razdvoji sastojke ako treba.");
+      } catch (err2) {
+        console.error("I lokalno prepoznavanje nije uspjelo", err2);
+        setScanError((err && err.message) || "Skeniranje nije uspjelo. Unesi ručno.");
+      }
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // omogući ponovni odabir istog fajla ako upload ne uspije
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      updateField("slikaUrl", url);
+    } catch (err) {
+      console.error("Cloudinary upload failed", err);
+      setUploadError("Otpremanje slike nije uspjelo. Probaj ponovo ili zalijepi link ručno.");
+    } finally {
+      setUploading(false);
+    }
+  }
+  function updateSastojak(idx, field, value) {
+    setForm((prev) => {
+      const next = prev.sastojci.slice();
+      next[idx] = { ...next[idx], [field]: value };
+      return { ...prev, sastojci: next };
+    });
+  }
+  function removeSastojak(idx) {
+    setForm((prev) => {
+      const next = prev.sastojci.slice();
+      next.splice(idx, 1);
+      if (next.length === 0) next.push({ naziv: "", kolicina: "", jedinica: "" });
+      return { ...prev, sastojci: next };
+    });
+  }
+  function addSastojak() {
+    setForm((prev) => ({ ...prev, sastojci: prev.sastojci.concat([{ naziv: "", kolicina: "", jedinica: "" }]) }));
+  }
+
+  const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9, border: "1px solid #E4DFD3", fontSize: 14, fontFamily: "inherit", color: "#0F222B", background: "#fff" };
+  const labelStyle = { fontWeight: 700, fontSize: 12.5, color: "#0F222B", marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.3 };
+  const cjenovnikNames = Array.from(new Set((cjenovnik || []).map((c) => c.naziv).filter(Boolean))).sort((a, b) => a.localeCompare(b, "sr"));
+  const receptCijenaForm = receptCijena(form, cjenovnik);
+  const porcijeForm = Number(form.brojPorcija) > 0 ? Number(form.brojPorcija) : null;
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: "#0F222B" }}>{isNew ? "Dodaj recept" : "Izmijeni recept"}</div>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0EDE4", color: "#0F222B", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+
+        <div style={{ marginBottom: 16, padding: "12px 14px", background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 12 }}>
+          {scanning ? (
+            <div style={{ width: "100%", boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 12px", fontWeight: 700, fontSize: 14, opacity: 0.75, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {uploadIcon()} Čitam recept sa slike...
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              <label style={{ position: "relative", overflow: "hidden", flex: 1, boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 10px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, WebkitTapHighlightColor: "transparent" }}>
+                {cameraIcon()} Slikaj
+                <input type="file" accept="image/*" capture="environment" onChange={handleScanSelected} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, border: 0, padding: 0, margin: 0, cursor: "pointer" }} />
+              </label>
+              <label style={{ position: "relative", overflow: "hidden", flex: 1, boxSizing: "border-box", background: "#007991", color: "#fff", borderRadius: 9, padding: "11px 10px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, WebkitTapHighlightColor: "transparent" }}>
+                {uploadIcon()} Galerija
+                <input ref={scanInputRef} type="file" accept="image/*" onChange={handleScanSelected} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, border: 0, padding: 0, margin: 0, cursor: "pointer" }} />
+              </label>
+            </div>
+          )}
+          <div style={{ color: "#5A6B6E", fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
+„Slikaj" — fotografiši recept kamerom. „Galerija" — izaberi postojeću sliku ili screenshot. Polja se popune sama; provjeri prije nego sačuvaš.
+          </div>
+          {scanError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 8 }}>{scanError}</div>}
+          {scanNotice && <div style={{ color: "#007991", fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>{scanNotice}</div>}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Naziv</label>
+          <input type="text" value={form.naziv} onChange={(e) => updateField("naziv", e.target.value)} placeholder="Naziv recepta" style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Kategorija</label>
+          <AutocompleteInput
+            value={form.kategorija}
+            onChange={(v) => updateField("kategorija", v)}
+            options={knownCategories}
+            placeholder="Kategorija (upiši ili izaberi)"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Slika</label>
+          <input type="text" value={form.slikaUrl} onChange={(e) => updateField("slikaUrl", e.target.value)} placeholder="https://... (ili otpremi ispod)" style={inputStyle} />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} style={{ display: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              disabled={uploading}
+              style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: uploading ? "default" : "pointer", fontFamily: "inherit", opacity: uploading ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 }}
+            >
+              {uploadIcon()} {uploading ? "Otpremanje..." : "Otpremi sliku"}
+            </button>
+            {form.slikaUrl && (
+              <div style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "#F0EDE4", flexShrink: 0 }}>
+                <img src={form.slikaUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
+              </div>
+            )}
+          </div>
+          {uploadError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 6 }}>{uploadError}</div>}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Video (URL)</label>
+          <input type="text" value={form.videoUrl} onChange={(e) => updateField("videoUrl", e.target.value)} placeholder="https://..." style={inputStyle} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Broj porcija (opciono)</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            value={form.brojPorcija}
+            onChange={(e) => updateField("brojPorcija", e.target.value)}
+            placeholder="npr. 4"
+            style={{ ...inputStyle, width: 90 }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Sastojci</label>
+          <div style={{ color: "#8A8578", fontSize: 12, marginBottom: 8, lineHeight: 1.4 }}>
+            Količina i jedinica su opcione - unesi ih da bi se cijena sastojka sama izračunala (ako je namirnica u Cjenovniku).
+          </div>
+          {form.sastojci.map((s, i) => {
+            const cijenaSastojka = sastojakCijena(s, cjenovnik);
+            return (
+              <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < form.sastojci.length - 1 ? "1px solid #F0EDE4" : "none" }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                  <AutocompleteInput
+                    value={s.naziv}
+                    onChange={(v) => updateSastojak(i, "naziv", v)}
+                    options={cjenovnikNames}
+                    placeholder={"Sastojak " + (i + 1)}
+                    style={inputStyle}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSastojak(i)}
+                    style={{ flexShrink: 0, width: 38, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    {xIcon()}
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={s.kolicina}
+                    onChange={(e) => updateSastojak(i, "kolicina", normalizujBroj(e.target.value))}
+                    placeholder="količina"
+                    style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
+                  />
+                  <UnitDropdown value={s.jedinica} onChange={(v) => updateSastojak(i, "jedinica", v)} />
+                  {cijenaSastojka !== null && (
+                    <div style={{ color: "#007991", fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap", marginLeft: "auto", paddingLeft: 8 }}>≈ {fmtEUR(cijenaSastojka)}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={addSastojak}
+            style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            + Dodaj sastojak
+          </button>
+          {receptCijenaForm && (
+            <div style={{ marginTop: 12, background: "#EAF3F4", border: "1px solid #CADEE1", borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#0F222B" }}>
+                  {receptCijenaForm.nepoznato > 0 ? "~" : ""}{fmtEUR(receptCijenaForm.ukupno)}
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#8A8578", marginLeft: 4 }}>ukupno</span>
+                </div>
+                {porcijeForm && (
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "#007991" }}>
+                    {receptCijenaForm.nepoznato > 0 ? "~" : ""}{fmtEUR(receptCijenaForm.ukupno / porcijeForm)}
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#8A8578", marginLeft: 4 }}>po porciji</span>
+                  </div>
+                )}
+              </div>
+              {receptCijenaForm.nepoznato > 0 && (
+                <div style={{ fontSize: 11.5, color: "#8A8578", marginTop: 5 }}>
+                  {receptCijenaForm.nepoznato} {receptCijenaForm.nepoznato === 1 ? "sastojak nije" : "sastojka nisu"} u cjenovniku
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Priprema</label>
+            <button
+              type="button"
+              onClick={toggleDictation}
+              style={{
+                display: "flex", alignItems: "center", gap: 6, border: "none", borderRadius: 999,
+                padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                background: listening ? "#B3413E" : "#EAF3F4", color: listening ? "#fff" : "#007991",
+              }}
+            >
+              {micIcon(14)} {listening ? "Zaustavi" : "Izdiktiraj"}
+            </button>
+          </div>
+          <textarea
+            value={form.priprema}
+            onChange={(e) => updateField("priprema", e.target.value)}
+            placeholder="Koraci pripreme..."
+            rows={5}
+            style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
+          />
+          {listening && (
+            <div style={{ color: "#007991", fontSize: 12, marginTop: 6, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              {micIcon(13)} Slušam... izgovori korake pripreme.
+            </div>
+          )}
+          {speechError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 6 }}>{speechError}</div>}
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "12px 12px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Otkaži
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            style={{ flex: 1, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "12px 12px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Sačuvaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cjenovnik - lista namirnica koje se ponavljaju kroz recepte. Ovdje se ne unosi direktno cijena
+// po jedinici mjere (npr. €/kg), nego onako kako se stvarno kupuje - npr. "10 jaja = 2,20 €" ili
+// "1 kg brašna = 0,55 €" - aplikacija sama izračuna cijenu po jedinici mjere dijeljenjem
+// (cijena pakovanja / količina u pakovanju), i to koristi za automatsko računanje cijene recepta.
+function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
+  // Spisak se poređa po abecedi (nazivu) - lakše je pronaći namirnicu u dužem spisku po slovima nego
+  // pamtiti kojim je redom unesena. Prazan red za novi unos ostaje na dnu dok se ne popuni i sačuva -
+  // poslije čuvanja i ponovnog otvaranja i on se uklopi na svoje mjesto po abecedi.
+  const [rows, setRows] = useState(() =>
+    (cjenovnik && cjenovnik.length
+      ? cjenovnik
+          .map((c) => ({ ...c, kolicina: c.kolicina === undefined || c.kolicina === null || c.kolicina === "" ? 1 : c.kolicina }))
+          .sort((a, b) => (a.naziv || "").localeCompare(b.naziv || "", "sr", { sensitivity: "base" }))
+      : []
+    ).concat([{ naziv: "", kolicina: 1, jedinica: "kg", cijena: "" }])
+  );
+
+  const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9, border: "1px solid #E4DFD3", fontSize: 13.5, fontFamily: "inherit", color: "#0F222B", background: "#fff" };
+
+  // Cijena po jedinici mjere za jedan red (npr. "10 jaja = 2,20€" -> 0,22 €/kom), samo za prikaz -
+  // ne čuva se posebno, uvijek se računa iz kolicina+cijena kad zatreba (ovdje i pri računanju
+  // cijene recepta), tako korisnik uvijek vidi/uređuje brojeve onako kako ih je i unio.
+  function jedinicnaCijena(row) {
+    const k = Number(row.kolicina);
+    const c = row.cijena === "" || row.cijena === null || row.cijena === undefined ? NaN : Number(row.cijena);
+    if (!row.kolicina || !isFinite(k) || k <= 0 || !isFinite(c) || c < 0 || !row.jedinica) return null;
+    return c / k;
+  }
+
+  function updateRow(idx, field, value) {
+    setRows((prev) => {
+      const next = prev.slice();
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  }
+  function removeRow(idx) {
+    setRows((prev) => {
+      const next = prev.slice();
+      next.splice(idx, 1);
+      return next;
+    });
+  }
+  function addRow() {
+    setRows((prev) => prev.concat([{ naziv: "", kolicina: 1, jedinica: "kg", cijena: "" }]));
+  }
+  function handleSave() {
+    const cleaned = rows
+      .map((r) => ({
+        naziv: (r.naziv || "").trim(),
+        kolicina: r.kolicina === "" || r.kolicina === null || r.kolicina === undefined ? "" : Number(r.kolicina),
+        jedinica: r.jedinica || "kg",
+        cijena: r.cijena === "" || r.cijena === null || r.cijena === undefined ? "" : Number(r.cijena),
+      }))
+      .filter((r) => r.naziv && r.kolicina !== "" && isFinite(r.kolicina) && r.kolicina > 0 && r.cijena !== "" && isFinite(r.cijena) && r.cijena >= 0);
+    setCjenovnik(cleaned);
+    onClose();
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,34,43,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 10000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#FFFDF8", width: "100%", maxWidth: 480, maxHeight: "90dvh", overflowY: "auto", borderRadius: "18px 18px 0 0", boxShadow: "0 -8px 30px rgba(15,34,43,0.25)", padding: "20px 20px 26px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: "#0F222B" }}>Cjenovnik</div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ width: 30, height: 30, borderRadius: "50%", background: "#F0EDE4", color: "#0F222B", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          >
+            {xIcon()}
+          </button>
+        </div>
+        <div style={{ color: "#8A8578", fontSize: 12.5, marginBottom: 16, lineHeight: 1.45 }}>
+          Unesi kako si stvarno kupio/la - npr. 10 jaja = 2,20 €, ili 1 kg brašna = 0,55 €. Cijena po jedinici mjere se sama izračuna. Naziv mora biti isti kao naziv sastojka u receptu da bi se cijena prepoznala.
+        </div>
+
+        {rows.map((r, i) => {
+          const jc = jedinicnaCijena(r);
+          return (
+            <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < rows.length - 1 ? "1px solid #F0EDE4" : "none" }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                <input
+                  type="text"
+                  value={r.naziv}
+                  onChange={(e) => updateRow(i, "naziv", e.target.value)}
+                  placeholder="Naziv namirnice"
+                  style={inputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeRow(i)}
+                  style={{ flexShrink: 0, width: 36, borderRadius: 9, border: "1px solid #E4DFD3", background: "#fff", color: "#8A8578", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  {xIcon()}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={r.kolicina}
+                  onChange={(e) => updateRow(i, "kolicina", normalizujBroj(e.target.value))}
+                  placeholder="količina"
+                  style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
+                />
+                <UnitDropdown value={r.jedinica} onChange={(v) => updateRow(i, "jedinica", v)} />
+                <span style={{ color: "#8A8578", fontSize: 13.5, flexShrink: 0 }}>=</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={r.cijena}
+                  onChange={(e) => updateRow(i, "cijena", normalizujBroj(e.target.value))}
+                  placeholder="cijena"
+                  style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
+                />
+                <span style={{ color: "#0F222B", fontSize: 20, fontWeight: 400, flexShrink: 0 }}>€</span>
+              </div>
+              {jc !== null && (
+                <div style={{ color: "#007991", fontSize: 12.5, marginTop: 5, fontWeight: 700 }}>
+                  = {fmtEUR(jc)} / {r.jedinica}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={addRow}
+          style={{ background: "#F0EDE4", color: "#0F222B", border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 20 }}
+        >
+          + Dodaj namirnicu
+        </button>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ flex: 1, background: "#fff", color: "#0F222B", border: "1px solid #E4DFD3", borderRadius: 10, padding: "12px 12px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Otkaži
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            style={{ flex: 1, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "12px 12px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Sačuvaj
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<RecipeApp />);
+</script>
+<script>
+  const __src = document.getElementById('app-source-code').textContent;
+  const __out = Babel.transform(__src, { presets: [["react", { runtime: "classic" }]] }).code;
+  const __script = document.createElement('script');
+  __script.textContent = __out;
+  document.body.appendChild(__script);
+</script>
+<script src="nav-bar.js?v=20260817"></script>
+</body>
+</html>
