@@ -357,6 +357,20 @@ function skiniKvacice(s) {
     .replace(/[đĐ]/g, "dj");
 }
 
+// Uobičajene skraćenice iz recepata - prije poređenja naziva, skraćenica se zamijeni punim
+// nazivom namirnice, da bi se prepoznala i cijena našla automatski bez obzira da li je
+// skraćenica upisana u Cjenovniku, u receptu, ili u oba (npr. "p.z.p.", "pzp", "p z p" ->
+// "prašak za pecivo"). Radi i kad je skraćenica dio duže fraze (npr. "kesica p.z.p."), a ne
+// hvata je slučajno usred neke druge riječi (mora biti okružena razmakom/početkom/krajem/znakom).
+const SKRACENICE = [{ obrazac: /(^|[^a-z])p\.?\s*z\.?\s*p\.?(?=$|[^a-z])/g, puno: "prasak za pecivo" }];
+function prosiriSkracenice(s) {
+  let rez = s || "";
+  SKRACENICE.forEach(({ obrazac, puno }) => {
+    rez = rez.replace(obrazac, (cijeli, pre) => pre + puno);
+  });
+  return rez;
+}
+
 // Levenshtein rastojanje - najmanji broj izmjena (dodaj/obriši/zamijeni jedno slovo) potrebnih da
 // se riječ "a" pretvori u riječ "b". Koristi se kao rezervni pokušaj poklapanja naziva ispod.
 function levenshteinRastojanje(a, b) {
@@ -378,10 +392,19 @@ function levenshteinRastojanje(a, b) {
 }
 
 function nazivPodudaranje(a, b) {
-  const x = skiniKvacice((a || "").trim().toLowerCase());
-  const y = skiniKvacice((b || "").trim().toLowerCase());
+  const x = prosiriSkracenice(skiniKvacice((a || "").trim().toLowerCase()));
+  const y = prosiriSkracenice(skiniKvacice((b || "").trim().toLowerCase()));
   if (!x || !y) return false;
   if (x === y) return true;
+  // Ako je (poslije eventualnog razvijanja skraćenice) kraći naziv u cjelosti sadržan u dužem kao
+  // cijela riječ/fraza (npr. "prasak za pecivo" unutar "kesica prasak za pecivo"), to je poklapanje.
+  // Ograničeno na dužinu >= 4 da kratke riječi ne bi lažno pokupile nešto nepovezano.
+  const kraci = x.length <= y.length ? x : y;
+  const duzi = x.length <= y.length ? y : x;
+  if (kraci.length >= 4) {
+    const escapiran = kraci.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp("(^|[^a-z])" + escapiran + "($|[^a-z])").test(duzi)) return true;
+  }
   let common = 0;
   const maxCommon = Math.min(x.length, y.length);
   while (common < maxCommon && x[common] === y[common]) common++;
