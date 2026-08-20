@@ -491,7 +491,18 @@ function sastojakCijena(sastojak, cjenovnik) {
   if (!isFinite(entryKolicina) || entryKolicina <= 0) return null;
   const sUnit = UNIT_BASE[eff.jedinica];
   const eUnit = UNIT_BASE[entry.jedinica];
-  if (!sUnit || !eUnit || sUnit.base !== eUnit.base) return null;
+  if (!sUnit || !eUnit) return null;
+  if (sUnit.base !== eUnit.base) {
+    // Sastojak nema pravu mjeru (npr. "1 prašak za pecivo" ili "1/2 praška za pecivo" - samo broj
+    // komada, bez grama/ml/kg jer u tekstu nije prepoznata nijedna jedinica), a ta namirnica je u
+    // Cjenovniku unesena po težini/zapremini (npr. "12 g = 0,30 €" za cijelo pakovanje). Tada se
+    // "1 komad" tumači kao "1 CIJELO pakovanje iz Cjenovnika" (po cijeni entry.cijena), a "0,5
+    // komada" kao pola pakovanja - to je jedino razumno značenje kad korisnik napiše samo naziv bez
+    // stvarne količine. Ako obje strane imaju "prave" ali nespojive mjere (npr. grami naspram
+    // litara), i dalje se ništa ne računa (ostaje null) - tu nema sigurnog nagađanja.
+    if (sUnit.base === "komad") return eff.kolicina * Number(entry.cijena);
+    return null;
+  }
   const kolicinaUBaznoj = eff.kolicina * sUnit.factor;
   const entryKolicinaUBaznoj = entryKolicina * eUnit.factor;
   const cijenaPoBaznoj = Number(entry.cijena) / entryKolicinaUBaznoj;
