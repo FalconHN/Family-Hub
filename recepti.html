@@ -245,7 +245,9 @@ const JEDINICA_ALIASES = {
   kasicica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
 };
 function mapirajJedinicu(rawWord) {
-  return JEDINICA_ALIASES[(rawWord || "").toLowerCase()] || null;
+  // Skida tačke prije provjere (npr. "kg." -> "kg", "gr." -> "gr") - dozvoljava i skraćenice sa
+  // tačkama iz teksta sastojka (vidi napomenu uz regex u parsirajSastojakTekst ispod).
+  return JEDINICA_ALIASES[(rawWord || "").toLowerCase().replace(/\./g, "")] || null;
 }
 function parsirajBroj(txt) {
   const n = parseFloat((txt || "").replace(",", "."));
@@ -302,7 +304,9 @@ function parsirajSastojakTekst(text) {
 
   // Oblik "500g brašna" / "500 g brašna" / "3 jaja" / "2 kašike šećera" / "1/2 praška za pecivo"
   // (razlomak poslije cijelog broja je opcion - "1/2" se svede na 0.5 prije daljeg računanja).
-  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)(?:\s*\/\s*([0-9]+(?:[.,][0-9]+)?))?\s*([a-zA-ZčćžšđČĆŽŠĐ]*)\s*(.*)$/);
+  // Riječ poslije broja dozvoljava i tačku poslije svakog slova (npr. "p.z.p." ili "kg.") - inače bi
+  // se čitanje prekinulo na prvoj tački i naziv bi ispao pogrešno podijeljen (npr. "p" + ".z.p.").
+  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)(?:\s*\/\s*([0-9]+(?:[.,][0-9]+)?))?\s*((?:[a-zA-ZčćžšđČĆŽŠĐ]\.?)*)\s*(.*)$/);
   if (m && m[1]) {
     let broj = parsirajBroj(m[1]);
     if (broj !== null && m[2]) {
@@ -327,7 +331,7 @@ function parsirajSastojakTekst(text) {
   }
 
   // Oblik "brašno 500g" / "brašno 500 g"
-  m = s.match(/^(.*?)\s+([0-9]+(?:[.,][0-9]+)?)\s*([a-zA-ZčćžšđČĆŽŠĐ]*)$/);
+  m = s.match(/^(.*?)\s+([0-9]+(?:[.,][0-9]+)?)\s*((?:[a-zA-ZčćžšđČĆŽŠĐ]\.?)*)$/);
   if (m && m[2]) {
     const broj = parsirajBroj(m[2]);
     if (broj && broj > 0) {
@@ -392,18 +396,25 @@ function levenshteinRastojanje(a, b) {
 }
 
 function nazivPodudaranje(a, b) {
-  const x = prosiriSkracenice(skiniKvacice((a || "").trim().toLowerCase()));
-  const y = prosiriSkracenice(skiniKvacice((b || "").trim().toLowerCase()));
+  const xSirovo = skiniKvacice((a || "").trim().toLowerCase());
+  const ySirovo = skiniKvacice((b || "").trim().toLowerCase());
+  const x = prosiriSkracenice(xSirovo);
+  const y = prosiriSkracenice(ySirovo);
   if (!x || !y) return false;
   if (x === y) return true;
-  // Ako je (poslije eventualnog razvijanja skraćenice) kraći naziv u cjelosti sadržan u dužem kao
-  // cijela riječ/fraza (npr. "prasak za pecivo" unutar "kesica prasak za pecivo"), to je poklapanje.
-  // Ograničeno na dužinu >= 4 da kratke riječi ne bi lažno pokupile nešto nepovezano.
-  const kraci = x.length <= y.length ? x : y;
-  const duzi = x.length <= y.length ? y : x;
-  if (kraci.length >= 4) {
-    const escapiran = kraci.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp("(^|[^a-z])" + escapiran + "($|[^a-z])").test(duzi)) return true;
+  // "Sadržana fraza" provjera (npr. "prasak za pecivo" unutar "kesica prasak za pecivo") se radi
+  // SAMO kad je bar jedna strana stvarno nastala razvijanjem skraćenice (x/y se razlikuje od
+  // sirovog teksta) - inače bi npr. "Šećer" lažno pokupio "Vanilin šećer" (obična riječ je skoro
+  // uvijek "sadržana" u nekom dužem, srodnom ali RAZLIČITOM nazivu, pa opšte pravilo nije sigurno).
+  const xPromijenjen = x !== xSirovo;
+  const yPromijenjen = y !== ySirovo;
+  if (xPromijenjen || yPromijenjen) {
+    const kraci = x.length <= y.length ? x : y;
+    const duzi = x.length <= y.length ? y : x;
+    if (kraci.length >= 4) {
+      const escapiran = kraci.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp("(^|[^a-z])" + escapiran + "($|[^a-z])").test(duzi)) return true;
+    }
   }
   let common = 0;
   const maxCommon = Math.min(x.length, y.length);
