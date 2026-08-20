@@ -22,6 +22,7 @@
   #root { min-height:100%; overflow-x: hidden; }
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
   @keyframes fhspin { to { transform: rotate(360deg); } }
+  @keyframes fhpulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
   /* Sklanja ugrađene strelice za povećaj/smanji na poljima za broj (Količina, Cijena, Broj
      porcija...) - te strelice na uskim poljima pojedu skoro pola prostora, pa se sam broj (npr.
      "1,69") ne vidi cijeo. Bez njih polje ima punu širinu za sam upisani broj. */
@@ -751,6 +752,11 @@ function RecipeApp() {
   const [toast, setToast] = useState(null); // null ili { msg, type: "success" | "error" }
   const [addingToCart, setAddingToCart] = useState(false);
   const [cjenovnikOpen, setCjenovnikOpen] = useState(false);
+  // true dok prikazani podaci dolaze iz lokalnog keša telefona (brzo, ali možda zastarjelo ako je
+  // nešto izmijenjeno na drugom uređaju u međuvremenu), a baza još nije potvrdila da su
+  // najsvježiji. Koristi se samo za mali, suptilni indikator - ne blokira ništa i ne mijenja kad
+  // se šta iscrtava.
+  const [syncing, setSyncing] = useState(false);
 
   const lastSentRecipes = useRef(null);
   const lastSentCjenovnik = useRef(null);
@@ -789,6 +795,10 @@ function RecipeApp() {
           sharedDocRef.set({ recepti: JSON.stringify([]), cjenovnik: JSON.stringify([]) });
         }
         setLoaded(true);
+        // snap.metadata.fromCache je true dok je ovo lokalno sačuvana kopija (prije nego što
+        // baza potvrdi da je najsvježija) - koristimo to samo da pokažemo mali indikator, ne za
+        // ništa drugo.
+        setSyncing(!!(snap.metadata && snap.metadata.fromCache));
       },
       (err) => {
         console.error("Firestore sync error", err);
@@ -1020,7 +1030,15 @@ function RecipeApp() {
             </svg>
             <div>
               <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 26, fontWeight: 700, color: "#0F222B", letterSpacing: "-0.02em", margin: 0 }}>Recepti</h1>
-              <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2 }}>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</div>
+              <div style={{ color: "#8A8578", fontSize: 13.5, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                <span>{recipes.length} {recipes.length === 1 ? "recept" : "recepta"}</span>
+                {syncing && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#A9A398" }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#A9A398", animation: "fhpulse 1.2s ease-in-out infinite" }} />
+                    <span style={{ fontSize: 11.5 }}>sinhronizuje se…</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
