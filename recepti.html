@@ -844,7 +844,7 @@ function moneyIcon(size) {
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9.5"/>
-      <text x="12" y="16.9" textAnchor="middle" fontSize="16" fontWeight="700" stroke="none" fill="currentColor">€</text>
+      <text x="12" y="12" textAnchor="middle" dominantBaseline="central" fontSize="16" fontWeight="700" stroke="none" fill="currentColor">€</text>
     </svg>
   );
 }
@@ -1966,7 +1966,7 @@ function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
                   placeholder="cijena"
                   style={{ ...inputStyle, flex: "1 1 0", minWidth: 0, padding: "9px 10px" }}
                 />
-                <span style={{ color: "#0F222B", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>€</span>
+                <span style={{ color: "#0F222B", fontSize: 20, fontWeight: 400, flexShrink: 0 }}>€</span>
               </div>
               {jc !== null && (
                 <div style={{ color: "#007991", fontSize: 12.5, marginTop: 5, fontWeight: 700 }}>
