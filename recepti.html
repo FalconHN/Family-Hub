@@ -151,6 +151,32 @@ async function scanRecipeFromImage(file) {
   return data || {};
 }
 
+// ---- Besplatna rezerva za čitanje teksta sa slike (bez AI), kad Gemini ne uspije ----
+// Tesseract.js radi direktno u browseru (samo prvi put preuzme "jezički paket", pa radi bez
+// interneta/troška poslije toga) - "vidi" slova, ali za razliku od AI ne razumije SADRŽAJ (ne zna
+// šta je naziv, sastojak, ili korak pripreme). Zato solidno radi za OTKUCAN/štampan tekst (npr.
+// screenshot recepta sa sajta), a znatno slabije za rukom pisan tekst. AI (Gemini) ostaje prvi
+// izbor kad je dostupan - ovo je samo rezerva za kad Google javi da je privremeno preopterećen.
+const TESSERACT_CDN_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+let tesseractLoadPromise = null;
+function loadTesseractScript() {
+  if (window.Tesseract) return Promise.resolve();
+  if (tesseractLoadPromise) return tesseractLoadPromise;
+  tesseractLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = TESSERACT_CDN_URL;
+    s.onload = () => resolve();
+    s.onerror = () => { tesseractLoadPromise = null; reject(new Error("Ne mogu da učitam lokalni čitač teksta.")); };
+    document.head.appendChild(s);
+  });
+  return tesseractLoadPromise;
+}
+async function localOcrFromImage(file) {
+  await loadTesseractScript();
+  const { data } = await window.Tesseract.recognize(file, "srp_latn+eng");
+  return (data && data.text) || "";
+}
+
 function uid() {
   return Date.now().toString() + Math.random().toString(36).slice(2, 8);
 }
@@ -1370,6 +1396,7 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
   const fileInputRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
+  const [scanNotice, setScanNotice] = useState(""); // info (ne greška) kad se koristi rezerva bez AI
   const scanInputRef = useRef(null);
   const [listening, setListening] = useState(false);
   const [speechError, setSpeechError] = useState("");
@@ -1471,6 +1498,7 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
     e.target.value = ""; // dozvoli ponovni odabir iste slike
     if (!file) return;
     setScanError("");
+    setScanNotice("");
     setScanning(true);
     try {
       const r = await scanRecipeFromImage(file);
@@ -1489,8 +1517,17 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
         };
       });
     } catch (err) {
-      console.error("Scan failed", err);
-      setScanError((err && err.message) || "Skeniranje nije uspjelo. Unesi ručno.");
+      console.error("AI skener nije uspio, probam lokalno prepoznavanje teksta (bez AI)...", err);
+      try {
+        const text = await localOcrFromImage(file);
+        const cleaned = (text || "").split("\n").map((l) => l.trim()).filter(Boolean).join("\n");
+        if (!cleaned) throw new Error("prazno");
+        setForm((prev) => ({ ...prev, priprema: prev.priprema ? prev.priprema + "\n" + cleaned : cleaned }));
+        setScanNotice("AI trenutno nedostupan, pa je korišćeno osnovno prepoznavanje teksta (bez AI) - manje pouzdano, naročito za rukopis. Tekst je ubačen u „Priprema” ispod; provjeri ga i sam razdvoji sastojke ako treba.");
+      } catch (err2) {
+        console.error("I lokalno prepoznavanje nije uspjelo", err2);
+        setScanError((err && err.message) || "Skeniranje nije uspjelo. Unesi ručno.");
+      }
     } finally {
       setScanning(false);
     }
@@ -1578,6 +1615,7 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
 „Slikaj" — fotografiši recept kamerom. „Galerija" — izaberi postojeću sliku ili screenshot. Polja se popune sama; provjeri prije nego sačuvaš.
           </div>
           {scanError && <div style={{ color: "#B3413E", fontSize: 12.5, marginTop: 8 }}>{scanError}</div>}
+          {scanNotice && <div style={{ color: "#007991", fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>{scanNotice}</div>}
         </div>
 
         <div style={{ marginBottom: 14 }}>
