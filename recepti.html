@@ -109,7 +109,7 @@ async function uploadImageToCloudinary(file) {
 const RECIPE_OCR_WORKER_URL = "https://recept-ocr.ivanmitrovic82usa-503.workers.dev";
 
 // Smanjuje sliku (radi brzine i limita) i vraća base64 (bez "data:" prefiksa).
-function fileToDownscaledBase64(file, maxDim) {
+function fileToDownscaledBase64(file, maxDim, kvalitet) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -122,7 +122,7 @@ function fileToDownscaledBase64(file, maxDim) {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        const dataUrl = canvas.toDataURL("image/jpeg", typeof kvalitet === "number" ? kvalitet : 0.85);
         resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
       };
       img.onerror = () => reject(new Error("Ne mogu da učitam sliku."));
@@ -133,20 +133,43 @@ function fileToDownscaledBase64(file, maxDim) {
   });
 }
 
+// Greške na koje ima smisla ČEKATI pa pokušati ponovo (privremena zauzetost AI servisa), za
+// razliku od onih kod kojih ponavljanje ništa ne mijenja (npr. slika je nečitka, ključ nije
+// podešen, dnevni limit je potrošen).
+function vrijediPonoviti(status, poruka) {
+  if (status === 503 || status === 429 || status === 502 || status === 504) return true;
+  return /preopterećen|preoptereen|zauzet|high demand|overloaded|unavailable|try again/i.test(poruka || "");
+}
+
 async function scanRecipeFromImage(file) {
   if (!RECIPE_OCR_WORKER_URL || RECIPE_OCR_WORKER_URL.indexOf("REPLACE-WITH") !== -1) {
     throw new Error("Skener još nije podešen (Worker URL nije unešen u recepti.html).");
   }
-  const { base64, mimeType } = await fileToDownscaledBase64(file, 1600);
-  const res = await fetch(RECIPE_OCR_WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image: base64, mimeType }),
-  });
+  // 2000px umjesto 1600 i kvalitet 0.9 umjesto 0.85 - sitan tekst sa fotografije recepta (a
+  // pogotovo rukopis) se osjetno bolje prepoznaje, a slika je i dalje daleko ispod dozvoljene
+  // veličine koju Worker prima.
+  const { base64, mimeType } = await fileToDownscaledBase64(file, 2000, 0.9);
+  let res;
+  try {
+    res = await fetch(RECIPE_OCR_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, mimeType }),
+    });
+  } catch (e) {
+    // Mreža je pukla - vrijedi pokušati ponovo.
+    const greska = new Error("Nema veze sa internetom.");
+    greska.ponoviti = true;
+    throw greska;
+  }
   let data = null;
   try { data = await res.json(); } catch (e) {}
   if (!res.ok) {
-    throw new Error((data && data.error) || ("Greška servera (" + res.status + ")."));
+    const poruka = (data && data.error) || ("Greška servera (" + res.status + ").");
+    const greska = new Error(poruka);
+    // Worker javlja i sam da li se isplati ponoviti; ako ne javi, procjenjujemo po statusu/tekstu.
+    greska.ponoviti = (data && typeof data.ponoviti === "boolean") ? data.ponoviti : vrijediPonoviti(res.status, poruka);
+    throw greska;
   }
   return data || {};
 }
@@ -1693,6 +1716,12 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Pauze (ms) prije svakog sljedećeg pokušaja kad AI javi da je zauzet. Zbir je oko 19 sekundi,
+  // što je u praksi dovoljno da prođe kratkotrajni "špic" na Google-ovoj strani. Ranije se
+  // odustajalo poslije prvog odgovora, pa je korisnik odmah dobijao poruku o preopterećenju iako
+  // bi drugi pokušaj za par sekundi najčešće prošao.
+  const SCAN_PAUZE_MS = [3000, 6000, 10000];
+
   async function handleScanSelected(e) {
     const file = e.target.files && e.target.files[0];
     e.target.value = ""; // dozvoli ponovni odabir iste slike
@@ -1701,7 +1730,27 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
     setScanNotice("");
     setScanning(true);
     try {
-      const r = await scanRecipeFromImage(file);
+      let r = null;
+      let zadnjaGreska = null;
+      for (let pokusaj = 0; pokusaj <= SCAN_PAUZE_MS.length; pokusaj++) {
+        try {
+          r = await scanRecipeFromImage(file);
+          zadnjaGreska = null;
+          break;
+        } catch (greska) {
+          zadnjaGreska = greska;
+          const imaJos = pokusaj < SCAN_PAUZE_MS.length;
+          if (!greska || !greska.ponoviti || !imaJos) break;
+          const sekundi = Math.round(SCAN_PAUZE_MS[pokusaj] / 1000);
+          setScanNotice(
+            "AI je trenutno zauzet. Čekam " + sekundi + " s pa pokušavam ponovo… (" +
+            (pokusaj + 2) + "/" + (SCAN_PAUZE_MS.length + 1) + ")"
+          );
+          await new Promise((res) => setTimeout(res, SCAN_PAUZE_MS[pokusaj]));
+        }
+      }
+      if (zadnjaGreska) throw zadnjaGreska;
+      setScanNotice("");
       setForm((prev) => {
         // Forma zatvorena dok je skeniranje trajalo - vidi objašnjenje uz govorni unos gore.
         if (!prev) return prev;
