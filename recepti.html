@@ -1750,7 +1750,14 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
         }
       }
       if (zadnjaGreska) throw zadnjaGreska;
-      setScanNotice("");
+      // Ako je recept pročitao REZERVNI AI (glavni je bio nedostupan), reci to otvoreno.
+      // Rezervni je slabiji i sklon da "popuni prazninu" kad je slika mutna, pa je bolje da
+      // korisnik zna da treba pažljivije da pogleda šta se popunilo prije nego što sačuva.
+      setScanNotice(
+        r && r.izvor === "rezerva"
+          ? "Glavni AI je bio zauzet, pa je recept pročitao rezervni. On je manje pouzdan — dobro provjeri naziv, sastojke i pripremu prije nego sačuvaš."
+          : ""
+      );
       setForm((prev) => {
         // Forma zatvorena dok je skeniranje trajalo - vidi objašnjenje uz govorni unos gore.
         if (!prev) return prev;
