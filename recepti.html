@@ -985,6 +985,13 @@ function RecipeApp() {
   // najsvježiji. Koristi se samo za mali, suptilni indikator - ne blokira ništa i ne mijenja kad
   // se šta iscrtava.
   const [syncing, setSyncing] = useState(false);
+  // Režim rasporeda: dok je uključen, na svakoj kartici se pojave strelice za premještanje.
+  // Namjerno nije stalno uključen - strelice bi inače stajale preko slika recepata.
+  const [reorderMode, setReorderMode] = useState(false);
+  // Koji se recept trenutno prevlači mišem. Prevlačenje radi SAMO na računaru: ugrađeni
+  // "drag and drop" u browseru ne postoji na telefonima (dodir prstom se tumači kao listanje
+  // stranice, ne kao prevlačenje). Zato strelice ostaju - one rade svuda isto.
+  const [dragId, setDragId] = useState(null);
 
   const lastSentRecipes = useRef(null);
   const lastSentCjenovnik = useRef(null);
@@ -1246,6 +1253,21 @@ function RecipeApp() {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, omiljen: !r.omiljen } : r)));
   }
 
+  // Premjesti recept na mjesto susjednog. Cijelom spisku se poslije toga ponovo dodijele redni
+  // brojevi, pa raspored ostaje ispravan i kad su stari brojevi izmiješani ili se ponavljaju.
+  function moveRecipeTo(id, susjedId) {
+    if (!susjedId || id === susjedId) return;
+    setRecipes((prev) => {
+      const lista = [...prev].sort((a, b) => (a.order || 0) - (b.order || 0));
+      const odakle = lista.findIndex((r) => r.id === id);
+      const dokle = lista.findIndex((r) => r.id === susjedId);
+      if (odakle === -1 || dokle === -1) return prev;
+      const [pomjeren] = lista.splice(odakle, 1);
+      lista.splice(dokle, 0, pomjeren);
+      return lista.map((r, i) => ({ ...r, order: i }));
+    });
+  }
+
   async function addIngredientsToShoppingList(recipe) {
     if (!recipe.sastojci || recipe.sastojci.length === 0) {
       showToast("Ovaj recept nema unešene sastojke.", "error");
@@ -1323,6 +1345,18 @@ function RecipeApp() {
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button
               type="button"
+              onClick={() => setReorderMode((v) => !v)}
+              title={reorderMode ? "Završi raspoređivanje" : "Rasporedi recepte po svom redu"}
+              aria-label={reorderMode ? "Završi raspoređivanje" : "Rasporedi recepte"}
+              style={{ background: reorderMode ? "#E5F0ED" : "#fff", color: reorderMode ? "#00707F" : "#0F222B", border: "1px solid " + (reorderMode ? "#9FC6C9" : "#E4DFD3"), borderRadius: 9, height: 40, minWidth: 40, padding: reorderMode ? "0 12px" : 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", boxSizing: "border-box", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 8L5 5 2 8M5 5v14M16 16l3 3 3-3M19 19V5"/>
+              </svg>
+              {reorderMode && <span>Gotovo</span>}
+            </button>
+            <button
+              type="button"
               onClick={() => setCjenovnikOpen(true)}
               title="Cjenovnik namirnica"
               aria-label="Cjenovnik namirnica"
@@ -1361,11 +1395,23 @@ function RecipeApp() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
-            {visibleRecipes.map((r) => (
+            {visibleRecipes.map((r, idx) => (
               <div
                 key={r.id}
-                onClick={() => setDetailId(r.id)}
-                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)" }}
+                onClick={() => { if (!reorderMode || !dragId) setDetailId(r.id); }}
+                draggable={reorderMode}
+                onDragStart={() => setDragId(r.id)}
+                onDragOver={(e) => { if (reorderMode && dragId && dragId !== r.id) e.preventDefault(); }}
+                onDrop={(e) => { e.preventDefault(); if (dragId && dragId !== r.id) moveRecipeTo(dragId, r.id); setDragId(null); }}
+                onDragEnd={() => setDragId(null)}
+                style={{
+                  background: "#fff", borderRadius: 14, overflow: "hidden",
+                  cursor: reorderMode ? "grab" : "pointer",
+                  opacity: dragId === r.id ? 0.45 : 1,
+                  outline: reorderMode && dragId && dragId !== r.id ? "2px dashed #9FC6C9" : "none",
+                  outlineOffset: 2,
+                  boxShadow: "0 1px 2px rgba(27,58,74,0.06), 0 8px 20px -10px rgba(27,58,74,0.1)",
+                }}
               >
                 <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "#F0EDE4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   <RecipeImage url={r.slikaUrl} alt={r.naziv} iconSize={36} />
@@ -1377,6 +1423,31 @@ function RecipeApp() {
                   >
                     {heartIcon(r.omiljen, 16)}
                   </button>
+                  {reorderMode && (() => {
+                    // U mreži "gore/dolje" ne znači ništa jasno (skače preko cijelog reda), pa
+                    // strelice pomjeraju na PRETHODNO odnosno SLJEDEĆE mjesto u nizu - isto kao
+                    // kad bi ih ručno prevlačio. Susjedi se traže u trenutno VIDLJIVOM spisku,
+                    // da raspoređivanje radi ispravno i kad je uključen filter ili pretraga.
+                    const prethodni = idx > 0 ? visibleRecipes[idx - 1] : null;
+                    const sljedeci = idx < visibleRecipes.length - 1 ? visibleRecipes[idx + 1] : null;
+                    const dugme = (aktivan, naSta, oznaka, putanja) => (
+                      <button
+                        type="button"
+                        aria-label={oznaka}
+                        disabled={!aktivan}
+                        onClick={(e) => { e.stopPropagation(); if (aktivan) moveRecipeTo(r.id, naSta.id); }}
+                        style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.94)", color: "#0F222B", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: aktivan ? "pointer" : "default", boxShadow: "0 1px 4px rgba(15,34,43,0.18)", padding: 0, opacity: aktivan ? 1 : 0.35 }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d={putanja} /></svg>
+                      </button>
+                    );
+                    return (
+                      <div style={{ position: "absolute", left: 8, right: 8, bottom: 8, display: "flex", justifyContent: "space-between", pointerEvents: "auto" }}>
+                        {dugme(!!prethodni, prethodni, "Pomjeri unazad", "M15 18l-6-6 6-6")}
+                        {dugme(!!sljedeci, sljedeci, "Pomjeri naprijed", "M9 18l6-6-6-6")}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div style={{ padding: "10px 12px 12px" }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0F222B", marginBottom: 6, lineHeight: 1.25 }}>{r.naziv}</div>
