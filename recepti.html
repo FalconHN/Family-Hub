@@ -243,6 +243,14 @@ const JEDINICA_ALIASES = {
   kasika: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasike: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasiku: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" }, kasikom: { jedinica: "ml", mnozilac: 15, vrsta: "kasika" },
   kašičica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kašičicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
   kasicica: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicice: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicu: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" }, kasicicom: { jedinica: "ml", mnozilac: 5, vrsta: "kasicica" },
+  // Šolja = standardna kuvarska mjera (1 šolja = 250 ml), čaša = uobičajena balkanska mjera (2 dl).
+  // Kao i kod kašike, za tečnosti se svode na ml, a za suve namirnice na grame (vidi KASIKA_GRAMI).
+  // "Šoljica" NIJE ovdje namjerno - ona nema standardnu zapreminu (kafena šoljica ~50ml, čajna
+  // ~200ml), pa bi svako nagađanje davalo pogrešnu cijenu; za nju upiši količinu u ml ručno.
+  šolja: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, šolje: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, šolju: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, šoljom: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, šolji: { jedinica: "ml", mnozilac: 250, vrsta: "solja" },
+  solja: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, solje: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, solju: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, soljom: { jedinica: "ml", mnozilac: 250, vrsta: "solja" }, solji: { jedinica: "ml", mnozilac: 250, vrsta: "solja" },
+  čaša: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, čaše: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, čašu: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, čašom: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, čaši: { jedinica: "ml", mnozilac: 200, vrsta: "casa" },
+  casa: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, case: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, casu: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, casom: { jedinica: "ml", mnozilac: 200, vrsta: "casa" }, casi: { jedinica: "ml", mnozilac: 200, vrsta: "casa" },
 };
 function mapirajJedinicu(rawWord) {
   // Skida tačke prije provjere (npr. "kg." -> "kg", "gr." -> "gr") - dozvoljava i skraćenice sa
@@ -268,28 +276,48 @@ function normalizujBroj(v) {
   return x;
 }
 
+// Vrijednosti su usklađene sa standardnim kuvarskim tablicama (npr. 1 kašika brašna = 8 g,
+// kristalnog šećera = 12,5 g, meda = 21 g, 1 kašičica praška za pecivo = 4,5 g) i međusobno su
+// dosljedne - iz težine kašike izvedena je gustina namirnice, pa iz nje težina kašičice, šolje i
+// čaše, da ista namirnica ne bi davala različit rezultat zavisno od toga kojom je mjerom upisana.
 // Približna težina RAVNE kašike/kašičice za par čestih suvih namirnica - gustina zavisi od
 // namirnice (šećer, brašno, so... sve različito teže), pa se za njih kašika/kašičica posebno
 // svodi na grame umjesto na zapreminu (ml) kao za tečnosti. Brojevi su po standardnoj kuvarskoj
 // tablici mjera. Ovo je procjena za RAVNU kašiku; ako se u receptu misli na punu/nabreklu kašiku,
 // stvarna težina može biti i skoro duplo veća.
 const KASIKA_GRAMI = [
-  { naziv: "šećer", kasika: 12, kasicica: 4 },
-  { naziv: "brašno", kasika: 10, kasicica: 3 },
-  { naziv: "so", kasika: 15, kasicica: 5 },
-  { naziv: "kakao", kasika: 6, kasicica: 2 },
-  { naziv: "puter", kasika: 14, kasicica: 5 },
-  { naziv: "med", kasika: 20, kasicica: 6 },
-  { naziv: "pirinač", kasika: 15, kasicica: 3 },
-  { naziv: "prašak", kasika: 10, kasicica: 3 },
+  { naziv: "šećer", kasika: 12.5, kasicica: 4.2, solja: 208, casa: 167 },
+  { naziv: "šećer u prahu", kasika: 7.5, kasicica: 2.5, solja: 125, casa: 100 },
+  { naziv: "brašno", kasika: 8, kasicica: 2.7, solja: 133, casa: 107 },
+  { naziv: "griz", kasika: 12, kasicica: 4, solja: 200, casa: 160 },
+  { naziv: "skrob", kasika: 7.5, kasicica: 2.5, solja: 125, casa: 100 },
+  { naziv: "gustin", kasika: 7.5, kasicica: 2.5, solja: 125, casa: 100 },
+  { naziv: "so", kasika: 16.5, kasicica: 5.5, solja: 275, casa: 220 },
+  { naziv: "kakao", kasika: 5.5, kasicica: 1.8, solja: 92, casa: 73 },
+  { naziv: "kafa", kasika: 5.5, kasicica: 1.8, solja: 92, casa: 73 },
+  { naziv: "mlevena kafa", kasika: 5.5, kasicica: 1.8, solja: 92, casa: 73 },
+  { naziv: "puter", kasika: 14, kasicica: 4.6, solja: 228, casa: 182 },
+  { naziv: "med", kasika: 21, kasicica: 7, solja: 350, casa: 280 },
+  { naziv: "pirinač", kasika: 12.5, kasicica: 4.2, solja: 208, casa: 167 },
+  { naziv: "prašak", kasika: 13.5, kasicica: 4.5, solja: 225, casa: 180 },
+  { naziv: "želatin", kasika: 9, kasicica: 3, solja: 150, casa: 120 },
 ];
 function nadjiKasikaGrame(naziv) {
   const y = (naziv || "").trim().toLowerCase();
   if (!y) return null;
   const kandidati = KASIKA_GRAMI.filter((k) => nazivOdgovara(k.naziv, y));
   if (!kandidati.length) return null;
-  // Ako se poklopi više unosa, uzmi najspecifičniji (najduži naziv u tabeli).
-  return kandidati.reduce((best, k) => (k.naziv.length > best.naziv.length ? k : best));
+  // Ako se poklopi više unosa, uzmi onaj NAJBLIŽI upisanom tekstu (najmanje Levenshtein rastojanje),
+  // a ne prosto najduži naziv. Npr. "šećera" se zbog istog početka poklopi i sa "šećer" i sa
+  // "šećer u prahu"; pravilo "najduži" bi tu pogrešno izabralo šećer u prahu (7,5 g po kašici)
+  // umjesto kristalnog šećera (12,5 g). Kod izjednačenog rastojanja i dalje pobjeđuje duži naziv.
+  const rastojanje = (k) => levenshteinRastojanje(skiniKvacice(k.naziv.toLowerCase()), skiniKvacice(y));
+  return kandidati.reduce((best, k) => {
+    const dK = rastojanje(k);
+    const dB = rastojanje(best);
+    if (dK !== dB) return dK < dB ? k : best;
+    return k.naziv.length > best.naziv.length ? k : best;
+  });
 }
 
 // Iz broja (npr. "2") i prepoznate jedinice (uInfo iz mapirajJedinicu) odredi konačnu
@@ -298,9 +326,10 @@ function nadjiKasikaGrame(naziv) {
 function primijeniJedinicu(broj, uInfo, ostatakNaziva) {
   if (uInfo.vrsta && ostatakNaziva) {
     const suvo = nadjiKasikaGrame(ostatakNaziva);
-    if (suvo) {
-      const grami = uInfo.vrsta === "kasika" ? suvo.kasika : suvo.kasicica;
-      return { kolicina: broj * grami, jedinica: "g" };
+    // Traži grame baš za tu vrstu mjere (kasika/kasicica/solja/casa) - ako za neku vrstu nema
+    // upisane vrijednosti, pada nazad na obično računanje po zapremini (ml) ispod.
+    if (suvo && suvo[uInfo.vrsta]) {
+      return { kolicina: broj * suvo[uInfo.vrsta], jedinica: "g" };
     }
   }
   return { kolicina: broj * uInfo.mnozilac, jedinica: uInfo.jedinica };
@@ -389,6 +418,31 @@ function prosiriSkracenice(s) {
   return rez;
 }
 
+// Skida riječ za PAKOVANJE sa početka naziva ("1 kesica vanil šećera" -> "vanil šećera"), jer ona
+// govori u čemu je namirnica, a ne KOJA je namirnica - bez ovoga se "kesica vanil šećera" ne bi
+// poklopilo sa "Vanilin šećer" iz Cjenovnika. Broj je već ranije odvojen (parsirajSastojakTekst),
+// pa "1 kesica" ostaje kao količina 1, što je i tačno značenje. Skida se samo sa POČETKA i samo
+// ako iza nje ostane još teksta - da sama riječ "kesica" (ako je neko tako nazove) ne nestane.
+const PAKOVANJA = /^(?:kesic[aeu]|kesic[ei]ca|kes[aeu]|kese|vrecic[aeu]|vrecice|paket(?:a|i|ic|ica)?|pakovanj[ae]|kutij[aeu]|kutije|konzerv[aeu]|konzerve|flasic[aeu]|flas[aeu]|teglic[aeu]|tegl[aeu])\s+(?:od\s+)?(?=\S)/;
+function skiniPakovanje(s) {
+  const rez = (s || "").replace(PAKOVANJA, "");
+  return rez.trim() ? rez.trim() : (s || "");
+}
+
+// Izbacuje NAPOMENE koje nisu dio imena namirnice, prije poređenja sa Cjenovnikom:
+//  - tekst u zagradama: "p.z.p. (dodati u brašno)" -> "p.z.p."
+//    (bez ovoga se "(dodati u brašno)" poklopi sa "Brašno" iz Cjenovnika, pa prašak za pecivo
+//    dobije POGREŠNU cijenu - cijenu cijelog kilograma brašna)
+//  - alternativu iza "ili": "vanil šećer ili aroma vanilije" -> "vanil šećer"
+//    (računa se prva navedena, tj. ona koju je korisnik stavio kao osnovnu)
+// Prikaz sastojka u receptu ostaje netaknut - ovo se koristi samo za traženje cijene.
+function skiniNapomene(s) {
+  let rez = (s || "").replace(/\([^)]*\)/g, " ");
+  rez = rez.replace(/\s+ili\s+[\s\S]*$/, "");
+  rez = rez.replace(/\s{2,}/g, " ").trim();
+  return rez || (s || "");
+}
+
 // Levenshtein rastojanje - najmanji broj izmjena (dodaj/obriši/zamijeni jedno slovo) potrebnih da
 // se riječ "a" pretvori u riječ "b". Koristi se kao rezervni pokušaj poklapanja naziva ispod.
 function levenshteinRastojanje(a, b) {
@@ -410,8 +464,8 @@ function levenshteinRastojanje(a, b) {
 }
 
 function nazivPodudaranje(a, b) {
-  const xSirovo = skiniKvacice((a || "").trim().toLowerCase());
-  const ySirovo = skiniKvacice((b || "").trim().toLowerCase());
+  const xSirovo = skiniPakovanje(skiniNapomene(skiniKvacice((a || "").trim().toLowerCase())));
+  const ySirovo = skiniPakovanje(skiniNapomene(skiniKvacice((b || "").trim().toLowerCase())));
   const x = prosiriSkracenice(xSirovo);
   const y = prosiriSkracenice(ySirovo);
   if (!x || !y) return false;
@@ -451,8 +505,8 @@ function nazivPodudaranje(a, b) {
 // namjerno ograničen na najviše 3 slova (koliko obično ima nastavak za padež), da npr. "so" ne bi
 // slučajno pokupio potpuno drugu riječ koja slučajno počinje isto (npr. "sok od limuna").
 function nazivOdgovara(bazniNaziv, sastojakNaziv) {
-  const x = skiniKvacice((bazniNaziv || "").trim().toLowerCase());
-  const y = skiniKvacice((sastojakNaziv || "").trim().toLowerCase());
+  const x = skiniPakovanje(skiniNapomene(skiniKvacice((bazniNaziv || "").trim().toLowerCase())));
+  const y = skiniPakovanje(skiniNapomene(skiniKvacice((sastojakNaziv || "").trim().toLowerCase())));
   if (!x || !y) return false;
   if (y === x) return true;
   if (x.length <= 3 && y.indexOf(x) === 0 && y.length - x.length <= 3) return true;
