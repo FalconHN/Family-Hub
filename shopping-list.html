@@ -1071,9 +1071,15 @@ function SmartShoppingList() {
     </div>
   );
 
-  const renderRow = (it) => {
+  const renderRow = (it, idx, arr) => {
     const over = priceAlertThreshold !== null && priceAlertThreshold > 0 && totalCost(it) > priceAlertThreshold;
     const isDragging = dragId === it.id;
+    // Isti susjedi kao u karticama - da "Rasporedi" radi i na računaru, a ne samo na telefonu.
+    const vidljive = Array.isArray(arr) ? arr : [];
+    const istoStanje = vidljive.filter((x) => x && !!x.purchased === !!it.purchased);
+    const pos = istoStanje.findIndex((x) => x.id === it.id);
+    const gore = pos > 0 ? istoStanje[pos - 1] : null;
+    const dolje = pos !== -1 && pos < istoStanje.length - 1 ? istoStanje[pos + 1] : null;
     return (
       <div
         key={it.id}
@@ -1096,7 +1102,32 @@ function SmartShoppingList() {
           cursor: "default",
         }}
       >
-        <span style={{ color: "#B5AFA0", cursor: "grab", fontSize: 14, textAlign: "center" }}>⠿</span>
+        {reorderMode ? (
+          // U režimu rasporeda tačkice za prevlačenje ustupaju mjesto strelicama - prevlačenje
+          // mišem i dalje radi, ali strelice su pouzdanije i rade isto na svakom uređaju.
+          <span style={{ display: "inline-flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => gore && moveItemTo(it.id, gore.id)}
+              disabled={!gore}
+              aria-label="Pomjeri gore"
+              style={{ width: 22, height: 15, border: "1px solid #E4DFD3", background: "#fff", borderRadius: 5, color: "#5B6B70", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, cursor: gore ? "pointer" : "default", opacity: gore ? 1 : 0.3 }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => dolje && moveItemTo(it.id, dolje.id)}
+              disabled={!dolje}
+              aria-label="Pomjeri dolje"
+              style={{ width: 22, height: 15, border: "1px solid #E4DFD3", background: "#fff", borderRadius: 5, color: "#5B6B70", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, cursor: dolje ? "pointer" : "default", opacity: dolje ? 1 : 0.3 }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </span>
+        ) : (
+          <span style={{ color: "#B5AFA0", cursor: "grab", fontSize: 14, textAlign: "center" }}>⠿</span>
+        )}
         <input
           type="checkbox"
           checked={!!it.purchased}
