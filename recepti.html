@@ -23,6 +23,15 @@
   * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
   @keyframes fhspin { to { transform: rotate(360deg); } }
   @keyframes fhpulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+  /* Zaglavlje stranice Recepti. Na širokom ekranu naslov i dugmad stoje u istom redu, a dugmad
+     su poravnata desno. Na telefonu dugmad ionako ne mogu stati pored naslova, pa zauzmu cijeli
+     svoj red: ikonice uz lijevu, "Dodaj recept" uz desnu ivicu. Time se dugme poklapa sa poljem
+     "Sve kategorije" ispod (obojе su široki tačno 160px i uz desnu ivicu), pa im se lijeva i
+     desna ivica poklapaju. */
+  .fh-rec-akcije { display:flex; gap:8px; flex-shrink:0; justify-content:flex-end; }
+  @media (max-width: 560px) {
+    .fh-rec-akcije { width:100%; justify-content:space-between; }
+  }
   /* Sklanja ugrađene strelice za povećaj/smanji na poljima za broj (Količina, Cijena, Broj
      porcija...) - te strelice na uskim poljima pojedu skoro pola prostora, pa se sam broj (npr.
      "1,69") ne vidi cijeo. Bez njih polje ima punu širinu za sam upisani broj. */
@@ -1342,7 +1351,8 @@ function RecipeApp() {
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div className="fh-rec-akcije">
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button
               type="button"
               onClick={() => setReorderMode((v) => !v)}
@@ -1364,10 +1374,12 @@ function RecipeApp() {
             >
               {moneyIcon(27)}
             </button>
+            </div>
             <button
               type="button"
               onClick={openAddForm}
-              style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: 160, height: 40, boxSizing: "border-box" }}
+              // Širina 160 je ista kao kod polja "Sve kategorije" ispod, da im se ivice poklope.
+              style={{ background: "#007991", color: "#fff", border: "1px solid #007991", borderRadius: 9, padding: "0 12px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", flex: "0 0 160px", width: 160, height: 40, boxSizing: "border-box" }}
             >
               + Dodaj recept
             </button>
@@ -1379,13 +1391,18 @@ function RecipeApp() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Pretraži po nazivu ili sastojku..."
-            style={{ flex: "3 1 160px", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "0 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
+            /* Osnova 120px (ne "auto"): sa "auto" se za osnovu uzima dužina teksta u polju, pa
+               je polje kategorija ispadalo u NOVI red na telefonu. Ovako pretraga i kategorije
+               uvijek stanu u isti red, a pretraga se rasteže na ono što ostane. */
+            style={{ flex: "1 1 120px", minWidth: 0, height: 40, boxSizing: "border-box", border: "1px solid #E6E1D8", borderRadius: 9, padding: "0 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", outline: "none" }}
           />
           <CategoryDropdown
             value={categoryFilter}
             onChange={setCategoryFilter}
             options={allCategoriesForFilter}
-            wrapperStyle={{ flex: "0 1 160px", minWidth: 100, maxWidth: 160 }}
+            /* Fiksnih 160px (ne rastezljivo) - da se ivice uvijek poklope sa dugmetom "Dodaj
+               recept" iznad, na svakoj širini ekrana. Pretraga lijevo uzima ostatak. */
+            wrapperStyle={{ flex: "0 0 160px", width: 160 }}
           />
         </div>
 
