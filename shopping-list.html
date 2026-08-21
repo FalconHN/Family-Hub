@@ -50,14 +50,14 @@
   // Auth guard: bounce to login page if not signed in.
   firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
-      window.location.href = "index.html?v=20260817";
+      window.location.href = "index.html?v=20260821";
       return;
     }
     // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo.
     firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
       const role = (snap.exists && snap.data().role) || 'parent';
       if (role === 'child') {
-        window.location.href = "raspored.html?v=20260817";
+        window.location.href = "raspored.html?v=20260821";
         return;
       }
       if (typeof window.fhApplyRole === 'function') window.fhApplyRole(role);
@@ -66,7 +66,7 @@
   // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
   window.fhLogout = function () {
     firebase.auth().signOut().catch(() => {}).finally(() => {
-      window.location.href = "index.html?v=20260817";
+      window.location.href = "index.html?v=20260821";
     });
   };
 </script>
@@ -117,6 +117,10 @@ const CATEGORY_META = {
 };
 
 const CATEGORY_LIST = Object.keys(CATEGORY_META);
+// Prodavnice koje stoje u samom kodu. Njih nema u "customStores", pa se ne mogu ni obrisati ni
+// preimenovati prostim mijenjanjem tog spiska - zato preimenovanje ugrađenog naziva radi tako
+// što stari sakrije (hiddenStores), a novi doda među vlastite (vidi renameStore).
+const UGRADJENE_PRODAVNICE = ["Voli", "Lidl", "Kaufland", "Idea", "Aroma", "Temu", "Okov", "Kips"];
 
 function colorForStore(name) {
   if (!name) return null;
@@ -350,15 +354,29 @@ function IconDroplet() {
 // how wide the shared Family Hub sidebar is — that's what caused the layout
 // to look broken at in-between browser widths before.
 const CARD_LAYOUT_BREAKPOINT = 900;
-function useIsMobile(containerRef, breakpoint = CARD_LAYOUT_BREAKPOINT) {
+// "spreman" mora da se promijeni onog trenutka kad glavni okvir stvarno uđe u stranicu.
+// Ranije se ovaj efekat pokretao samo jednom, dok je na ekranu još stajalo "Učitavanje…", pa
+// containerRef još nije pokazivao ni na šta - efekat bi odustao, a pošto se zavisnosti nikad
+// nisu mijenjale, ResizeObserver se nikad ne bi ni zakačio. Posljedica: prikaz je zauvijek
+// ostajao na "usko", pa se i na širokom ekranu prikazivao telefonski raspored, a tabela (u
+// kojoj jedino postoji premještanje stavki prevlačenjem) nije se prikazivala nikad.
+function useIsMobile(containerRef, breakpoint = CARD_LAYOUT_BREAKPOINT, spreman = true) {
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
     const measure = (width) => setIsMobile(width < breakpoint);
+    const el = containerRef.current;
+    if (!el) {
+      // Okvir još nije na ekranu - privremeno se ravnamo prema širini prozora.
+      measure(window.innerWidth);
+      const onResize = () => measure(window.innerWidth);
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
+    }
     if (typeof ResizeObserver === "undefined") {
+      const onResize = () => measure(el.getBoundingClientRect().width);
       measure(el.getBoundingClientRect().width);
-      return;
+      window.addEventListener("resize", onResize);
+      return () => window.removeEventListener("resize", onResize);
     }
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect?.width;
@@ -367,7 +385,7 @@ function useIsMobile(containerRef, breakpoint = CARD_LAYOUT_BREAKPOINT) {
     ro.observe(el);
     measure(el.getBoundingClientRect().width);
     return () => ro.disconnect();
-  }, [containerRef, breakpoint]);
+  }, [containerRef, breakpoint, spreman]);
   return isMobile;
 }
 
@@ -377,6 +395,7 @@ function SmartShoppingList() {
   const [budget, setBudget] = useState(null);
   const [budgetInput, setBudgetInput] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [syncError, setSyncError] = useState(false); // učitavanje iz baze nije uspjelo
   const [tab, setTab] = useState("all");
   const [hidePurchased, setHidePurchased] = useState(false);
   const [newName, setNewName] = useState("");
@@ -403,10 +422,24 @@ function SmartShoppingList() {
   // Which name's color palette is currently open, e.g. "store:Lidl" or "cat:Drinks".
   const [colorPickerFor, setColorPickerFor] = useState(null);
   const shellRef = useRef(null);
-  const isMobile = useIsMobile(shellRef);
+  // "loaded" se prosljeđuje da bi se mjerenje ponovilo čim glavni okvir stvarno uđe u stranicu.
+  const isMobile = useIsMobile(shellRef, CARD_LAYOUT_BREAKPOINT, loaded);
   const saveTimer = useRef(null);
 
   const lastSentItems = useRef(null);
+  // Da li smo IKAD stvarno dobili podatke iz baze. Nije isto što i "loaded": ako učitavanje ne
+  // uspije (nema interneta, istekla prijava, greška u pravilima), ekran se ipak otključava, ali
+  // lista tada stoji na PRAZNOM početnom nizu - a to nije stvarno stanje baze. Bez ove zastavice
+  // automatsko snimanje bi taj prazan niz upisalo preko stvarnih podataka i OBRISALO cijelu
+  // zajedničku listu za kupovinu (i sve prodavnice/kategorije/boje) na svim telefonima.
+  const primljeniPodaci = useRef(false);
+  // Id-evi stavki koje smo STVARNO prikazali (primili iz baze ili sami dodali). Služi da se pri
+  // snimanju razlikuje "ovu stavku sam ja obrisao" (bili smo je vidjeli, sad je nema kod nas) od
+  // "ovu je neko upravo dodao sa drugog telefona" (nikad je nismo vidjeli) - vidi spajanje dolje.
+  const vidjeniIds = useRef(new Set());
+  function zapamtiVidjene(niz) {
+    (niz || []).forEach((it) => { if (it && it.id != null) vidjeniIds.current.add(it.id); });
+  }
   const lastSentFavorites = useRef(null);
   const lastSentBudget = useRef(null);
   const lastSentStoreColors = useRef(null);
@@ -428,7 +461,18 @@ function SmartShoppingList() {
             try {
               const parsed = JSON.parse(data.items);
               if (Array.isArray(parsed)) {
-                setItems(parsed.map((it, i) => ({ note: "", order: i, ...it })));
+                // Ako lokalno nešto čeka snimanje (neko upravo kuca ili je štiklirao stavku),
+                // NE preuzimaj stanje iz baze - pregazilo bi tu izmjenu i ona se nikad ne bi
+                // ni poslala (tajmer bi se ponovo naoružao već pregaženom vrijednošću).
+                // Tuđe stavke se ne gube: spajaju se pri snimanju, u transakciji dolje.
+                if (saveTimer.current) {
+                  // namjerno ništa - ove stavke NE upisujemo u vidjeniIds, pa će ih spajanje
+                  // prepoznati kao tuđe nove i sačuvati ih.
+                } else {
+                  const nove = parsed.map((it, i) => ({ note: "", order: i, ...it }));
+                  zapamtiVidjene(nove);
+                  setItems(nove);
+                }
               }
             } catch (e) {}
           }
@@ -489,85 +533,120 @@ function SmartShoppingList() {
             priceAlertThreshold: JSON.stringify(priceAlertThreshold),
           });
         }
+        // Uspješno pročitano iz baze - od sad je bezbjedno automatski snimati.
+        primljeniPodaci.current = true;
         setLoaded(true);
       },
       (err) => {
         console.error("Firestore sync error", err);
+        // NAMJERNO ne diramo primljeniPodaci - vidi objašnjenje gore. Otključavamo ekran i
+        // javljamo korisniku, ali ne dozvoljavamo da se prazno stanje upiše preko baze.
+        setSyncError(true);
         setLoaded(true);
       }
     );
     return () => unsub();
   }, []);
 
+  // Snimanje liste. NE upisuje se slijepo cijeli lokalni niz preko onoga u bazi, nego se u
+  // transakciji spaja sa trenutnim stanjem: ono što je neko drugi dodao u međuvremenu (stavke
+  // koje mi nikad nismo vidjeli, npr. sastojci koje je neko poslao sa stranice Recepti) ostaje.
+  // Ranije je zadnji upis brisao sve što je stiglo u zadnjih pola sekunde.
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      const json = JSON.stringify(items);
-      lastSentItems.current = json;
-      sharedDocRef.set({ items: json }, { merge: true }).catch((e) => console.error("Failed to save shopping list", e));
+      const lokalne = items;
+      zapamtiVidjene(lokalne);
+      db.runTransaction(async (tx) => {
+        const snap = await tx.get(sharedDocRef);
+        let udaljene = [];
+        try {
+          const raw = snap.exists ? (snap.data() || {}).items : null;
+          if (typeof raw === "string") {
+            const p = JSON.parse(raw);
+            if (Array.isArray(p)) udaljene = p;
+          }
+        } catch (e) {}
+        const lokalniIds = new Set(lokalne.map((it) => it && it.id));
+        const tudjeNove = udaljene.filter((it) => it && !lokalniIds.has(it.id) && !vidjeniIds.current.has(it.id));
+        const spojene = tudjeNove.length ? lokalne.concat(tudjeNove) : lokalne;
+        const json = JSON.stringify(spojene);
+        lastSentItems.current = json;
+        tx.set(sharedDocRef, { items: json }, { merge: true });
+        return spojene;
+      }).then((spojene) => {
+        saveTimer.current = null;
+        if (!spojene) return;
+        zapamtiVidjene(spojene);
+        // Ako je spajanje pokupilo tuđe stavke, prikaži ih i kod nas.
+        setItems((prev) => (JSON.stringify(prev) === JSON.stringify(spojene) ? prev : spojene));
+      }).catch((e) => {
+        saveTimer.current = null;
+        console.error("Failed to save shopping list", e);
+      });
     }, 400);
-    return () => clearTimeout(saveTimer.current);
+    return () => { if (saveTimer.current) { clearTimeout(saveTimer.current); } };
   }, [items, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(favorites);
     lastSentFavorites.current = json;
     sharedDocRef.set({ favorites: json }, { merge: true }).catch(() => {});
   }, [favorites, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(budget);
     lastSentBudget.current = json;
     sharedDocRef.set({ budget: json }, { merge: true }).catch(() => {});
   }, [budget, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(storeColors);
     lastSentStoreColors.current = json;
     sharedDocRef.set({ storeColors: json }, { merge: true }).catch(() => {});
   }, [storeColors, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(categoryColors);
     lastSentCategoryColors.current = json;
     sharedDocRef.set({ categoryColors: json }, { merge: true }).catch(() => {});
   }, [categoryColors, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(customStores);
     lastSentCustomStores.current = json;
     sharedDocRef.set({ customStores: json }, { merge: true }).catch(() => {});
   }, [customStores, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(customCategories);
     lastSentCustomCategories.current = json;
     sharedDocRef.set({ customCategories: json }, { merge: true }).catch(() => {});
   }, [customCategories, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(hiddenStores);
     lastSentHiddenStores.current = json;
     sharedDocRef.set({ hiddenStores: json }, { merge: true }).catch(() => {});
   }, [hiddenStores, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(hiddenCategories);
     lastSentHiddenCategories.current = json;
     sharedDocRef.set({ hiddenCategories: json }, { merge: true }).catch(() => {});
   }, [hiddenCategories, loaded]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     const json = JSON.stringify(priceAlertThreshold);
     lastSentPriceAlertThreshold.current = json;
     sharedDocRef.set({ priceAlertThreshold: json }, { merge: true }).catch(() => {});
@@ -603,22 +682,44 @@ function SmartShoppingList() {
     const next = prompt("Novi naziv prodavnice", oldName);
     const value = (next || "").trim();
     if (!value || value === oldName) return;
+    const ugradjena = UGRADJENE_PRODAVNICE.includes(oldName);
     setItems(prev => prev.map(it => it.store === oldName ? { ...it, store: value } : it));
-    setCustomStores(prev => prev.map(x => x === oldName ? value : x));
-    setHiddenStores(prev => prev.filter(x => x !== oldName));
+    // Novi naziv se pamti među vlastitim, da ostane u spisku i kad ga nijedna stavka ne koristi.
+    setCustomStores(prev => {
+      const bez = prev.filter(x => x !== oldName);
+      return bez.some(x => x.toLowerCase() === value.toLowerCase()) ? bez : bez.concat([value]);
+    });
+    setHiddenStores(prev => {
+      // Novi naziv nikad ne smije ostati skriven...
+      let next2 = prev.filter(x => x.toLowerCase() !== value.toLowerCase() && x !== oldName);
+      // ...a ugrađeni stari naziv se mora sakriti, jer ga nema u spisku vlastitih pa bi se inače
+      // i dalje prikazivao pored novog (ili bi preimenovanje izgledalo kao da nije ništa uradilo).
+      if (ugradjena) next2 = next2.concat([oldName]);
+      return next2;
+    });
     setStoreColors(prev => { const copy = { ...prev }; if (copy[oldName] && !copy[value]) copy[value] = copy[oldName]; delete copy[oldName]; return copy; });
     setNewStore(value);
+    setColorPickerFor(null);
   }
 
   function renameCategory(oldName) {
     const next = prompt("Novi naziv kategorije", oldName);
     const value = (next || "").trim();
     if (!value || value === oldName) return;
+    const ugradjena = CATEGORY_LIST.includes(oldName); // isto pravilo kao kod prodavnica gore
     setItems(prev => prev.map(it => it.category === oldName ? { ...it, category: value } : it));
-    setCustomCategories(prev => prev.map(x => x === oldName ? value : x));
-    setHiddenCategories(prev => prev.filter(x => x !== oldName));
+    setCustomCategories(prev => {
+      const bez = prev.filter(x => x !== oldName);
+      return bez.some(x => x.toLowerCase() === value.toLowerCase()) ? bez : bez.concat([value]);
+    });
+    setHiddenCategories(prev => {
+      let next2 = prev.filter(x => x.toLowerCase() !== value.toLowerCase() && x !== oldName);
+      if (ugradjena) next2 = next2.concat([oldName]);
+      return next2;
+    });
     setCategoryColors(prev => { const copy = { ...prev }; if (copy[oldName] && !copy[value]) copy[value] = copy[oldName]; delete copy[oldName]; return copy; });
     setNewCategory(value);
+    setColorPickerFor(null);
   }
 
   function deleteStore(name) {
@@ -665,7 +766,15 @@ function SmartShoppingList() {
     if (name === undefined) { setNewName(""); setNewStore(""); setNewCategory(""); setNewQuantity("1"); setNewPrice(""); setShowAddModal(false); }
   }
 
+  // Trajno briše sve kupljene stavke, i to za CIJELU porodicu (brisanje se za pola sekunde
+  // proširi na sve telefone) i bez mogućnosti poništavanja. Dugme stoji odmah pored "Sakrij
+  // kupljeno", koje izgleda slično a bezopasno je - zato traži potvrdu, isto kao brisanje
+  // prodavnice ili kategorije, i kaže tačno koliko stavki nestaje.
   function clearPurchased() {
+    const kupljene = items.filter((it) => it && it.purchased);
+    if (!kupljene.length) return;
+    const koliko = kupljene.length === 1 ? "1 kupljenu stavku" : kupljene.length + " kupljenih stavki";
+    if (!confirm("Trajno izbrisati " + koliko + " sa liste?\n\nOvo se ne može poništiti i vidjeće se na svim telefonima.")) return;
     setItems((prev) => prev.filter((it) => !it.purchased));
   }
 
@@ -675,8 +784,17 @@ function SmartShoppingList() {
     );
   }
 
+  // Količina koja se STVARNO koristi. Prazno polje (obrisao si broj da ga otkucaš ponovo, pa
+  // otišao dalje) znači "1 komad" - tačno onako kako kartica i piše. Ranije je prikaz pisao
+  // "1 kom" a računanje uzimalo 0, pa je takva stavka izgledala kao da ne košta ništa: nije
+  // ulazila ni u ukupan trošak, ni u preostali trošak, ni u budžet, ni u zbir po prodavnici.
+  function kolicinaZa(it) {
+    const n = Number(it && it.quantity);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
   function totalCost(it) {
-    return (Number(it.quantity) || 0) * (Number(it.price) || 0);
+    return kolicinaZa(it) * (Number(it.price) || 0);
   }
 
   const visibleItems = hidePurchased ? items.filter((it) => !it.purchased) : items;
@@ -689,12 +807,18 @@ function SmartShoppingList() {
   const grandTotal = items.reduce((sum, it) => sum + totalCost(it), 0);
   const remainingTotal = items.filter((it) => !it.purchased).reduce((sum, it) => sum + totalCost(it), 0);
 
+  // Naziv koji NEKA STAVKA trenutno koristi prikazuje se uvijek, čak i ako je ranije obrisan.
+  // Ranije se filter skrivenih primjenjivao na kraju, pa se dešavalo ovo: obrišeš prodavnicu,
+  // kasnije je ponovo otkucaš kod neke stavke - oznaka se vidi na stavci, ali naziv nestane iz
+  // ponuđenih i iz "Oznake i boje", pa mu se više nije mogla ni promijeniti boja ni obrisati.
+  const prodavniceUStavkama = new Set(items.map((it) => it.store).filter(Boolean));
+  const kategorijeUStavkama = new Set(items.map((it) => it.category).filter(Boolean));
   const knownStores = Array.from(
-    new Set(["Voli", "Lidl", "Kaufland", "Idea", "Aroma", "Temu", "Okov", "Kips", ...customStores, ...items.map((it) => it.store).filter(Boolean)])
-  ).filter(name => !hiddenStores.includes(name));
+    new Set([...UGRADJENE_PRODAVNICE, ...customStores, ...prodavniceUStavkama])
+  ).filter(name => prodavniceUStavkama.has(name) || !hiddenStores.includes(name));
   const knownCategories = Array.from(
-    new Set([...CATEGORY_LIST, ...customCategories, ...items.map((it) => it.category).filter(Boolean)])
-  ).filter(name => !hiddenCategories.includes(name));
+    new Set([...CATEGORY_LIST, ...customCategories, ...kategorijeUStavkama])
+  ).filter(name => kategorijeUStavkama.has(name) || !hiddenCategories.includes(name));
   // Ponuđeni nazivi namirnica - kombinacija sačuvanih favorita i trenutno/ranije unešenih stavki,
   // isti princip kao predmeti u Rasporedu: klik/kucanje nudi poznate namirnice, ali se slobodno
   // može upisati i potpuno nov naziv koji nije na listi.
@@ -984,6 +1108,7 @@ function SmartShoppingList() {
           min="0"
           value={it.quantity}
           onChange={(e) => updateItem(it.id, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
+          onBlur={() => { if (kolicinaZa(it) !== Number(it.quantity)) updateItem(it.id, { quantity: kolicinaZa(it) }); }}
           style={{ ...inputStyle, width: 50, textAlign: "right" }}
         />
         <AutocompleteInput
@@ -1180,12 +1305,17 @@ function SmartShoppingList() {
                   min="0"
                   value={it.quantity}
                   onChange={(e) => updateItem(it.id, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
-                  onBlur={() => setEditingCell(null)}
+                  onBlur={() => {
+                    // Vrati na 1 ako je polje ostalo prazno - da se prazna vrijednost ne sačuva
+                    // u bazi i ne raširi na sve telefone (vidi kolicinaZa gore).
+                    if (kolicinaZa(it) !== Number(it.quantity)) updateItem(it.id, { quantity: kolicinaZa(it) });
+                    setEditingCell(null);
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
                   style={{ ...inputStyle, width: 44, textAlign: "center" }}
                 />
               ) : (
-                <>{it.quantity || 1} kom{hasPrice ? ` · ×${fmtEUR(Number(it.price) || 0)}` : ""}</>
+                <>{kolicinaZa(it)} kom{hasPrice ? ` · ×${fmtEUR(Number(it.price) || 0)}` : ""}</>
               )}
             </span>
           </div>
@@ -1283,6 +1413,29 @@ function SmartShoppingList() {
       <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, background: "#F5F3EE", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
         <div style={{ width: 34, height: 34, border: "3px solid #DDE7E4", borderTopColor: "#007991", borderRadius: "50%", animation: "fhspin 0.8s linear infinite" }} />
         <div style={{ fontSize: 14, fontWeight: 600, color: "#5B6B70" }}>Učitavanje…</div>
+      </div>
+    );
+  }
+
+  // Ako učitavanje iz baze nije uspjelo, NE pokazuj praznu listu kao da je to stvarno stanje -
+  // porodica bi pomislila da je neko obrisao sve. Snimanje je u tom slučaju već blokirano
+  // (primljeniPodaci), pa ništa što se ovdje otkuca ne može pregaziti pravu listu u bazi.
+  if (syncError) {
+    return (
+      <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: 24, textAlign: "center", background: "#F5F3EE", fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+        <div style={{ fontSize: 40 }}>⚠️</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#0F222B" }}>Lista se nije učitala</div>
+        <div style={{ fontSize: 13.5, color: "#5B6B70", maxWidth: 340, lineHeight: 1.5 }}>
+          Nema veze sa bazom, pa lista nije prikazana. <b>Ništa nije obrisano</b> — podaci su i dalje u bazi.
+          Provjeri internet pa osvježi stranicu.
+        </div>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          style={{ marginTop: 4, background: "#007991", color: "#fff", border: "none", borderRadius: 10, padding: "11px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          Pokušaj ponovo
+        </button>
       </div>
     );
   }
@@ -1573,6 +1726,6 @@ root.render(<SmartShoppingList />);
   __script.textContent = __out;
   document.body.appendChild(__script);
 </script>
-<script src="nav-bar.js?v=20260817"></script>
+<script src="nav-bar.js?v=20260821"></script>
 </body>
 </html>

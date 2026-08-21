@@ -1,5 +1,5 @@
 // Family Hub - zajednicka navigacija za prelazak izmedju aplikacija.
-// Ubaci <script src="nav-bar.js?v=20260817"></script> pred kraj <body> u svaku app stranicu.
+// Ubaci <script src="nav-bar.js?v=20260821"></script> pred kraj <body> u svaku app stranicu.
 // Na telefonu (uzi ekran): traka na dnu. Na kompjuteru (siri ekran, >=768px): bocna traka sa leve strane.
 // Boje se automatski prilagodjavaju pozadini stranice (tamna ili svijetla tema).
 // Kad se doda nova aplikacija: izmeni APPS niz ispod (jedno mesto za sve stranice).
@@ -7,7 +7,7 @@
 // izmedju stranica, sto tjera browser da uvijek povuce svjezu verziju umjesto stare
 // keširane (npr. Opera je znala da posluzi zastarjelu stranicu bez ovoga).
 (function () {
-  var NAV_VER = "20260817";
+  var NAV_VER = "20260821";
   var ICONS = {
     droplets:
       '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/>' +
@@ -103,7 +103,10 @@
   var topBar = document.createElement("div");
   topBar.id = "fhNavTop";
   topBar.innerHTML =
-    '<span class="fh-top-title">Family Hub</span>' +
+    // Naslov je ujedno i povratak na početnu stranu. Do sada iz zajedničke trake nije
+    // postojao nijedan način da se vrati na početnu - jedino preko dugmeta "nazad" u
+    // browseru ili odjavom.
+    '<a class="fh-top-title" href="index.html?v=' + NAV_VER + '" aria-label="Početna strana">Family Hub</a>' +
     '<div class="fh-top-actions">' +
       '<a class="fh-top-backup' + (BACKUP_APP.file === currentFile ? ' active' : '') + '" id="fhTopBackupLink" href="' + BACKUP_APP.file + '?v=' + NAV_VER + '" aria-label="Backup" style="' + backupDisplay0 + '">' + BACKUP_APP.icon + '</a>' +
       '<button class="fh-top-logout" id="fhLogoutBtnTop" aria-label="Odjava">' + svgIcon(ICONS.logOut) + '</button>' +
@@ -116,7 +119,7 @@
   var sideBar = document.createElement("div");
   sideBar.id = "fhNavSide";
   sideBar.innerHTML =
-    '<div class="fh-side-header"><img class="fh-side-logo" src="icons/sidebar-logo.png" alt="Family Hub" /><span class="fh-side-title">Family Hub</span></div>' +
+    '<a class="fh-side-header" href="index.html?v=' + NAV_VER + '" aria-label="Početna strana"><img class="fh-side-logo" src="icons/sidebar-logo.png" alt="Family Hub" /><span class="fh-side-title">Family Hub</span></a>' +
     '<div class="fh-side-tabs">' + tabsHtml("side", appsForRole(cachedRole)) + '</div>' +
     '<div class="fh-side-secondary" id="fhSideSecondary" style="' + backupDisplay0 + '">' + tabsHtml("side", [BACKUP_APP]) + '</div>' +
     '<button class="fh-logout-btn" id="fhLogoutBtn">' +
@@ -143,7 +146,7 @@
     'background:' + theme.bg + ';border-bottom:1px solid ' + theme.border + ';' +
     'padding:calc(14px + env(safe-area-inset-top)) 16px 14px;' +
     'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
-    '.fh-top-title{font-size:16px;font-weight:700;color:' + theme.headerText + ';}' +
+    '.fh-top-title{font-size:16px;font-weight:700;color:' + theme.headerText + ';text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;}' +
     '.fh-top-actions{display:flex;align-items:center;gap:4px;}' +
     '.fh-top-logout, .fh-top-backup{background:none;border:none;color:' + theme.text + ';cursor:pointer;padding:6px;' +
       'border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;}' +
@@ -171,7 +174,7 @@
         'z-index:9999;background:' + theme.bg + ';border-right:1px solid ' + theme.border + ';' +
         'padding:20px 14px;box-sizing:border-box;' +
         'font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}' +
-      '.fh-side-header{display:flex;align-items:center;gap:10px;margin-bottom:26px;padding:0 6px;}' +
+      '.fh-side-header{display:flex;align-items:center;gap:10px;margin-bottom:26px;padding:0 6px;text-decoration:none;cursor:pointer;}' +
       '.fh-side-logo{width:48px;height:48px;display:block;border-radius:12px;}' +
       '.fh-side-title{font-size:16px;font-weight:700;color:' + theme.headerText + ';}' +
       '.fh-side-tabs{display:flex;flex-direction:column;gap:4px;}' +

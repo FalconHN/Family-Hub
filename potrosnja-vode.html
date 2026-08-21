@@ -262,14 +262,14 @@ const authGate = getAuth(authGateApp);
 const authGateDb = getFirestore(authGateApp);
 onAuthStateChanged(authGate, (user) => {
   if (!user) {
-    window.location.href = "index.html?v=20260817";
+    window.location.href = "index.html?v=20260821";
     return;
   }
   // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo.
   getDoc(doc(authGateDb, "users", user.uid)).then((snap) => {
     const role = (snap.exists() && snap.data().role) || "parent";
     if (role === "child") {
-      window.location.href = "raspored.html?v=20260817";
+      window.location.href = "raspored.html?v=20260821";
       return;
     }
     if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
@@ -374,8 +374,13 @@ const INITIAL_MONTHS = {
 let state = { rates: { ...DEFAULT_RATES }, meters: DEFAULT_METERS.map(m => ({...m})), months: {} };
 let loaded = false;
 let tab = "unos";
-let monthIdx = new Date().getMonth();
-let overviewYear = START_YEAR + Math.floor(monthIdx / 12);
+// monthIdx je REDNI BROJ mjeseca računat od START_YEAR (0 = Januar 2026), a NE mjesec u godini.
+// Ranije je stajalo samo new Date().getMonth(), što vraća 0-11 bez obzira na godinu - pa bi od
+// 1.1.2027. aplikacija otvarala mjesece 2026. godine i nova stanja vodomjera upisivala preko
+// prošlogodišnjih. Naziv mjeseca bi pritom bio tačan, pa se greška ne bi ni primijetila.
+const _danas = new Date();
+let monthIdx = (_danas.getFullYear() - START_YEAR) * 12 + _danas.getMonth();
+let overviewYear = periodInfo(monthIdx).year;
 let saveTimer = null;
 
 function n(v) {
@@ -817,14 +822,14 @@ function doLogin() {
 document.getElementById("loginBtn").addEventListener("click", doLogin);
 document.getElementById("loginPassword").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 document.getElementById("logoutBtn").addEventListener("click", () => {
-  signOut(authGate).catch(() => {}).finally(() => { window.location.href = "index.html?v=20260817"; });
+  signOut(authGate).catch(() => {}).finally(() => { window.location.href = "index.html?v=20260821"; });
 });
 if (!AUTH_ENABLED) document.getElementById("logoutBtn").style.display = "none";
 
 // Odjava - poziva se iz zajednicke nav trake (nav-bar.js). Odjavljuje zajednicku (shared) sesiju.
 window.fhLogout = function () {
   signOut(authGate).catch(() => {}).finally(() => {
-    window.location.href = "index.html?v=20260817";
+    window.location.href = "index.html?v=20260821";
   });
 };
 
@@ -840,6 +845,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 </script>
-<script src="nav-bar.js?v=20260817"></script>
+<script src="nav-bar.js?v=20260821"></script>
 </body>
 </html>

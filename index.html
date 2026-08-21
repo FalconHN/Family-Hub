@@ -145,22 +145,22 @@
     </header>
 
     <section class="grid">
-      <a class="card" href="shopping-list.html?v=20260817">
+      <a class="card" href="shopping-list.html?v=20260821">
         <div class="icon" style="background:#D6F3DB;color:#0B4A12;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
         <h2>Kupovina</h2><p>Zajednička lista</p>
         <div class="metric" id="shoppingMetric">—</div>
       </a>
-      <a class="card" href="recepti.html?v=20260817">
+      <a class="card" href="recepti.html?v=20260821">
         <div class="icon" style="background:#FFE4CC;color:#6B2E00;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.042V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></div>
         <h2>Recepti</h2><p>Kuvarska knjiga i favoriti</p>
         <div class="metric" id="recipeMetric">—</div>
       </a>
-      <a class="card" href="raspored.html?v=20260817">
+      <a class="card" href="raspored.html?v=20260821">
         <div class="icon" style="background:#EBD9FF;color:#33076B;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg></div>
         <h2>Djeca</h2><p>Škola, časovi i obaveze</p>
         <div class="metric" id="schoolMetric">—</div>
       </a>
-      <a class="card" href="potrosnja-vode.html?v=20260817">
+      <a class="card" href="potrosnja-vode.html?v=20260821">
         <div class="icon" style="background:#D8ECFF;color:#0A3A6B;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg></div>
         <h2>Voda</h2><p>Potrošnja za ovaj mjesec</p>
         <div class="metric" id="waterMetric">—</div>
@@ -169,9 +169,9 @@
         <div class="icon" style="background:#FDEEC0;color:#5C4700;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
         <h2>Brze akcije</h2><p>Najčešće korištene stvari</p>
         <div class="quick">
-          <a href="shopping-list.html?v=20260817">+ Kupovina</a>
-          <a href="recepti.html?v=20260817">+ Recept</a>
-          <a href="potrosnja-vode.html?v=20260817">Unesi vodu</a>
+          <a href="shopping-list.html?v=20260821">+ Kupovina</a>
+          <a href="recepti.html?v=20260821">+ Recept</a>
+          <a href="potrosnja-vode.html?v=20260821">Unesi vodu</a>
         </div>
       </div>
     </section>
@@ -183,8 +183,8 @@
   </main>
 </div>
 
-<script src="nav-bar.js?v=20260817"></script>
-<script src="backup-core.js?v=20260817"></script>
+<script src="nav-bar.js?v=20260821"></script>
+<script src="backup-core.js?v=20260821"></script>
 <script>
 /* ======================================================================
    FAMILY HUB — Dashboard
@@ -263,6 +263,11 @@ function doLogin() {
     .catch(() => { errorBox.textContent = "Pogrešan email ili lozinka."; });
 }
 function doLogout() { auth.signOut(); }
+// Zajednička nav traka (nav-bar.js) zove window.fhLogout kad se pritisne njeno dugme za odjavu.
+// Sve ostale stranice ga definišu, a početna nije - pa je dugme za odjavu u gornjoj traci (i
+// "Odjava" u bočnoj traci na računaru) na OVOJ stranici samo brisalo zapamćenu ulogu i nije
+// radilo ništa drugo: korisnik bi ostao prijavljen, bez ikakve poruke.
+window.fhLogout = function () { doLogout(); };
 document.getElementById("loginBtn").addEventListener("click", doLogin);
 document.getElementById("logoutBtn").addEventListener("click", doLogout);
 document.getElementById("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
@@ -367,10 +372,15 @@ function normalizeObaveze(raw) {
   });
   return merged;
 }
+// Prva i druga smjena su DVIJE VARIJANTE rasporeda za isto dijete (u raspored.html se gleda jedna
+// po jedna, prebacivanjem kartice), a ne dva dijela istog dana. Zato se NE smiju sabirati - dijete
+// koje ima upisanih 6 časova u obje smjene prikazivalo bi se kao "12 časova", pa je i ukupan zbir
+// na početnoj strani bio dvostruko veći. Uzima se prva smjena (kao i raspored.html koji se uvijek
+// otvara na njoj), a ako je ona prazna za taj dan, druga.
 function casoviForDay(raw, dayKey) {
   const prva  = (raw && raw.smjene && raw.smjene.prva  && raw.smjene.prva.casovi  && raw.smjene.prva.casovi[dayKey])  || [];
   const druga = (raw && raw.smjene && raw.smjene.druga && raw.smjene.druga.casovi && raw.smjene.druga.casovi[dayKey]) || [];
-  return prva.length + druga.length;
+  return prva.length || druga.length;
 }
 function casaLabel(n) { return n === 1 ? "1 čas" : n + " časova"; }
 function obavezaLabel(n) { return n === 1 ? "1 obaveza" : n + " obaveza"; }
@@ -446,6 +456,13 @@ auth.onAuthStateChanged((user) => {
     const childId = snap.exists && snap.data().childId;
     const hello = document.getElementById("hello");
 
+    // Podesi zajedničku nav traku prema ulozi. Ovo su radile SVE ostale stranice osim ove.
+    // Posljedica je bila da dijete na novom uređaju (gdje uloga još nije zapamćena u browseru)
+    // na početnoj strani vidi cijelu navigaciju - Kupovinu, Recepte, Vodu, pa i dugme Backup -
+    // iako ga svaka od tih stranica odmah vrati nazad. Nav traka takođe pamti ulogu, pa je od
+    // sad ispravna i na svim ostalim stranicama već pri prvom otvaranju.
+    if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);
+
     if (role === "child") {
       hello.textContent = "Zdravo!";
       if (childId) childView(childId);
@@ -459,6 +476,7 @@ auth.onAuthStateChanged((user) => {
     }
   }).catch(() => {
     // Upit nije uspio -> tretiraj kao roditelja, prikaži sve.
+    if (typeof window.fhApplyRole === "function") window.fhApplyRole("parent");
     document.getElementById("hello").textContent = timeGreeting() + "!";
     loadShopping(); loadRecipes(); loadWater(); loadSchedule();
     runAutoBackup();

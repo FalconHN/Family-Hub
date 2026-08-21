@@ -49,7 +49,7 @@
   // Auth guard: bounce to login page if not signed in.
   firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
-      window.location.href = "index.html?v=20260817";
+      window.location.href = "index.html?v=20260821";
       return;
     }
     // Djeca imaju pristup samo Rasporedu - ako se nadju ovdje, preusmjeri ih tamo (isto kao
@@ -57,7 +57,7 @@
     firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
       const role = (snap.exists && snap.data().role) || 'parent';
       if (role === 'child') {
-        window.location.href = "raspored.html?v=20260817";
+        window.location.href = "raspored.html?v=20260821";
         return;
       }
       if (typeof window.fhApplyRole === 'function') window.fhApplyRole(role);
@@ -66,7 +66,7 @@
   // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
   window.fhLogout = function () {
     firebase.auth().signOut().catch(() => {}).finally(() => {
-      window.location.href = "index.html?v=20260817";
+      window.location.href = "index.html?v=20260821";
     });
   };
 </script>
@@ -300,6 +300,10 @@ const KASIKA_GRAMI = [
   { naziv: "med", kasika: 21, kasicica: 7, solja: 350, casa: 280 },
   { naziv: "pirinač", kasika: 12.5, kasicica: 4.2, solja: 208, casa: 167 },
   { naziv: "prašak", kasika: 13.5, kasicica: 4.5, solja: 225, casa: 180 },
+  // Puni naziv stoji kao poseban unos jer se poređenje naziva namjerno drži strogim (kratak naziv
+  // ne smije da hvata bilo koji duži koji tako počinje), pa "prašak" sam po sebi ne pokriva
+  // "praška za pecivo" - a taj puni oblik je ono što se najčešće i piše u receptu.
+  { naziv: "prašak za pecivo", kasika: 13.5, kasicica: 4.5, solja: 225, casa: 180 },
   { naziv: "želatin", kasika: 9, kasicica: 3, solja: 150, casa: 120 },
 ];
 function nadjiKasikaGrame(naziv) {
@@ -487,36 +491,64 @@ function nazivPodudaranje(a, b) {
   let common = 0;
   const maxCommon = Math.min(x.length, y.length);
   while (common < maxCommon && x[common] === y[common]) common++;
-  if (common >= 3 && common >= maxCommon - 2) return true;
+  // Zajednički početak mora da pokrije skoro cijelu DUŽU riječ (najviše 2 slova razlike), a ne
+  // samo kraću. Ranije se gledala kraća riječ, pa je kratak naziv iz Cjenovnika hvatao bilo šta
+  // što tako počinje: "Sir" je poklapao "sirup" i "sirće", "Papar" je poklapao "paprike", "Riba"
+  // je poklapala "ribizle", "Mak" je poklapao "makarone" - i sastojak bi tiho dobio cijenu
+  // POTPUNO druge namirnice.
+  if (common >= 3 && common >= Math.max(x.length, y.length) - 2) return true;
   // Zajednički početak ne hvata promjene USRED riječi, npr. "prašak" (nominativ) -> "praška"
   // (genitiv, "pola praška") - slovo "a" se u srpskom/bosanskom jeziku kod ovakvih riječi pomjera
   // ili nestaje ("nepostojano a": prašak/praška, sastanak/sastanka, momak/momka...), pa se prekid
   // dogodi odmah na mjestu promjene i gornje pravilo ne prepozna da je u pitanju ista riječ. Prag
   // za Levenshtein rastojanje raste sa dužinom riječi, da kraće riječi ne bi lako lažno poklopile
   // nepovezane riječi slične dužine.
-  if (maxCommon < 4) return false;
-  const prag = maxCommon <= 5 ? 1 : maxCommon <= 8 ? 2 : 3;
+  // Levenshtein se koristi SAMO za duže riječi (bar 6 slova). Kod kratkih je jedno slovo razlike
+  // sasvim druga namirnica ("riba"/"riža", "sok"/"sir"), pa bi tolerancija tu pravila štetu; a
+  // ono zbog čega je Levenshtein i uveden - "nepostojano a" (prašak/praška, pirinač/pirinča) -
+  // ionako se javlja samo kod dužih riječi.
+  if (maxCommon < 6) return false;
+  const prag = maxCommon <= 8 ? 2 : 3;
   return levenshteinRastojanje(x, y) <= prag;
 }
 
 // Isto kao nazivPodudaranje, uz dodatnu proveru za kratke osnovne nazive (npr. "So" iz Cjenovnika,
 // 2 slova) kod kojih se padež samo dodaje na kraj (npr. "soli") - nazivPodudaranje sam po sebi to
-// ne hvata jer je riječ prekratka za pravilo "bar 3 zajednička slova". Dodatak na kraju je
-// namjerno ograničen na najviše 3 slova (koliko obično ima nastavak za padež), da npr. "so" ne bi
-// slučajno pokupio potpuno drugu riječ koja slučajno počinje isto (npr. "sok od limuna").
+// ne hvata jer je riječ prekratka za pravilo "bar 3 zajednička slova".
+// Dodatak na kraju NIJE bilo koja slova, nego mora biti stvarni padežni nastavak iz spiska ispod.
+// Bez toga bi "So" hvatalo "sok"/"soka", a "Sir" bi hvatalo "sirup" - dovoljno je jedno slovo
+// viška da to bude sasvim druga namirnica, a cijena bi se tiho preuzela sa pogrešnog unosa.
+// ("li"/"lju" su u spisku zbog nepravilne promjene riječi "so": so - soli - solju.)
+const PADEZNI_NASTAVCI = /^(a|e|i|u|o|om|em|im|ju|li|lju|ovi|evi|ima|ama)$/;
 function nazivOdgovara(bazniNaziv, sastojakNaziv) {
   const x = skiniPakovanje(skiniNapomene(skiniKvacice((bazniNaziv || "").trim().toLowerCase())));
   const y = skiniPakovanje(skiniNapomene(skiniKvacice((sastojakNaziv || "").trim().toLowerCase())));
   if (!x || !y) return false;
   if (y === x) return true;
-  if (x.length <= 3 && y.indexOf(x) === 0 && y.length - x.length <= 3) return true;
+  if (x.length <= 3 && y.indexOf(x) === 0 && PADEZNI_NASTAVCI.test(y.slice(x.length))) return true;
   return nazivPodudaranje(x, y);
 }
 
+// Nađi unos iz Cjenovnika koji odgovara nazivu sastojka. Ako ih odgovara više, uzima se NAJBLIŽI
+// (najmanje Levenshtein rastojanje), a ne prvi po redu - isto pravilo kao u nadjiKasikaGrame.
+// Ranije se uzimao prvi, a Cjenovnik je poređan po abecedi, pa je opštiji naziv uvijek bio ispred
+// svoje posebne vrste i zasjenio je: "Šećer" je hvatao "šećer u prahu", "Ulje" je hvatalo "ulje
+// maslinovo", "Čokolada" je hvatala "čokolada u prahu" - sastojak bi dobio cijenu jeftinije,
+// obične varijante iako je u Cjenovniku postojao tačan unos.
 function findCijenaEntry(naziv, cjenovnik) {
   const key = (naziv || "").trim();
   if (!key) return null;
-  return (cjenovnik || []).find((c) => nazivOdgovara(c.naziv, key)) || null;
+  const kandidati = (cjenovnik || []).filter((c) => nazivOdgovara(c.naziv, key));
+  if (!kandidati.length) return null;
+  if (kandidati.length === 1) return kandidati[0];
+  const cilj = skiniPakovanje(skiniNapomene(skiniKvacice(key.trim().toLowerCase())));
+  const rastojanje = (c) => levenshteinRastojanje(skiniPakovanje(skiniNapomene(skiniKvacice(String(c.naziv || "").trim().toLowerCase()))), cilj);
+  return kandidati.reduce((best, c) => {
+    const dC = rastojanje(c);
+    const dB = rastojanje(best);
+    if (dC !== dB) return dC < dB ? c : best;
+    return String(c.naziv || "").length > String(best.naziv || "").length ? c : best;
+  });
 }
 
 // Efektivna količina/jedinica/naziv za računanje cijene: ako je korisnik u formi ručno unio
@@ -933,6 +965,19 @@ function RecipeApp() {
 
   const lastSentRecipes = useRef(null);
   const lastSentCjenovnik = useRef(null);
+  // Da li smo IKAD stvarno dobili podatke iz baze. Ovo NIJE isto što i "loaded": ako se
+  // učitavanje ne uspije (nema interneta, istekla prijava, greška u pravilima pristupa), ekran
+  // se ipak mora otključati (da korisnik vidi poruku o grešci umjesto vječnog vrtića), ali tada
+  // recepti/cjenovnik stoje na PRAZNOM početnom nizu - a to nije stvarno stanje baze, nego samo
+  // "još ništa nismo pročitali". Bez ove zastavice automatsko snimanje bi taj prazan niz upisalo
+  // preko stvarnih podataka i OBRISALO sve recepte na svim uređajima.
+  const primljeniPodaci = useRef(false);
+  // Id-evi recepata koje smo stvarno prikazali - da se pri snimanju razlikuje "ovaj sam ja
+  // obrisao" od "ovaj je neko upravo dodao sa drugog telefona". Vidi spajanje kod snimanja.
+  const vidjeniRecepti = useRef(new Set());
+  function zapamtiVidjeneRecepte(niz) {
+    (niz || []).forEach((r) => { if (r && r.id != null) vidjeniRecepti.current.add(r.id); });
+  }
   const saveTimer = useRef(null);
   const cjenovnikSaveTimer = useRef(null);
   const toastTimer = useRef(null);
@@ -947,11 +992,17 @@ function RecipeApp() {
               const parsed = JSON.parse(data.recepti);
               if (Array.isArray(parsed)) {
                 const next = parsed.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: i, brojPorcija: "", ...r, sastojci: normalizeSastojci(r.sastojci) }));
+                // Ako lokalno nešto čeka snimanje (upravo si obrisao recept, promijenio omiljeni,
+                // sačuvao izmjenu), NE preuzimaj stanje iz baze - pregazilo bi tu izmjenu i ona se
+                // nikad ne bi ni poslala, jer bi se tajmer ponovo naoružao već pregaženom
+                // vrijednošću. Tuđi recepti se ne gube: spajaju se pri snimanju (transakcija dolje).
+                if (saveTimer.current) return;
                 // Ako su podaci koji su stigli iz baze suštinski isti kao ono što već prikazujemo
                 // (npr. baza samo "odjekne" nazad naš vlastiti upis, ili stigne suvišni snapshot),
                 // ne pravimo novi niz/objekte - to bi natjeralo cijelu listu i otvoreni prozorčić da
                 // se iznova iscrtaju bez ikakve stvarne promjene, što se na sporijoj/nestabilnoj
                 // mreži vidi kao kratak "trzaj"/treperenje ekrana.
+                zapamtiVidjeneRecepte(next);
                 setRecipes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
               }
             } catch (e) {}
@@ -967,6 +1018,9 @@ function RecipeApp() {
         } else {
           sharedDocRef.set({ recepti: JSON.stringify([]), cjenovnik: JSON.stringify([]) });
         }
+        // Uspješno pročitano iz baze (bilo da dokument postoji ili smo ga tek napravili) - od sad
+        // je bezbjedno automatski snimati.
+        primljeniPodaci.current = true;
         setLoaded(true);
         // snap.metadata.fromCache je true dok je ovo lokalno sačuvana kopija (prije nego što
         // baza potvrdi da je najsvježija) - koristimo to samo da pokažemo mali indikator, ne za
@@ -983,24 +1037,53 @@ function RecipeApp() {
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    // Ne snimaj dok stvarno ne pročitamo bazu - vidi objašnjenje uz primljeniPodaci gore.
+    if (!loaded || !primljeniPodaci.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      const json = JSON.stringify(recipes);
-      lastSentRecipes.current = json;
-      sharedDocRef.set({ recepti: json }, { merge: true }).catch((e) => {
+      const lokalni = recipes;
+      zapamtiVidjeneRecepte(lokalni);
+      // Ne upisuje se slijepo cijeli lokalni spisak preko onoga u bazi, nego se u transakciji
+      // spaja: recept koji je neko drugi dodao dok si ti nešto mijenjao (a ti ga nikad nisi
+      // vidio) ostaje. Ranije bi zadnji upis obrisao sve što je stiglo u zadnjih pola sekunde.
+      db.runTransaction(async (tx) => {
+        const snap = await tx.get(sharedDocRef);
+        let udaljeni = [];
+        try {
+          const raw = snap.exists ? (snap.data() || {}).recepti : null;
+          if (typeof raw === "string") {
+            const p = JSON.parse(raw);
+            if (Array.isArray(p)) udaljeni = p;
+          }
+        } catch (e) {}
+        const lokalniIds = new Set(lokalni.map((r) => r && r.id));
+        const tudjiNovi = udaljeni.filter((r) => r && !lokalniIds.has(r.id) && !vidjeniRecepti.current.has(r.id));
+        const spojeni = tudjiNovi.length
+          ? lokalni.concat(tudjiNovi.map((r, i) => ({ sastojci: [], priprema: "", kategorija: "", slikaUrl: "", videoUrl: "", omiljen: false, order: lokalni.length + i, brojPorcija: "", ...r, sastojci: normalizeSastojci(r.sastojci) })))
+          : lokalni;
+        const json = JSON.stringify(spojeni);
+        lastSentRecipes.current = json;
+        tx.set(sharedDocRef, { recepti: json }, { merge: true });
+        return spojeni;
+      }).then((spojeni) => {
+        saveTimer.current = null;
+        if (!spojeni) return;
+        zapamtiVidjeneRecepte(spojeni);
+        setRecipes((prev) => (JSON.stringify(prev) === JSON.stringify(spojeni) ? prev : spojeni));
+      }).catch((e) => {
+        saveTimer.current = null;
         console.error("Failed to save recepti", e);
         lastSentRecipes.current = null; // ne blokiraj ponovni pokušaj kasnije ako se doc ipak promijeni
         showToast("Snimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + "). Recept NIJE sačuvan trajno — provjeri internet ili se javi.", "error");
       });
     }, 400);
-    return () => clearTimeout(saveTimer.current);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [recipes, loaded]);
 
   // Cjenovnik (cijene po jedinici mjere za namirnice) se čuva u istom dokumentu kao i recepti,
   // samo u drugom polju - isti obrazac autosnimanja (400ms poslije zadnje izmjene).
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !primljeniPodaci.current) return;
     if (cjenovnikSaveTimer.current) clearTimeout(cjenovnikSaveTimer.current);
     cjenovnikSaveTimer.current = setTimeout(() => {
       const json = JSON.stringify(cjenovnik);
@@ -1548,6 +1631,10 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
       finalText = finalText.trim();
       if (finalText) {
         setForm((prev) => {
+          // Forma je u međuvremenu zatvorena (Sačuvaj/Otkaži/dugme nazad) - prepoznati tekst
+          // nema gdje da ide. Bez ove provjere prev je null, čitanje prev.priprema baca grešku
+          // usred React-ovog osvježavanja i cijela stranica ostane bijela.
+          if (!prev) return prev;
           const existing = prev.priprema || "";
           const sep = existing && !/\s$/.test(existing) ? " " : "";
           return { ...prev, priprema: existing + sep + finalText };
@@ -1616,6 +1703,8 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
     try {
       const r = await scanRecipeFromImage(file);
       setForm((prev) => {
+        // Forma zatvorena dok je skeniranje trajalo - vidi objašnjenje uz govorni unos gore.
+        if (!prev) return prev;
         // Skener vraća sastojke kao običan tekst (npr. "500g brašna") - količina/jedinica se ne
         // pogađaju automatski, korisnik ih po želji naknadno doda radi računanja cijene.
         const sastojci = Array.isArray(r.sastojci) && r.sastojci.length
@@ -1635,7 +1724,9 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
         const text = await localOcrFromImage(file);
         const cleaned = (text || "").split("\n").map((l) => l.trim()).filter(Boolean).join("\n");
         if (!cleaned) throw new Error("prazno");
-        setForm((prev) => ({ ...prev, priprema: prev.priprema ? prev.priprema + "\n" + cleaned : cleaned }));
+        // Ovo je najduža radnja u aplikaciji (prvi put se preuzima i jezički paket), pa je ovdje
+        // najvjerovatnije da korisnik u međuvremenu zatvori formu - vidi objašnjenje gore.
+        setForm((prev) => (prev ? { ...prev, priprema: prev.priprema ? prev.priprema + "\n" + cleaned : cleaned } : prev));
         setScanNotice("AI trenutno nedostupan, pa je korišćeno osnovno prepoznavanje teksta (bez AI) - manje pouzdano, naročito za rukopis. Tekst je ubačen u „Priprema” ispod; provjeri ga i sam razdvoji sastojke ako treba.");
       } catch (err2) {
         console.error("I lokalno prepoznavanje nije uspjelo", err2);
@@ -2080,6 +2171,6 @@ root.render(<RecipeApp />);
   __script.textContent = __out;
   document.body.appendChild(__script);
 </script>
-<script src="nav-bar.js?v=20260817"></script>
+<script src="nav-bar.js?v=20260821"></script>
 </body>
 </html>

@@ -133,8 +133,8 @@
   </div>
 </div>
 
-<script src="nav-bar.js?v=20260817"></script>
-<script src="backup-core.js?v=20260817"></script>
+<script src="nav-bar.js?v=20260821"></script>
+<script src="backup-core.js?v=20260821"></script>
 <script>
 // ==== Glavni projekat (isti login kao ostale stranice) ====
 const firebaseConfig = {
@@ -164,7 +164,7 @@ try { waterDb = firebase.initializeApp(waterConfig, "waterApp").firestore(); } c
 // Odjava - poziva se iz zajedničke nav trake (nav-bar.js).
 window.fhLogout = function () {
   auth.signOut().catch(() => {}).finally(() => {
-    window.location.href = "index.html?v=20260817";
+    window.location.href = "index.html?v=20260821";
   });
 };
 
@@ -183,34 +183,45 @@ function setStatus(el, msg, kind) {
 }
 
 function summarizeData(data) {
-  if (!data) return "0 stavki";
-  const parts = [];
-  try {
-    const rec = data["recepti/shared"];
-    if (rec && typeof rec.recepti === "string") parts.push(JSON.parse(rec.recepti).length + " recepata");
-  } catch (e) {}
-  try {
-    const sl = data["shopping-list/shared"];
-    if (sl && typeof sl.items === "string") parts.push(JSON.parse(sl.items).length + " stavki kupovine");
-  } catch (e) {}
-  const kids = ["filip", "jaksa", "miljan", "relja"].filter((id) => data["raspored/" + id]);
-  if (kids.length) parts.push("raspored (" + kids.length + "/4 djece)");
-  if (data["water/data"]) parts.push("potrošnja vode");
-  return parts.length ? parts.join(", ") : "podaci";
+  const s = window.FH_BACKUP.makeSummary(data);
+  return s || "bez prepoznatljivog sadržaja";
 }
 
 async function doRestore(dataObj, statusEl) {
-  if (!dataObj) { setStatus(statusEl, "Fajl ne sadrži prepoznatljive podatke.", "err"); return; }
+  if (!dataObj) { setStatus(statusEl, "Snimak ne sadrži prepoznatljive podatke — ništa nije dirano.", "err"); return; }
   const summary = summarizeData(dataObj);
   const ok = window.confirm(
     "Ovo će PREPISATI trenutne podatke (recepte, kupovinu, raspored, potrošnju vode) sadržajem: " +
-    summary + ".\n\nOva radnja se ne može poništiti. Nastaviti?"
+    summary + ".\n\nPrije toga se automatski pravi snimak trenutnog stanja, pa se ovo može poništiti. Nastaviti?"
   );
   if (!ok) return;
+
+  // Sigurnosna mreža: prvo snimi TRENUTNO stanje, pa tek onda prepiši. Ako se ispostavi da je
+  // vraćena pogrešna verzija, korisnik se može vratiti na "Prije vraćanja" iz istorije.
+  setStatus(statusEl, "Pravim snimak trenutnog stanja…");
+  try {
+    await window.FH_BACKUP.saveSafetySnapshot(db, waterDb);
+  } catch (e) {
+    const ipak = window.confirm(
+      "Nije uspjelo snimanje trenutnog stanja (" + (e && e.code ? e.code : "greška") + ").\n\n" +
+      "To znači da se vraćanje NEĆE moći poništiti. Želiš li ipak da nastaviš?"
+    );
+    if (!ipak) { setStatus(statusEl, "Otkazano — ništa nije promijenjeno.", ""); return; }
+  }
+
   setStatus(statusEl, "Vraćanje u toku…");
   try {
-    await window.FH_BACKUP.restoreAllData(db, waterDb, dataObj);
-    setStatus(statusEl, "Gotovo! Podaci su vraćeni. Otvori ili osvježi ostale stranice da vidiš izmjene.", "ok");
+    const izv = await window.FH_BACKUP.restoreAllData(db, waterDb, dataObj);
+    if (izv.neuspjelo.length) {
+      setStatus(statusEl,
+        "DJELIMIČNO vraćeno. Uspjelo: " + (izv.vraceno.length || 0) + ". " +
+        "Nije uspjelo: " + izv.neuspjelo.join(", ") + ". Pokušaj ponovo — baza je sad pomiješana.", "err");
+    } else if (!izv.vraceno.length) {
+      setStatus(statusEl, "Ništa nije vraćeno — ovaj snimak je prazan. Podaci su ostali nepromijenjeni.", "err");
+    } else {
+      setStatus(statusEl,
+        "Gotovo! Vraćeno: " + izv.vraceno.length + " dijelova. Otvori ili osvježi ostale stranice da vidiš izmjene.", "ok");
+    }
   } catch (e) {
     setStatus(statusEl, "Vraćanje nije uspjelo (" + (e && e.code ? e.code : "greška") + ").", "err");
   }
@@ -229,7 +240,11 @@ function wireManualBackup() {
       window.FH_BACKUP.downloadBackupFile(data);
       setStatus(manualStatus, "Preuzeto: " + summarizeData(data) + ".", "ok");
     } catch (e) {
-      setStatus(manualStatus, "Preuzimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + ").", "err");
+      // Namjerno NE preuzimamo nepotpun fajl - lažan backup je gori od nikakvog.
+      const msg = (e && e.code === "nepotpuno-citanje")
+        ? "Backup NIJE napravljen jer se svi podaci nisu mogli pročitati (" + (e.neuspjeli || []).join(", ") + "). Provjeri internet i pokušaj ponovo."
+        : "Preuzimanje nije uspjelo (" + (e && e.code ? e.code : "greška") + ").";
+      setStatus(manualStatus, msg, "err");
     } finally {
       downloadBtn.disabled = false;
     }
@@ -242,7 +257,11 @@ function wireManualBackup() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const dataObj = parsed && parsed.data ? parsed.data : parsed;
+      const dataObj = window.FH_BACKUP.extractBackupData(parsed);
+      if (!dataObj) {
+        setStatus(manualStatus, "Ovaj fajl nije Family Hub backup — ništa nije dirano.", "err");
+        return;
+      }
       await doRestore(dataObj, manualStatus);
     } catch (e) {
       setStatus(manualStatus, "Fajl nije validan JSON backup.", "err");
@@ -260,13 +279,56 @@ async function loadHistory() {
       return;
     }
     listEl.innerHTML = "";
+
+    // Upozori ako zadnji dnevni snimak nije od danas ni juče. Automatski backup se pravi
+    // "u tišini" pri otvaranju aplikacije, pa bi bez ovoga mogao mjesecima da ne radi
+    // (npr. baza je narasla preko dozvoljene veličine dokumenta) a da niko ne primijeti.
+    const dnevni = items.filter((it) => !it.sigurnosni);
+    if (dnevni.length) {
+      const zadnji = new Date(dnevni[0].id + "T12:00:00");
+      const danaStar = Math.floor((Date.now() - zadnji.getTime()) / 86400000);
+      if (isFinite(danaStar) && danaStar > 1) {
+        const w = document.createElement("div");
+        w.className = "history-error";
+        w.textContent = "Pažnja: zadnji automatski snimak je od " + dnevni[0].id + " (prije " + danaStar +
+          " dana). Automatski backup možda ne radi — napravi ručni backup dugmetom gore.";
+        listEl.appendChild(w);
+      }
+    }
+
     items.forEach((item) => {
       const row = document.createElement("div");
       row.className = "history-row";
+      const naslov = item.sigurnosni ? "Prije vraćanja" : item.id;
+      const detalj = [fmtWhen(item.createdAt), item.summary].filter(Boolean).join(" · ");
       row.innerHTML =
-        '<div class="when">' + item.id + '<small>' + fmtWhen(item.createdAt) + '</small></div>' +
+        '<div class="when"></div>' +
         '<button class="btn secondary small" type="button">Vrati ovu verziju</button>';
-      row.querySelector("button").addEventListener("click", () => doRestore(item.data, historyStatus));
+      const whenEl = row.querySelector(".when");
+      whenEl.textContent = naslov;
+      const small = document.createElement("small");
+      small.textContent = detalj;
+      whenEl.appendChild(small);
+
+      const btn = row.querySelector("button");
+      btn.addEventListener("click", async () => {
+        // Sadržaj snimka se dovlači tek sad (spisak ga namjerno ne nosi - vidi listAutoBackups).
+        btn.disabled = true;
+        setStatus(historyStatus, "Učitavam snimak…");
+        try {
+          const data = await window.FH_BACKUP.getAutoBackup(db, item.id);
+          if (!data) {
+            setStatus(historyStatus, "Ovaj snimak je prazan — ništa nije dirano.", "err");
+            return;
+          }
+          await doRestore(data, historyStatus);
+          loadHistory();
+        } catch (e) {
+          setStatus(historyStatus, "Snimak nije mogao da se učita (" + (e && e.code ? e.code : "greška") + ").", "err");
+        } finally {
+          btn.disabled = false;
+        }
+      });
       listEl.appendChild(row);
     });
   } catch (e) {
@@ -280,13 +342,13 @@ async function loadHistory() {
 
 auth.onAuthStateChanged((user) => {
   if (!user) {
-    window.location.href = "index.html?v=20260817";
+    window.location.href = "index.html?v=20260821";
     return;
   }
   db.collection("users").doc(user.uid).get().then((snap) => {
     const role = (snap.exists && snap.data().role) || "parent";
     if (role === "child") {
-      window.location.href = "raspored.html?v=20260817";
+      window.location.href = "raspored.html?v=20260821";
       return;
     }
     if (typeof window.fhApplyRole === "function") window.fhApplyRole(role);

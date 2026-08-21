@@ -328,7 +328,7 @@
   Nalog nije povezan ni sa jednim djetetom. Obratite se roditelju.
 </div>
 
-<script src="nav-bar.js?v=20260817"></script>
+<script src="nav-bar.js?v=20260821"></script>
 <script>
 // ==== Centralni login (isti nalog kao za sve ostale aplikacije, projekat family-hub-m) ====
 const firebaseConfig = {
@@ -350,7 +350,7 @@ db.enablePersistence({ synchronizeTabs: true }).catch(function () {});
 // Odjava - poziva se iz zajednicke nav trake (nav-bar.js).
 window.fhLogout = function () {
   auth.signOut().catch(() => {}).finally(() => {
-    window.location.href = "index.html?v=20260817";
+    window.location.href = "index.html?v=20260821";
   });
 };
 
@@ -468,7 +468,7 @@ function formatDatumSrFull(dateStr) {
 
 auth.onAuthStateChanged((user) => {
   if (!user) {
-    window.location.href = "index.html?v=20260817";
+    window.location.href = "index.html?v=20260821";
     return;
   }
   db.collection("users").doc(user.uid).get().then((snap) => {
