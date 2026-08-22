@@ -385,19 +385,26 @@ function parsirajSastojakTekst(text) {
   // (razlomak poslije cijelog broja je opcion - "1/2" se svede na 0.5 prije daljeg računanja).
   // Riječ poslije broja dozvoljava i tačku poslije svakog slova (npr. "p.z.p." ili "kg.") - inače bi
   // se čitanje prekinulo na prvoj tački i naziv bi ispao pogrešno podijeljen (npr. "p" + ".z.p.").
-  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)(?:\s*\/\s*([0-9]+(?:[.,][0-9]+)?))?\s*((?:[a-zA-ZčćžšđČĆŽŠĐ]\.?)*)\s*(.*)$/);
+  // Prihvata se i RASPON ("4-5 dl kapućina") - uzima se sredina, jer je cijena ionako procjena.
+  // Bez ovoga bi se pročitala samo prva cifra, a ostatak ("-5 dl kapućina") ostao bi zalijepljen
+  // za naziv, pa se namirnica ne bi našla u Cjenovniku.
+  let m = s.match(/^([0-9]+(?:[.,][0-9]+)?)(?:\s*\/\s*([0-9]+(?:[.,][0-9]+)?))?(?:\s*-\s*([0-9]+(?:[.,][0-9]+)?))?\s*((?:[a-zA-ZčćžšđČĆŽŠĐ]\.?)*)\s*(.*)$/);
   if (m && m[1]) {
     let broj = parsirajBroj(m[1]);
     if (broj !== null && m[2]) {
       const imenilac = parsirajBroj(m[2]);
       if (imenilac) broj = broj / imenilac;
     }
+    if (broj !== null && m[3] && !m[2]) {
+      const gornja = parsirajBroj(m[3]);
+      if (gornja !== null && gornja > broj) broj = (broj + gornja) / 2;
+    }
     if (broj && broj > 0) {
-      let ostatak = (m[4] || "").trim();
-      const uInfo = mapirajJedinicu(m[3]);
+      let ostatak = (m[5] || "").trim();
+      const uInfo = mapirajJedinicu(m[4]);
       let jedinica, kolicina;
       if (!uInfo) {
-        if (m[3]) ostatak = (m[3] + " " + ostatak).trim();
+        if (m[4]) ostatak = (m[4] + " " + ostatak).trim();
         jedinica = "kom";
         kolicina = broj;
       } else {
@@ -445,7 +452,14 @@ function skiniKvacice(s) {
 // skraćenica upisana u Cjenovniku, u receptu, ili u oba (npr. "p.z.p.", "pzp", "p z p" ->
 // "prašak za pecivo"). Radi i kad je skraćenica dio duže fraze (npr. "kesica p.z.p."), a ne
 // hvata je slučajno usred neke druge riječi (mora biti okružena razmakom/početkom/krajem/znakom).
-const SKRACENICE = [{ obrazac: /(^|[^a-z])p\.?\s*z\.?\s*p\.?(?=$|[^a-z])/g, puno: "prasak za pecivo" }];
+const SKRACENICE = [
+  { obrazac: /(^|[^a-z])p\.?\s*z\.?\s*p\.?(?=$|[^a-z])/g, puno: "prasak za pecivo" },
+  // Žumance i bjelance su DIJELOVI jajeta, a u Cjenovniku stoji samo "Jaja" - niko ne kupuje
+  // žumanca posebno. Zato se prije poređenja svode na "jaje", pa "4 žumanca" dobije cijenu
+  // četiri jajeta. (Zapis u receptu ostaje netaknut - ovo se koristi samo za traženje cijene.)
+  { obrazac: /(^|[^a-z])(zumanca|zumanace|zumance|zumanaca|zumanjak|zumanjka|zumanjci|zumanjaka)(?=$|[^a-z])/g, puno: "jaje" },
+  { obrazac: /(^|[^a-z])(bjelanca|bjelance|bjelanaca|belanca|belance|belanaca|bjelanjak|belanjak)(?=$|[^a-z])/g, puno: "jaje" },
+];
 function prosiriSkracenice(s) {
   let rez = s || "";
   SKRACENICE.forEach(({ obrazac, puno }) => {
@@ -552,13 +566,35 @@ function nazivPodudaranje(a, b) {
 // viška da to bude sasvim druga namirnica, a cijena bi se tiho preuzela sa pogrešnog unosa.
 // ("li"/"lju" su u spisku zbog nepravilne promjene riječi "so": so - soli - solju.)
 const PADEZNI_NASTAVCI = /^(a|e|i|u|o|om|em|im|ju|li|lju|ovi|evi|ima|ama)$/;
-function nazivOdgovara(bazniNaziv, sastojakNaziv) {
+// KOSA CRTA u nazivu znači "ili": u Cjenovnik možeš upisati "Vajkrem/Ala Kajmak/Ala Krem" ili
+// "Slatka pavlaka/sl. pavlaka" i cijena će se naći bez obzira koji si od tih naziva upotrijebio
+// u receptu. Prije ovoga se cijela crtica-po-crtica fraza poredila kao JEDAN dugačak naziv, pa
+// se nije poklapala ni sa jednim od njih.
+function razdvojiAlternative(naziv) {
+  const cijeli = String(naziv || "");
+  if (cijeli.indexOf("/") === -1) return [cijeli];
+  const dijelovi = cijeli.split("/").map((d) => d.trim()).filter(Boolean);
+  return dijelovi.length ? dijelovi : [cijeli];
+}
+
+function osnovnoOdgovara(bazniNaziv, sastojakNaziv) {
   const x = skiniPakovanje(skiniNapomene(skiniKvacice((bazniNaziv || "").trim().toLowerCase())));
   const y = skiniPakovanje(skiniNapomene(skiniKvacice((sastojakNaziv || "").trim().toLowerCase())));
   if (!x || !y) return false;
   if (y === x) return true;
   if (x.length <= 3 && y.indexOf(x) === 0 && PADEZNI_NASTAVCI.test(y.slice(x.length))) return true;
   return nazivPodudaranje(x, y);
+}
+
+function nazivOdgovara(bazniNaziv, sastojakNaziv) {
+  const lijevo = razdvojiAlternative(bazniNaziv);
+  const desno = razdvojiAlternative(sastojakNaziv);
+  for (let i = 0; i < lijevo.length; i++) {
+    for (let j = 0; j < desno.length; j++) {
+      if (osnovnoOdgovara(lijevo[i], desno[j])) return true;
+    }
+  }
+  return false;
 }
 
 // Nađi unos iz Cjenovnika koji odgovara nazivu sastojka. Ako ih odgovara više, uzima se NAJBLIŽI
