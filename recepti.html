@@ -459,6 +459,10 @@ const SKRACENICE = [
   // četiri jajeta. (Zapis u receptu ostaje netaknut - ovo se koristi samo za traženje cijene.)
   { obrazac: /(^|[^a-z])(zumanca|zumanace|zumance|zumanaca|zumanjak|zumanjka|zumanjci|zumanjaka)(?=$|[^a-z])/g, puno: "jaje" },
   { obrazac: /(^|[^a-z])(bjelanca|bjelance|bjelanaca|belanca|belance|belanaca|bjelanjak|belanjak)(?=$|[^a-z])/g, puno: "jaje" },
+  // "sl." je uobičajena skraćenica za "slatka" u receptima ("250 ml sl. pavlake"). Bez ovoga se
+  // ne poklapa sa "Slatka pavlaka" iz Cjenovnika - razlika je prevelika da bi je uhvatilo
+  // poređenje po sličnosti. Traži se tačka poslije "sl", pa se ne dira nijedna prava riječ.
+  { obrazac: /(^|[^a-z])sl\.\s*/g, puno: "slatka " },
 ];
 function prosiriSkracenice(s) {
   let rez = s || "";
@@ -1206,11 +1210,13 @@ function RecipeApp() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  function showToast(msg, type) {
+  function showToast(msg, type, ponisti) {
     const t = type || "success";
-    setToast({ msg, type: t });
+    // "ponisti" je funkcija koja vraća stanje kakvo je bilo prije radnje. Ako je proslijeđena,
+    // u poruci se pojavi dugme "Poništi" i stoji duže (8 s), da stigneš da reaguješ.
+    setToast({ msg, type: t, ponisti: ponisti || null });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), t === "error" ? 6000 : 3000);
+    toastTimer.current = setTimeout(() => setToast(null), ponisti ? 8000 : (t === "error" ? 6000 : 3000));
   }
 
   // Isti "pun ekran" indikator učitavanja kao na ostalim stranicama (raspored.html),
@@ -1290,9 +1296,32 @@ function RecipeApp() {
     });
     setForm(null);
   }
+  // Brisanje recepta se odmah proširi na sve telefone i nema ga više nigdje. Zato se obrisani
+  // recept zapamti i ponudi dugme "Poništi" - 8 sekundi je dovoljno da se primijeti greška, a
+  // ne smeta kao pitanje "jesi li siguran?" na svako brisanje.
   function deleteRecipe(id) {
-    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    let obrisani = null;
+    let mjesto = -1;
+    setRecipes((prev) => {
+      mjesto = prev.findIndex((r) => r.id === id);
+      if (mjesto === -1) return prev;
+      obrisani = prev[mjesto];
+      return prev.filter((r) => r.id !== id);
+    });
     if (detailId === id) setDetailId(null);
+    setTimeout(() => {
+      if (!obrisani) return;
+      showToast("Recept „" + (obrisani.naziv || "bez naziva") + "” je obrisan.", "success", () => {
+        // Vraća se na isto mjesto u spisku, a ne na kraj.
+        setRecipes((prev) => {
+          if (prev.some((r) => r.id === obrisani.id)) return prev;
+          const kopija = [...prev];
+          kopija.splice(Math.max(0, Math.min(mjesto, kopija.length)), 0, obrisani);
+          return kopija.map((r, i) => ({ ...r, order: i }));
+        });
+        showToast("Recept je vraćen.");
+      });
+    }, 0);
   }
   function toggleFavorite(id) {
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, omiljen: !r.omiljen } : r)));
@@ -1530,9 +1559,19 @@ function RecipeApp() {
             background: toast.type === "error" ? "#B3413E" : "#1F7A52", color: "#fff", padding: "12px 16px", borderRadius: 10,
             fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, textAlign: "center", boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)",
             zIndex: 10001, maxWidth: "calc(100vw - 32px)", boxSizing: "border-box",
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          {toast.msg}
+          <span>{toast.msg}</span>
+          {toast.ponisti && (
+            <button
+              type="button"
+              onClick={() => { const f = toast.ponisti; setToast(null); if (toastTimer.current) clearTimeout(toastTimer.current); f(); }}
+              style={{ marginLeft: 12, background: "rgba(255,255,255,0.22)", color: "#fff", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, padding: "5px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+            >
+              Poništi
+            </button>
+          )}
         </div>
       )}
 

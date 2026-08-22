@@ -407,6 +407,16 @@ function SmartShoppingList() {
   // svakodnevnom korišćenju, a raspoređivanje se radi rijetko (npr. da se poređa redom kojim
   // se ide kroz prodavnicu).
   const [reorderMode, setReorderMode] = useState(false);
+  // Kratka poruka pri dnu ekrana, sa mogućnošću poništavanja. Brisanje se odmah proširi na sve
+  // telefone i nema ga više nigdje, pa je bolje ponuditi povratak nego pitati "jesi li siguran?"
+  // pri svakom brisanju - pitanje smeta svaki put, a povratak treba samo kad se pogriješi.
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  function showToast(msg, ponisti) {
+    setToast({ msg: msg, ponisti: ponisti || null });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), ponisti ? 8000 : 3000);
+  }
   const [newName, setNewName] = useState("");
   const [editingCell, setEditingCell] = useState(null);
   const [showExport, setShowExport] = useState(false);
@@ -666,7 +676,26 @@ function SmartShoppingList() {
   }
 
   function deleteItem(id) {
-    setItems((prev) => prev.filter((it) => it.id !== id));
+    let obrisana = null;
+    let mjesto = -1;
+    setItems((prev) => {
+      mjesto = prev.findIndex((it) => it.id === id);
+      if (mjesto === -1) return prev;
+      obrisana = prev[mjesto];
+      return prev.filter((it) => it.id !== id);
+    });
+    setTimeout(() => {
+      if (!obrisana) return;
+      showToast("„" + (obrisana.name || "Stavka") + "” je obrisana.", () => {
+        setItems((prev) => {
+          if (prev.some((it) => it.id === obrisana.id)) return prev;
+          const kopija = [...prev];
+          kopija.splice(Math.max(0, Math.min(mjesto, kopija.length)), 0, obrisana);
+          return kopija;
+        });
+        showToast("Stavka je vraćena.");
+      });
+    }, 0);
   }
 
   function addCustomStore(name) {
@@ -783,8 +812,15 @@ function SmartShoppingList() {
     const kupljene = items.filter((it) => it && it.purchased);
     if (!kupljene.length) return;
     const koliko = kupljene.length === 1 ? "1 kupljenu stavku" : kupljene.length + " kupljenih stavki";
-    if (!confirm("Trajno izbrisati " + koliko + " sa liste?\n\nOvo se ne može poništiti i vidjeće se na svim telefonima.")) return;
+    if (!confirm("Izbrisati " + koliko + " sa liste?\n\nVidjeće se na svim telefonima. Odmah poslije imaš 8 sekundi da poništiš.")) return;
+    const snimak = items.slice();
     setItems((prev) => prev.filter((it) => !it.purchased));
+    setTimeout(() => {
+      showToast("Obrisano: " + koliko + ".", () => {
+        setItems(snimak);
+        showToast("Vraćeno.");
+      });
+    }, 0);
   }
 
   function toggleFavorite(name) {
@@ -1800,6 +1836,30 @@ function SmartShoppingList() {
 
         {Object.keys(storeTotals).length>=1&&<div className="panel secondary-panel"><div className="section-title" style={{display:'flex',alignItems:'center',gap:7}}><IconWallet/> <span>Trošak po prodavnici</span></div>{Object.entries(storeTotals).sort((a,b)=>b[1]-a[1]).map(([store,total])=>{const storeMeta=resolveStoreColor(store==='Unassigned'?null:store);return <div key={store} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',fontSize:13}}><div style={{width:100}}><Tag label={store} color={storeMeta}/></div><div style={{flex:1,height:7,background:'#dfe7e3',borderRadius:99,overflow:'hidden'}}><div style={{height:'100%',width:`${grandTotal>0?(total/grandTotal)*100:0}%`,background:storeMeta?.bg||'#8FD8F7'}}/></div><span style={{color:'#17252b',minWidth:65,textAlign:'right',fontWeight:650}}>{fmtEUR(total)}</span></div>})}</div>}
       </div>
+
+      {toast && (
+        <div
+          style={{
+            position: "fixed", left: "50%", bottom: "calc(90px + env(safe-area-inset-bottom))", transform: "translateX(-50%)",
+            background: "#1F7A52", color: "#fff", padding: "12px 16px", borderRadius: 10,
+            fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, textAlign: "center",
+            boxShadow: "0 8px 20px -8px rgba(15,34,43,0.4)", zIndex: 10001,
+            maxWidth: "calc(100vw - 32px)", boxSizing: "border-box",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <span>{toast.msg}</span>
+          {toast.ponisti && (
+            <button
+              type="button"
+              onClick={() => { const f = toast.ponisti; setToast(null); if (toastTimer.current) clearTimeout(toastTimer.current); f(); }}
+              style={{ marginLeft: 12, background: "rgba(255,255,255,0.22)", color: "#fff", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, padding: "5px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+            >
+              Poništi
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
