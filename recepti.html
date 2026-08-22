@@ -1597,6 +1597,7 @@ function RecipeApp() {
           knownCategories={knownCategories}
           cjenovnik={cjenovnik}
           isNew={!recipes.some((r) => r.id === form.id)}
+          showToast={showToast}
         />
       )}
 
@@ -1605,6 +1606,7 @@ function RecipeApp() {
           cjenovnik={cjenovnik}
           setCjenovnik={setCjenovnik}
           onClose={() => setCjenovnikOpen(false)}
+          showToast={showToast}
         />
       )}
     </div>
@@ -1772,7 +1774,7 @@ function RecipeDetailModal({ recipe, cjenovnik, onClose, onEdit, onDelete, onAdd
   );
 }
 
-function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cjenovnik, isNew }) {
+function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cjenovnik, isNew, showToast }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
@@ -1980,12 +1982,31 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
     });
   }
   function removeSastojak(idx) {
+    let obrisani = null;
     setForm((prev) => {
       const next = prev.sastojci.slice();
+      obrisani = next[idx];
       next.splice(idx, 1);
       if (next.length === 0) next.push({ naziv: "", kolicina: "", jedinica: "" });
       return { ...prev, sastojci: next };
     });
+    setTimeout(() => {
+      // Prazan red se briše bez poruke - nema šta da se vraća.
+      const ime = (obrisani && (obrisani.naziv || "").trim()) || "";
+      if (!ime || typeof showToast !== "function") return;
+      showToast("Sastojak „" + ime + "” je obrisan.", "success", () => {
+        setForm((prev) => {
+          if (!prev) return prev;
+          const kopija = prev.sastojci.slice();
+          // Ako je poslije brisanja ostao samo prazan red koji je aplikacija sama dodala,
+          // njega uklanjamo da se ne bi pojavio suvišan prazan sastojak.
+          if (kopija.length === 1 && !(kopija[0].naziv || "").trim() && !kopija[0].kolicina) kopija.length = 0;
+          kopija.splice(Math.max(0, Math.min(idx, kopija.length)), 0, obrisani);
+          return { ...prev, sastojci: kopija };
+        });
+        showToast("Sastojak je vraćen.");
+      });
+    }, 0);
   }
   function addSastojak() {
     setForm((prev) => ({ ...prev, sastojci: prev.sastojci.concat([{ naziv: "", kolicina: "", jedinica: "" }]) }));
@@ -2224,7 +2245,7 @@ function RecipeFormModal({ form, setForm, onSave, onCancel, knownCategories, cje
 // po jedinici mjere (npr. €/kg), nego onako kako se stvarno kupuje - npr. "10 jaja = 2,20 €" ili
 // "1 kg brašna = 0,55 €" - aplikacija sama izračuna cijenu po jedinici mjere dijeljenjem
 // (cijena pakovanja / količina u pakovanju), i to koristi za automatsko računanje cijene recepta.
-function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
+function CjenovnikModal({ cjenovnik, setCjenovnik, onClose, showToast }) {
   // Spisak se poređa po abecedi (nazivu) - lakše je pronaći namirnicu u dužem spisku po slovima nego
   // pamtiti kojim je redom unesena. Prazan red za novi unos ostaje na dnu dok se ne popuni i sačuva -
   // poslije čuvanja i ponovnog otvaranja i on se uklopi na svoje mjesto po abecedi.
@@ -2256,12 +2277,29 @@ function CjenovnikModal({ cjenovnik, setCjenovnik, onClose }) {
       return next;
     });
   }
+  // Brisanje namirnice iz Cjenovnika je do sada bilo bez ikakvog traga: red nestane, a ako se
+  // klikne Sačuvaj, nestane i iz baze na svim telefonima. Zato se obrisani red zapamti i ponudi
+  // "Poništi" - vraća se na isto mjesto u spisku.
   function removeRow(idx) {
+    let obrisani = null;
     setRows((prev) => {
       const next = prev.slice();
+      obrisani = next[idx];
       next.splice(idx, 1);
       return next;
     });
+    setTimeout(() => {
+      if (!obrisani || typeof showToast !== "function") return;
+      const ime = (obrisani.naziv || "").trim() || "Namirnica";
+      showToast("„" + ime + "” je obrisana iz Cjenovnika.", "success", () => {
+        setRows((prev) => {
+          const kopija = prev.slice();
+          kopija.splice(Math.max(0, Math.min(idx, kopija.length)), 0, obrisani);
+          return kopija;
+        });
+        showToast("Vraćeno u Cjenovnik.");
+      });
+    }, 0);
   }
   function addRow() {
     setRows((prev) => prev.concat([{ naziv: "", kolicina: 1, jedinica: "kg", cijena: "" }]));
